@@ -18,3 +18,10 @@ but not to those using typical Rust workflows:
   (eg. by unpacking `https://www.segger.com/downloads/jlink/JLink_Linux_V880_x86_64.tgz` in /opt/SEGGER/JLink).
 * Run `nrfutil 91 modem-firmware-upgrade --firmware mfw-nr+_nrf91x1_1.1.0.zip --all-jlinks`
   (or specify the concrete JLink device).
+
+## Going back to the cellular firmware
+
+While there is no known way to read the network core's firmware
+(i.e., there is no way to perform a backup before overwriting it),
+the vendor firmware for LTE is [publically available ](https://www.nordicsemi.com/Products/nRF9151/Download#636701B052474E5A8EB903C56678D26E),
+and should be usable the same way to restore the original state.
