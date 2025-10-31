@@ -15,7 +15,7 @@ but not to those using typical Rust workflows:
 * Download `nrfutil` from <https://www.nordicsemi.com/Products/Development-tools/nRF-Util/Download>
 * Run `nrfutil install 91`, which downloads extra code into your home directory (`~/.nrfutil`).
 * Ensure that Segger's JLink is installed in the exact location nrfutil expects it to be
-  (eg. by unpacking `https://www.segger.com/downloads/jlink/JLink_Linux_V880_x86_64.tgz` in /opt/SEGGER/JLink).
+  (eg. by unpacking <https://www.segger.com/downloads/jlink/JLink_Linux_V880_x86_64.tgz> in /opt/SEGGER/JLink).
 * Run `nrfutil 91 modem-firmware-upgrade --firmware mfw-nr+_nrf91x1_1.1.0.zip --all-jlinks`
   (or specify the concrete JLink device).
 
