@@ -1,0 +1,30 @@
+[package]
+name = "test-libmodem"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ariel-os = { path = "build/imports/ariel-os/src/ariel-os", features = [] }
+ariel-os-boards = { path = "build/imports/ariel-os/src/ariel-os-boards" }
+cortex-m = { version = "0.7.7", default-features = false }
+
+embassy-nrf = { version = "0.3.1", default-features = false, features = ["nrf9151-s", "unstable-pac"] }
+# not used in API, but took guidance from there on setup, and it provides a lot
+# of the functions like malloc and nrf_modem_os_errno_set (but let's see which
+# of those are actually used in the dect_phy library -- thought that'd be
+# standalone but apparently it does use symbols from the main modem lib?)
+nrf-modem = { version = "0.9.1", features = ["nrf9151", "defmt", "modem-log"] } # "modem-log" is convenient to enable but also needs more C symbols and is a trouble cause when there's no other trouble
+# patched to include dect wrappers -- see below
+nrfxlib-sys = { version = "2.9", features = ["nrf9151"] }
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(context, values(any()))',
+] }
+
+[patch.crates-io]
+# test-dect branch kicked to look like a 2.9.2
+nrfxlib-sys = { path = "/home/chrysn/git/crates/nrfxlib-sys/" }
+# mainly having the ESHUTDOWN path in nrf_modem_os_timedwait removed because
+# this version also runs that code path before init is done, and with heap
+# initialization pulled into a pub fn.
+nrf-modem.path = "/home/chrysn/git/crates/nrf-modem"

@@ -1,0 +1,16 @@
+imports:
+  - git:
+      url: https://github.com/ariel-os/ariel-os
+      # just after https://github.com/ariel-os/ariel-os/pull/1463 was merged
+      commit: 870e401696edde95f1a50a8f1bb48e2257fae8f3
+    dldir: ariel-os
+
+apps:
+  - name: test-libmodem
+    selects:
+      # Modem initalization runs in a thread, and the way libmodem.a works, it
+      # needs to wait for an interrupt to come in during nrf_modem_os_timedwait
+      # because nrf_modem_os_is_in_isr would always return true.
+      # (Alternatively, could set an os-irq, but this is easier for
+      # exploration).
+      - executor-thread

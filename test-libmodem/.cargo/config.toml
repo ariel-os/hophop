@@ -1,0 +1,5 @@
+include = "../build/imports/ariel-os/ariel-os-cargo.toml"
+
+[unstable]
+# This is needed so the "include" statement above works.
+config-include = true
