@@ -1836,7 +1836,8 @@ dependencies = [
 
 [[package]]
 name = "nrf-modem"
-version = "0.9.1"
+version = "0.9.2"
+source = "git+https://github.com/chrysn-pull-requests/nrf-modem?branch=for-standalone-tests#d097df81af0e2bb2e0066308bbf6b00c4e25e75c"
 dependencies = [
  "arrayvec",
  "at-commands",
@@ -1876,7 +1877,8 @@ dependencies = [
 
 [[package]]
 name = "nrfxlib-sys"
-version = "2.9.2"
+version = "3.0.2"
+source = "git+https://github.com/chrysn-pull-requests/nrfxlib-sys?branch=test-dect#8937edaa4fee5b7376fea579de813ce7f3a1c0e1"
 dependencies = [
  "bindgen",
  "llvm-tools",
@@ -2867,3 +2869,11 @@ source = "git+https://github.com/ariel-os/esp-hal?rev=aa8d1995fc06eb5e6d04a2022e
 name = "esp-wifi"
 version = "0.12.0"
 source = "git+https://github.com/ariel-os/esp-hal?rev=aa8d1995fc06eb5e6d04a2022ecf3679b4929e63#aa8d1995fc06eb5e6d04a2022ecf3679b4929e63"
+
+[[patch.unused]]
+name = "nrf-modem"
+version = "0.9.2"
+
+[[patch.unused]]
+name = "nrfxlib-sys"
+version = "3.0.2"

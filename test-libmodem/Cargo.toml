@@ -13,16 +13,16 @@ embassy-nrf = { version = "0.3.1", default-features = false, features = ["nrf915
 # of the functions like malloc and nrf_modem_os_errno_set (but let's see which
 # of those are actually used in the dect_phy library -- thought that'd be
 # standalone but apparently it does use symbols from the main modem lib?)
-nrf-modem = { version = "0.9.1", features = ["nrf9151", "defmt", "modem-log"] } # "modem-log" is convenient to enable but also needs more C symbols and is a trouble cause when there's no other trouble
+nrf-modem = { version = "0.9.1", features = ["nrf9151", "defmt", "modem-log"], git = "https://github.com/chrysn-pull-requests/nrf-modem", branch = "for-standalone-tests" } # "modem-log" is convenient to enable but also needs more C symbols and is a trouble cause when there's no other trouble
 # patched to include dect wrappers -- see below
-nrfxlib-sys = { version = "2.9", features = ["nrf9151"] }
+nrfxlib-sys = { version = "3.0.2", features = ["nrf9151"], git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch = "test-dect" }
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
   'cfg(context, values(any()))',
 ] }
 
 [patch.crates-io]
-# test-dect branch kicked to look like a 2.9.2
+# test-dect branch kicked to look like a 2.9.2 (note that test-dect292 doesn't make any outcome any better)
 nrfxlib-sys = { path = "/home/chrysn/git/crates/nrfxlib-sys/" }
 # mainly having the ESHUTDOWN path in nrf_modem_os_timedwait removed because
 # this version also runs that code path before init is done, and with heap
