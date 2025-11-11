@@ -11,3 +11,22 @@ nRF9151
 * IPC peripheral:
   - If you're used to nRF53 series: the synchronization time [`t_IPC`](https://docs.nordicsemi.com/bundle/ps_nrf9151/page/ipc.html#ariaid-title16) is really long (165µs, compared to 1-4µs on 53). That's not necessarily latency, and I'm not sure yet if it also applies to signals from the *same* IPC source, but when doing any IPC manually, it's probably worth re-checking something more level-triggered after any event processing has started.
   - GPMEM sounds like a perfect place to dispatch initial memory offsets through, right? Not directly, though: this is [not shared data](https://devzone.nordicsemi.com/f/nordic-q-a/115496/cannot-read-value-using-gpmem-over-ipc-on-nrf7002dk/506724). Apparently the network core reads the application core's IPC GPMEM registers, but the docs don't say that.
+
+* Running embassy based examples sometimes locks up with:
+
+    ```
+    Firmware exited unexpectedly: Exception
+    ERROR probe_rs_debug::debug_info: Other("UNWIND: Tried to unwind `RegisterRule` at CFA = None.")
+    Core 0
+        Frame 0: add<usize> : ERROR: UNWIND: Tried to unwind `RegisterRule` at CFA = None. @ 0x00000144 inline
+           /home/chrysn/git/crates/nrf-modem/src/embassy_net_modem/mod.rs:23:88
+    Error: Exception
+    ```
+
+    In this case, it helps to recover and then flash an Ariel OS example, which usually ends its first run with:
+
+    ```
+    [WARN ] UICR bits were gravely misconfigure. Fixed, but this requires a reboot; you may want to attach to the soon-running session (test_libmodem test-libmodem/src/main.rs:100)
+    ```
+
+    To avoid getting in this situation, it helps to .
