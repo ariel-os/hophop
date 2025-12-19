@@ -1,38 +1,39 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    mutex::{Mutex, MutexGuard},
+use heapless::{
+    box_pool,
+    pool::boxed::{Box, BoxBlock},
 };
 use nrf_modem::{ErrorSource, nrfxlib_sys};
+use static_cell::StaticCell;
 
 use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
 
-/// Kind of a bump allocator for RSSI data, as that doesn't fit in small events.
-///
-/// Might later be turned into a ring buffer if any methods support stream-processing multiple
-/// events.
-///
-/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
-static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
-    Mutex::new(heapless::Vec::new());
+// Storage for RSSI results.
+//
+// These are passed to the caller owned; consequently, reception is fallible if the user does not
+// drop their items in time.
+//
+// This can probably be optimized, eg. by being an atomic ring buffer with the sender living in the
+// IRQ and the receiver in the consuming task.
+box_pool!(RssiPool: [u8; 240]);
+
+/// Initiates the RSSI pool.
+#[inline]
+pub(super) fn init() {
+    static RSSI_BUFFER: StaticCell<[BoxBlock<[u8; 240]>; 16]> = StaticCell::new();
+    for b in RSSI_BUFFER.init_with(|| core::array::from_fn(|_| BoxBlock::new())) {
+        RssiPool.manage(b);
+    }
+}
 
 /// Resulting data slice of a single RSSI measurement.
-///
-/// This keeps a lock on the receive buffer, and must therefore be dropped before the next attempt
-/// to perform any other operation.
-pub struct RssiResult<'a>(
-    MutexGuard<'static, CriticalSectionRawMutex, heapless::Vec<u8, 2400>>,
-    core::ops::Range<usize>,
-    // This ensures that a result is used before the next attempt to receive something (as
-    // that would panic around locking RECV_BUF).
-    core::marker::PhantomData<&'a mut ()>,
-);
+pub struct RssiResult(Box<RssiPool>);
 
-impl RssiResult<'_> {
+impl RssiResult {
     pub fn data(&self) -> &[u8] {
-        &self.0[self.1.clone()]
+        &*self.0
     }
 }
 
@@ -56,30 +57,23 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         meas.len(),
     );
 
-    if let Ok(mut recvbuf) = RECVBUF.try_lock() {
-        let start = recvbuf.len();
-        if recvbuf.extend_from_slice(meas).is_ok() {
-            DectEvent::Rssi(rssi.meas_start_time, Some(start..(start + meas.len())))
-        } else {
-            DectEvent::Rssi(rssi.meas_start_time, None)
-        }
+    if let Ok(buf) = RssiPool.alloc(
+        meas.try_into()
+            // FIXME: As some point, we might also receive shorter RSSI data.
+            .unwrap(),
+    ) {
+        DectEvent::Rssi(rssi.meas_start_time, Some(buf))
     } else {
         DectEvent::Rssi(rssi.meas_start_time, None)
     }
 }
 
-fn clear_recvbuf() {
-    let mut recvbuf = RECVBUF
-        .try_lock()
-        .expect("Buffer in use; unsafe construction of DectPhy, or pending future was dropped.");
-    recvbuf.clear();
-    drop(recvbuf);
-}
-
 impl DectPhy {
-    pub async fn rssi(&mut self, carrier: u16) -> Result<(u64, RssiResult<'_>), MixedError> {
-        clear_recvbuf();
-
+    /// Read a single RSSI series.
+    ///
+    /// The resulting data comes in an owned buffer. It is up to the caller to drop that in time
+    /// for later RSSI measurements to be taken; otherwise, later RSSI invocations will err.
+    pub async fn rssi(&mut self, carrier: u16) -> Result<(u64, RssiResult), MixedError> {
         // Relevant DECT constant timing parameters are 1 frame = 10ms, each 10ms frame is composed
         // of 24 slots,
 
@@ -128,15 +122,6 @@ impl DectPhy {
             panic!("Sequence violation");
         };
 
-        Ok((
-            result.0,
-            RssiResult(
-                RECVBUF
-                    .try_lock()
-                    .expect("Was checked before, and ISR users release this before returning"),
-                result.1,
-                core::marker::PhantomData,
-            ),
-        ))
+        Ok((result.0, RssiResult(result.1)))
     }
 }

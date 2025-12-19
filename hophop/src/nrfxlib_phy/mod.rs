@@ -49,7 +49,7 @@ enum DectEvent {
     PdcError,
     /// Length inside recvbuf
     Pdc(usize),
-    Rssi(u64, Option<core::ops::Range<usize>>),
+    Rssi(u64, Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
 }
 
 // FIXME: This is only pub while the DectPhy object doesn't have an init that calls the low-level
@@ -172,6 +172,10 @@ impl DectPhy {
     /// parameters); the `()` tuple is a stand-in that will evolve as Ariel OS's `take_modem()`
     /// will evolve.
     pub async fn init_after_modem_init(_modem_is_set_up: ()) -> Result<Self, Error> {
+        defmt::trace!("Setting up own memory");
+        // FIXME: Can we leave it to the user to allocate this?
+        rssi::init();
+
         defmt::trace!("Setting DECT handler");
 
         // Note that unlike typical C callbacks, this callback setup takes no argument -- if it did, we
