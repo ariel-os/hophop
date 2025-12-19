@@ -1,0 +1,6 @@
+version = 1
+
+[[annotations]]
+path = ["audits.toml", "config.toml", "imports.lock"]
+SPDX-FileCopyrightText = "Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems"
+SPDX-License-Identifier = "MIT OR Apache-2.0"
