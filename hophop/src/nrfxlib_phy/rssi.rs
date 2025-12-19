@@ -1,10 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use heapless::{
-    box_pool,
-    pool::boxed::{Box, BoxBlock},
-};
+use heapless::{box_pool, pool::boxed::BoxBlock};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
 
@@ -17,23 +14,28 @@ use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
 //
 // This can probably be optimized, eg. by being an atomic ring buffer with the sender living in the
 // IRQ and the receiver in the consuming task.
-box_pool!(RssiPool: [u8; 240]);
+box_pool!(RssiPool: RssiEvent);
 
 /// Initiates the RSSI pool.
 #[inline]
 pub(super) fn init() {
-    static RSSI_BUFFER: StaticCell<[BoxBlock<[u8; 240]>; 16]> = StaticCell::new();
+    static RSSI_BUFFER: StaticCell<[BoxBlock<RssiEvent>; 16]> = StaticCell::new();
     for b in RSSI_BUFFER.init_with(|| core::array::from_fn(|_| BoxBlock::new())) {
         RssiPool.manage(b);
     }
 }
 
 /// Resulting data slice of a single RSSI measurement.
-pub struct RssiResult(Box<RssiPool>);
+#[derive(Debug)]
+pub struct RssiEvent(u64, [u8; 240]);
 
-impl RssiResult {
+impl RssiEvent {
+    pub fn start_time(&self) -> u64 {
+        self.0
+    }
+
     pub fn data(&self) -> &[u8] {
-        &*self.0
+        &self.1
     }
 }
 
@@ -57,14 +59,15 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         meas.len(),
     );
 
-    if let Ok(buf) = RssiPool.alloc(
+    if let Ok(result) = RssiPool.alloc(RssiEvent(
+        rssi.meas_start_time,
         meas.try_into()
             // FIXME: As some point, we might also receive shorter RSSI data.
             .unwrap(),
-    ) {
-        DectEvent::Rssi(rssi.meas_start_time, Some(buf))
+    )) {
+        DectEvent::Rssi(Some(result))
     } else {
-        DectEvent::Rssi(rssi.meas_start_time, None)
+        DectEvent::Rssi(None)
     }
 }
 
@@ -73,7 +76,10 @@ impl DectPhy {
     ///
     /// The resulting data comes in an owned buffer. It is up to the caller to drop that in time
     /// for later RSSI measurements to be taken; otherwise, later RSSI invocations will err.
-    pub async fn rssi(&mut self, carrier: u16) -> Result<(u64, RssiResult), MixedError> {
+    pub async fn rssi(
+        &mut self,
+        carrier: u16,
+    ) -> Result<impl core::ops::Deref<Target = RssiEvent>, MixedError> {
         // Relevant DECT constant timing parameters are 1 frame = 10ms, each 10ms frame is composed
         // of 24 slots,
 
@@ -101,12 +107,8 @@ impl DectPhy {
 
         loop {
             match DECT_EVENTS.receive().await.event {
-                DectEvent::Rssi(start, range) => {
-                    debug_assert!(result.is_none(), "Sequence violation");
-                    result = Some((
-                        start,
-                        range.expect("We requested just one run, that fits in the receive buffer"),
-                    ));
+                DectEvent::Rssi(res) => {
+                    result = Some(res);
                 }
                 DectEvent::Completed(Ok(())) => {
                     break;
@@ -122,6 +124,7 @@ impl DectPhy {
             panic!("Sequence violation");
         };
 
-        Ok((result.0, RssiResult(result.1)))
+        result
+            .ok_or(MixedError::UsageError)
     }
 }

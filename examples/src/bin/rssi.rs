@@ -18,7 +18,7 @@ async fn main() {
         info!("Scanning band 1");
         for carrier in 1657..=1677 {
             if let Ok(rssi) = dect.rssi(carrier).await {
-                info!("RSSI for {} at {}: {:?}", carrier, rssi.0, rssi.1.data());
+                info!("RSSI for {} at {}: {:?}", carrier, rssi.start_time(), rssi.data());
             }
         }
     }
