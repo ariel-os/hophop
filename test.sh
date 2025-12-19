@@ -10,6 +10,7 @@
 set -ex
 
 pipx run reuse lint
+cargo vet check
 
 RUSTFLAGS="-D warnings" cargo check --workspace
 RUSTFLAGS="-D warnings" cargo check --workspace --all-features
