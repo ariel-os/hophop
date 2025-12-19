@@ -1,10 +1,22 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::MutexGuard};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    mutex::{Mutex, MutexGuard},
+};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 
-use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError, RECVBUF};
+use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
+
+/// Kind of a bump allocator for RSSI data, as that doesn't fit in small events.
+///
+/// Might later be turned into a ring buffer if any methods support stream-processing multiple
+/// events.
+///
+/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
+static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
+    Mutex::new(heapless::Vec::new());
 
 /// Resulting data slice of a single RSSI measurement.
 ///
@@ -56,9 +68,17 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
     }
 }
 
+fn clear_recvbuf() {
+    let mut recvbuf = RECVBUF
+        .try_lock()
+        .expect("Buffer in use; unsafe construction of DectPhy, or pending future was dropped.");
+    recvbuf.clear();
+    drop(recvbuf);
+}
+
 impl DectPhy {
     pub async fn rssi(&mut self, carrier: u16) -> Result<(u64, RssiResult<'_>), MixedError> {
-        self.clear_recvbuf();
+        clear_recvbuf();
 
         // Relevant DECT constant timing parameters are 1 frame = 10ms, each 10ms frame is composed
         // of 24 slots,

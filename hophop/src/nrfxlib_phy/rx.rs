@@ -1,10 +1,22 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::MutexGuard};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    mutex::{Mutex, MutexGuard},
+};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 
-use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError, RECVBUF};
+use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
+
+/// Kind of a bump allocator for received data, as that doesn't fit in small events.
+///
+/// Might later be turned into a ring buffer if any methods support stream-processing multiple
+/// events.
+///
+/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
+static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
+    Mutex::new(heapless::Vec::new());
 
 #[derive(Debug, defmt::Format, Copy, Clone)]
 #[non_exhaustive]
@@ -129,10 +141,18 @@ pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_e
     DectEvent::Pdc(data.len())
 }
 
+fn clear_recvbuf() {
+    let mut recvbuf = RECVBUF
+        .try_lock()
+        .expect("Buffer in use; unsafe construction of DectPhy, or pending future was dropped.");
+    recvbuf.clear();
+    drop(recvbuf);
+}
+
 impl DectPhy {
     // FIXME: heapless is not great for signature yet
     pub async fn rx(&mut self) -> Result<Option<RecvResult<'_>>, MixedError> {
-        self.clear_recvbuf();
+        clear_recvbuf();
 
         unsafe {
             // FIXME: everything

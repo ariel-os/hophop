@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! High-level wrappers around the DECT PHY.
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use nrf_modem::{Error, ErrorSource, nrfxlib_sys};
 
 mod error;
@@ -17,15 +17,6 @@ mod rx;
 // way the transaction is now complete". And do we need the CS mutex?
 static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 4> =
     embassy_sync::channel::Channel::new();
-
-/// Kind of a bump allocator for data that doesn't fit in the events.
-///
-/// Might later be turned into a ring buffer if any methods support stream-processing multiple
-/// events.
-///
-/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
-static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
-    Mutex::new(heapless::Vec::new());
 
 // FIXME here and in DectEvent: I'd much rather just copy the few bytes around rather than
 // repacking and copying; but that's optimization, and right now I want to get things to run.
@@ -257,18 +248,6 @@ impl DectPhy {
         };
 
         Ok(time)
-    }
-
-    /// Dual purpose:
-    /// * Clear out message
-    /// * Debug tool: This ensures that the panic won't happen in the ISR. (That'd be kind'a fine,
-    ///   but it's easier debugging this way).
-    fn clear_recvbuf(&mut self) {
-        let mut recvbuf = RECVBUF.try_lock().expect(
-            "Buffer in use; unsafe construction of DectPhy, or pending future was dropped.",
-        );
-        recvbuf.clear();
-        drop(recvbuf);
     }
 
     /// Transmit a message at the indicated time, or immediately if `start_time` is 0.
