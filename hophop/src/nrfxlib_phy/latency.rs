@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use super::DectEvent;
 use nrf_modem::nrfxlib_sys::*;
 
 /// Data is stored in a macro because there is no `PartialEq` on it, but we still want to do a
@@ -58,10 +59,22 @@ macro_rules! latency_info {
 #[expect(dead_code, reason = "users are TBD")]
 pub const LATENCY_INFO: nrf_modem_dect_phy_latency_info = latency_info!();
 
-/// Checks for identity between the `latency_info` argument and the [`LATENCY_INFO`] constant.
-///
-/// This is a dedicated function because we are not in control of the underlying type and can not
-/// easily derive `PartialEq` for it.
-pub fn latency_is_expected(latency_info: &nrf_modem_dect_phy_latency_info) -> bool {
-    matches!(*latency_info, latency_info!())
+pub(super) unsafe fn event(latency: *const nrf_modem_dect_phy_latency_info_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let latency = unsafe { &*latency };
+    assert_eq!(
+        latency.err,
+        nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS,
+    );
+    // SAFETY: Implied by the C API
+    let latency = unsafe { &*latency.latency_info };
+
+    // If and when this triggers, we'll know better which pieces we need of it.
+    assert!(
+        matches!(*latency, latency_info!()),
+        "Latency changed compared to known firmware versions."
+    );
+
+    defmt::trace!("Latency confirmed: {:?}", defmt::Debug2Format(&latency));
+    DectEvent::LatencyGet
 }

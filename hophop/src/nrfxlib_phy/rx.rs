@@ -61,6 +61,74 @@ impl RecvResult<'_> {
     }
 }
 
+/// # Safety
+///
+/// This function must only be called in the event handler, which is when libmodem implies that the
+/// pointers inside the event struct are valid.
+#[inline]
+pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let pcc = unsafe { &*pcc };
+
+    let header_len = match pcc.phy_type {
+        0 => 5,
+        1 => 10,
+        _ => return DectEvent::PccError(PccError::UnexpectedEventDetails),
+    };
+    // SAFETY: As per struct details.
+    // (Easier to pass this on as bytes and do our own field access later)
+    let header = &unsafe { pcc.hdr.type_2 }[..header_len];
+    defmt::trace!(
+        "PCC start {} handle {} phy_type {} rssi2 {} snr {} transaction {} hdr st {} hdr {:02x}",
+        pcc.stf_start_time,
+        pcc.handle,
+        pcc.phy_type,
+        pcc.rssi_2,
+        pcc.snr,
+        pcc.transaction_id,
+        pcc.header_status,
+        header
+    );
+
+    let mut recvbuf = RECVBUF
+        .try_lock()
+        .expect("Was checked when doing a request");
+
+    assert_eq!(recvbuf.len(), 0);
+    recvbuf
+        .extend_from_slice(header)
+        .expect("Length is small enough to always fit");
+    DectEvent::Pcc(pcc.stf_start_time, header.len())
+}
+
+/// # Safety
+///
+/// This function must only be called in the event handler, which is when libmodem implies that the
+/// pointers inside the event struct are valid.
+#[inline]
+pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let pdc = unsafe { &*pdc };
+    // SAFETY: Implied by the C API
+    let data = unsafe { core::slice::from_raw_parts(pdc.data as *const u8, pdc.len) };
+    defmt::trace!(
+        "PDC handle {} trns {} data {:02x}",
+        pdc.handle,
+        pdc.transaction_id,
+        data,
+    );
+
+    let mut recvbuf = RECVBUF
+        .try_lock()
+        .expect("Was checked when doing a request");
+
+    // Either it fits or it doesn't; the user will see when trying to access the buffer up
+    // to it.
+    // FIXME: Does it makes ense to store it as far as possible?
+    let _ = recvbuf.extend_from_slice(data);
+    DectEvent::Pdc(data.len())
+}
+
 impl DectPhy {
     // FIXME: heapless is not great for signature yet
     pub async fn rx(&mut self) -> Result<Option<RecvResult<'_>>, MixedError> {

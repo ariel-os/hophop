@@ -24,6 +24,38 @@ impl RssiResult<'_> {
     }
 }
 
+/// # Safety
+///
+/// This function must only be called in the event handler, which is when libmodem implies that the
+/// pointers inside the event struct are valid.
+#[inline]
+pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let rssi = unsafe { &*rssi };
+    // SAFETY: It is valid now, which is as long as we use it
+    // Casting because it's not precisely a signed integer anyuway (and our buffer is just
+    // bytes).
+    let meas = unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
+    defmt::trace!(
+        "RSSI handle {} start {} carrier {}; {} measurements",
+        rssi.handle,
+        rssi.meas_start_time,
+        rssi.carrier,
+        meas.len(),
+    );
+
+    if let Ok(mut recvbuf) = RECVBUF.try_lock() {
+        let start = recvbuf.len();
+        if recvbuf.extend_from_slice(meas).is_ok() {
+            DectEvent::Rssi(rssi.meas_start_time, Some(start..(start + meas.len())))
+        } else {
+            DectEvent::Rssi(rssi.meas_start_time, None)
+        }
+    } else {
+        DectEvent::Rssi(rssi.meas_start_time, None)
+    }
+}
+
 impl DectPhy {
     pub async fn rssi(&mut self, carrier: u16) -> Result<(u64, RssiResult<'_>), MixedError> {
         self.clear_recvbuf();
