@@ -27,15 +27,19 @@ pub(super) fn init() {
 
 /// Resulting data slice of a single RSSI measurement.
 #[derive(Debug)]
-pub struct RssiEvent(u64, [u8; 240]);
+pub struct RssiEvent {
+    handle: u32,
+    start_time: u64,
+    data: [u8; 240],
+}
 
 impl RssiEvent {
     pub fn start_time(&self) -> u64 {
-        self.0
+        self.start_time
     }
 
     pub fn data(&self) -> &[u8] {
-        &self.1
+        &self.data
     }
 }
 
@@ -59,12 +63,13 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         meas.len(),
     );
 
-    if let Ok(result) = RssiPool.alloc(RssiEvent(
-        rssi.meas_start_time,
-        meas.try_into()
+    if let Ok(result) = RssiPool.alloc(RssiEvent {
+        start_time: rssi.meas_start_time,
+        handle: rssi.handle,
+        data: meas.try_into()
             // FIXME: As some point, we might also receive shorter RSSI data.
             .unwrap(),
-    )) {
+    }) {
         DectEvent::Rssi(Some(result))
     } else {
         DectEvent::Rssi(None)
@@ -149,7 +154,7 @@ impl DectPhy {
             let destbuffers = destbuffers.as_mut();
             let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
                 start_time: current_start_time,
-                handle: handle.try_into().map_err(|_| MixedError::UsageError)?,
+                handle: handle.try_into().unwrap(),
                 carrier: *carrier,
                 duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
@@ -170,10 +175,10 @@ impl DectPhy {
         for (handle, (_carrier, starttime, destbuffers)) in carriers.iter_mut().enumerate() {
             for (destbufferindex, destbuffer) in destbuffers.as_mut().iter_mut().enumerate() {
                 match DECT_EVENTS.receive().await.event {
-                    // FIXME: Carry handle in RSSI event data. In particular, that'd protect
-                    // against AsMut impls that are not actually constant length.
-                    // assert_eq!(handle, …);
                     DectEvent::Rssi(Some(res)) => {
+                        // Protect against AsMut impls that are not actually constant length.
+                        assert_eq!(u32::try_from(handle).unwrap(), res.handle);
+
                         defmt::debug!("Got some RSSI at {}", res.start_time());
                         if destbufferindex == 0 {
                             *starttime = res.start_time();

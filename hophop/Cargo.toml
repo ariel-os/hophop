@@ -18,7 +18,7 @@ heapless = { version = "0.9.2", features = ["embedded-io-v0.7"] }
 embassy-sync = "0.7.2"
 defmt = "1"
 
-nrf-modem = { version = "*", features = ["dect", "nrf9151"] }
+nrf-modem = { version = "*", features = ["dect", "nrf9151", "defmt"] }
 ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
 ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
 static_cell = "2.1.1"
