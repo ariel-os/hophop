@@ -3,8 +3,7 @@
 #![no_main]
 #![no_std]
 
-use ariel_os::debug::{ExitCode, exit, log::info};
-use ariel_os::time::Timer;
+use ariel_os::debug::{ExitCode, exit, log::{info, error}};
 
 #[ariel_os::task(autostart)]
 async fn main() {
@@ -16,11 +15,31 @@ async fn main() {
         info!("DECT time is {:?}", dect.time_get().await);
 
         info!("Scanning band 1");
-        for carrier in 1657..=1677 {
-            if let Ok(rssi) = dect.rssi(carrier).await {
-                info!("RSSI for {} at {}: {:?}", carrier, rssi.start_time(), rssi.data());
+        let mut scans = [
+            (1657, 0, [[0; 240]]),
+            (1659, 0, [[0; 240]]),
+            (1661, 0, [[0; 240]]),
+            (1663, 0, [[0; 240]]),
+            (1665, 0, [[0; 240]]),
+            (1667, 0, [[0; 240]]),
+            (1669, 0, [[0; 240]]),
+            (1671, 0, [[0; 240]]),
+            (1673, 0, [[0; 240]]),
+            (1675, 0, [[0; 240]]),
+            (1677, 0, [[0; 240]]),
+        ];
+        match dect.rssi_bulk(scans.as_mut()).await {
+            Ok(()) => {
+                for (channel, start_time, data) in scans {
+                    // Reporting just one item of data stays compatible with the older output
+                    // format, and right now we know that it's just one frame per band anyway.
+                    info!("RSSI for {} at {}: {:?}", channel, start_time, data[0]);
+                }
             }
+            Err(e) => error!("Failed to scan: {:?}", e),
         }
+
+        // Not waiting: The rssi_bulk scan takes some time to start up anyway.
     }
 
     exit(ExitCode::SUCCESS);

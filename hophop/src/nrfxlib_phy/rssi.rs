@@ -127,4 +127,75 @@ impl DectPhy {
         result
             .ok_or(MixedError::UsageError)
     }
+
+    pub async fn rssi_bulk(
+        &mut self,
+        // channel, start time to be populated, outputs
+        carriers: &mut [(u16, u64, impl AsMut<[[u8; 240]]>)],
+        // FIXME: return times
+    ) -> Result<(), MixedError> {
+        let now = self.time_get().await?;
+
+        // Rather than doing nothing until we start, we could also start recording now for some
+        // slices, and use the first incoming data to calculate the remaining points. However, that
+        // requires the first slice to be long (minimum somewhere between 2 and 8, and I think
+        // above 4), so let's start with the generalized approach.
+        let slack = 69120 * 1; // 1ms should suffice, given that no data needs to be copied around.
+
+        let mut current_start_time = now + slack;
+
+        for (handle, (carrier, _starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+            // We don't need them mut here, but it's easier than asking AsRef too.
+            let destbuffers = destbuffers.as_mut();
+            let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
+                start_time: current_start_time,
+                handle: handle.try_into().map_err(|_| MixedError::UsageError)?,
+                carrier: *carrier,
+                duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
+                reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
+            };
+            unsafe { nrfxlib_sys::nrf_modem_dect_phy_rssi(&raw const params) }.into_result()?;
+            let duration = u64::try_from(destbuffers.len()).unwrap() * 691_200 /* 10ms */;
+            current_start_time = current_start_time.wrapping_add(duration);
+            current_start_time = current_start_time.wrapping_add(
+                u64::from(
+                    super::latency::LATENCY_INFO
+                        .operation
+                        .receive
+                        .active_to_idle_rx_rssi,
+                ) - 138, // -138 works on this firmware (eg. when switching from 1665 to 1667), -139 does not (even when staying on 1665)
+            );
+        }
+
+        for (handle, (_carrier, starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+            for (destbufferindex, destbuffer) in destbuffers.as_mut().iter_mut().enumerate() {
+                match DECT_EVENTS.receive().await.event {
+                    // FIXME: Carry handle in RSSI event data. In particular, that'd protect
+                    // against AsMut impls that are not actually constant length.
+                    // assert_eq!(handle, …);
+                    DectEvent::Rssi(Some(res)) => {
+                        defmt::debug!("Got some RSSI at {}", res.start_time());
+                        if destbufferindex == 0 {
+                            *starttime = res.start_time();
+                        }
+                        destbuffer.copy_from_slice(res.data());
+                    }
+                    DectEvent::Rssi(None) => {
+                        panic!("Async was not polled fast enough, could not empty RSSI buffers")
+                    }
+                    e => panic!("Sequence violation: {e:?}"),
+                }
+            }
+            match DECT_EVENTS.receive().await.event {
+                DectEvent::Completed(Ok(())) => (),
+                DectEvent::Completed(e) => {
+                    defmt::info!("Completed with error {:?}", e);
+                    e?
+                }
+                _ => panic!("Sequence violation"),
+            };
+        }
+
+        Ok(())
+    }
 }

@@ -56,7 +56,6 @@ macro_rules! latency_info {
 /// Until we find that we actually need all of this, checking at startup allows us to reach into
 /// the const for access whenever we need it, without needing to worry about how to get data
 /// around.
-#[expect(dead_code, reason = "users are TBD")]
 pub const LATENCY_INFO: nrf_modem_dect_phy_latency_info = latency_info!();
 
 pub(super) unsafe fn event(latency: *const nrf_modem_dect_phy_latency_info_event) -> DectEvent {
