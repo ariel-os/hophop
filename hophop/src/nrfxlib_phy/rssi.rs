@@ -133,11 +133,22 @@ impl DectPhy {
             .ok_or(MixedError::UsageError)
     }
 
+    /// Reads multiple RSSI slots in sequence.
+    ///
+    /// RSSI values are written into the provided slices (in .2 and .1, respectively).
+    ///
+    /// FIXME: This is using a different paradigm than the return-owned-data of
+    /// [`.rssi()`][Self::rssi()]. Let's play around with this discrepancy for the time being; if
+    /// it turns out to work well, it might make sense to move things into a "caller allocates, and
+    /// sends referecne to the ISR" pattern. This likely needs a bit of unsafe, as the reference
+    /// stored is short-lived, and (even on future on cancellation) needs to be removed reliably
+    /// from the ISR's reach. On the other hand, to be safe when working directly on IPC as opposed
+    /// to nrfxlib, we'd need to work on memory from a special source (first 128k RAM, and
+    /// specially cleared for secure mode), so maybe owned memory *is* the way to go.
     pub async fn rssi_bulk(
         &mut self,
         // channel, start time to be populated, outputs
         carriers: &mut [(u16, u64, impl AsMut<[[u8; 240]]>)],
-        // FIXME: return times
     ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
 
