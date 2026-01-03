@@ -15,8 +15,44 @@ mod rx;
 
 // FIXME: What's a good length? Probably events can pile up, like "here's the last data and by the
 // way the transaction is now complete". And do we need the CS mutex?
+//
+// … or we just replace all of them with signalling into explicit expecters, leaving nothing that
+// gets exclusively processed by a single task.
 static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 4> =
     embassy_sync::channel::Channel::new();
+
+/// Newtype around the 32-bit `handle` mechanism by which events can be correlated to who sent
+/// them, especially when multiple operations are enqueued.
+///
+/// This type encodes this library's convetion about how they are used:
+/// - Unmanaged values generally result in the event being passed on to `DECT_EVENTS`.
+/// - Managed values cause an action directly in the ISR.
+#[derive(Debug, defmt::Format, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct Handle(u32);
+
+const HANDLE_MANAGED_START: u32 = 0xffff0000;
+
+impl Handle {
+    fn new_unmanaged(value: u32) -> Option<Self> {
+        if value < HANDLE_MANAGED_START {
+            Some(Self(value))
+        } else {
+            None
+        }
+    }
+
+    pub fn is_managed(self) -> bool {
+        self.0 >= HANDLE_MANAGED_START
+    }
+
+    pub fn to_c(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_c(value: u32) -> Self {
+        Self(value)
+    }
+}
 
 // FIXME here and in DectEvent: I'd much rather just copy the few bytes around rather than
 // repacking and copying; but that's optimization, and right now I want to get things to run.

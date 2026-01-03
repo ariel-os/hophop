@@ -5,7 +5,7 @@ use heapless::{box_pool, pool::boxed::BoxBlock};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
 
-use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
+use super::{DECT_EVENTS, DectEvent, DectPhy, Handle, MixedError};
 
 // Storage for RSSI results.
 //
@@ -28,7 +28,7 @@ pub(super) fn init() {
 /// Resulting data slice of a single RSSI measurement.
 #[derive(Debug)]
 pub struct RssiEvent {
-    handle: u32,
+    handle: Handle,
     start_time: u64,
     data: [u8; 240],
 }
@@ -55,24 +55,32 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
     // Casting because it's not precisely a signed integer anyuway (and our buffer is just
     // bytes).
     let meas = unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
+    let handle = Handle::from_c(rssi.handle);
     defmt::trace!(
         "RSSI handle {} start {} carrier {}; {} measurements",
-        rssi.handle,
+        handle,
         rssi.meas_start_time,
         rssi.carrier,
         meas.len(),
     );
 
-    if let Ok(result) = RssiPool.alloc(RssiEvent {
+    let owned = if let Ok(result) = RssiPool.alloc(RssiEvent {
         start_time: rssi.meas_start_time,
-        handle: rssi.handle,
-        data: meas.try_into()
+        handle,
+        data: meas
+            .try_into()
             // FIXME: As some point, we might also receive shorter RSSI data.
             .unwrap(),
     }) {
-        DectEvent::Rssi(Some(result))
+        Some(result)
     } else {
-        DectEvent::Rssi(None)
+        None
+    };
+
+    if handle.is_managed() {
+        panic!("Currently there is no defined behavior for managed RSSI events")
+    } else {
+        DectEvent::Rssi(owned)
     }
 }
 
@@ -101,7 +109,7 @@ impl DectPhy {
 
         let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
             start_time: 0,
-            handle: 1234567,
+            handle: Handle::new_unmanaged(1234).unwrap().to_c(),
             carrier,
             duration: 48, // in subslots; 1 full report
             reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms
@@ -129,8 +137,7 @@ impl DectPhy {
             panic!("Sequence violation");
         };
 
-        result
-            .ok_or(MixedError::UsageError)
+        result.ok_or(MixedError::UsageError)
     }
 
     /// Reads multiple RSSI slots in sequence.
@@ -160,12 +167,23 @@ impl DectPhy {
 
         let mut current_start_time = now + slack;
 
+        fn handle_from_index(handle: usize) -> Handle {
+            handle
+                .try_into()
+                .ok()
+                .and_then(Handle::new_unmanaged)
+                .expect(
+                    "Carriers can't be so many this doesn't fit in the unmanaged portio of handles",
+                )
+        }
+
         for (handle, (carrier, _starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+            let handle = handle_from_index(handle);
             // We don't need them mut here, but it's easier than asking AsRef too.
             let destbuffers = destbuffers.as_mut();
             let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
                 start_time: current_start_time,
-                handle: handle.try_into().unwrap(),
+                handle: handle.to_c(),
                 carrier: *carrier,
                 duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
@@ -184,11 +202,12 @@ impl DectPhy {
         }
 
         for (handle, (_carrier, starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+            let handle = handle_from_index(handle);
             for (destbufferindex, destbuffer) in destbuffers.as_mut().iter_mut().enumerate() {
                 match DECT_EVENTS.receive().await.event {
                     DectEvent::Rssi(Some(res)) => {
                         // Protect against AsMut impls that are not actually constant length.
-                        assert_eq!(u32::try_from(handle).unwrap(), res.handle);
+                        assert_eq!(handle, res.handle);
 
                         defmt::debug!("Got some RSSI at {}", res.start_time());
                         if destbufferindex == 0 {
