@@ -73,6 +73,71 @@ impl RecvResult<'_> {
     }
 }
 
+#[derive(Default)]
+pub(crate) enum RecvResultBuilder {
+    #[default]
+    Waiting,
+    // PCC time, PCC length
+    GotPcc(Result<(u64, usize), PccError>),
+    GotBoth(RecvOk),
+}
+
+impl RecvResultBuilder {
+    fn feed(&mut self, event: DectEvent) -> Result<core::ops::ControlFlow<()>, MixedError> {
+        use RecvResultBuilder::*;
+        match (&self, event) {
+            (Waiting, DectEvent::Pcc(start, pcc_len)) => {
+                *self = GotPcc(Ok((start, pcc_len)));
+            }
+            (Waiting, DectEvent::PccError(e)) => {
+                *self = GotPcc(Err(e));
+            }
+            (GotPcc(Ok((pcc_start, pcc_len))), DectEvent::Pdc(pdc_len)) => {
+                *self = GotBoth(RecvOk {
+                    pcc_time: *pcc_start,
+                    pcc_len: *pcc_len,
+                    pdc_len: Ok(pdc_len),
+                });
+            }
+            (GotPcc(Ok((pcc_start, pcc_len))), DectEvent::PdcError) => {
+                *self = GotBoth(RecvOk {
+                    pcc_time: *pcc_start,
+                    pcc_len: *pcc_len,
+                    pdc_len: Err(PdcError::CrcError),
+                });
+            }
+            (_, DectEvent::Completed(c)) => {
+                c?;
+                return Ok(core::ops::ControlFlow::Break(()));
+            }
+            _ => panic!("Sequence violation"),
+        }
+        Ok(core::ops::ControlFlow::Continue(()))
+    }
+
+    fn finish<'a>(self) -> Option<RecvResult<'a>> {
+        use RecvResultBuilder::*;
+        let result = match self {
+            Waiting => return None,
+            GotPcc(Err(e)) => Err(e),
+            GotPcc(Ok((pcc_time, pcc_len))) => Ok(RecvOk {
+                pcc_time,
+                pcc_len,
+                pdc_len: Err(PdcError::NotReceived),
+            }),
+            GotBoth(sll) => Ok(sll),
+        };
+
+        Some(RecvResult {
+            data: RECVBUF
+                .try_lock()
+                .expect("Was checked before, and ISR users release this before returning"),
+            indices: result,
+            _phantom: core::marker::PhantomData,
+        })
+    }
+}
+
 /// # Safety
 ///
 /// This function must only be called in the event handler, which is when libmodem implies that the
@@ -179,57 +244,13 @@ impl DectPhy {
         }
         .into_result()?;
 
-        let mut pcc = None;
-        let mut pdc = None;
+        let mut result_builder = RecvResultBuilder::default();
 
-        loop {
-            match DECT_EVENTS.receive().await.event {
-                DectEvent::Pcc(start, pcc_len) => {
-                    debug_assert!(pcc.is_none(), "Sequence violation");
-                    pcc = Some(Ok((start, pcc_len)));
-                }
-                DectEvent::PccError(e) => {
-                    debug_assert!(pcc.is_none(), "Sequence violation");
-                    pcc = Some(Err(e));
-                }
-                DectEvent::Pdc(pcd_len) => {
-                    debug_assert!(pdc.is_none(), "Sequence violation");
-                    pdc = Some(Ok(pcd_len));
-                }
-                DectEvent::PdcError => {
-                    debug_assert!(pdc.is_none(), "Sequence violation");
-                    pdc = Some(Err(PdcError::CrcError));
-                }
-                DectEvent::Completed(Ok(())) => {
-                    break;
-                }
-                DectEvent::Completed(e) => e?,
-                _ => panic!("Sequence violation"),
-            }
-        }
+        while result_builder
+            .feed(DECT_EVENTS.receive().await.event)?
+            .is_continue()
+        {}
 
-        let result = match (pcc, pdc) {
-            (None, None) => return Ok(None),
-            (Some(Err(e)), None) => Err(e),
-            (Some(Ok((pcc_time, pcc_len))), None) => Ok(RecvOk {
-                pcc_time,
-                pcc_len,
-                pdc_len: Err(PdcError::NotReceived),
-            }),
-            (Some(Ok((pcc_time, pcc_len))), Some(pdc_len)) => Ok(RecvOk {
-                pcc_time,
-                pcc_len,
-                pdc_len,
-            }),
-            _ => panic!("Sequence violation"),
-        };
-
-        Ok(Some(RecvResult {
-            data: RECVBUF
-                .try_lock()
-                .expect("Was checked before, and ISR users release this before returning"),
-            indices: result,
-            _phantom: core::marker::PhantomData,
-        }))
+        Ok(result_builder.finish())
     }
 }
