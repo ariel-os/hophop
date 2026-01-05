@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use heapless::{box_pool, pool::boxed::{BoxBlock, Box}};
+use heapless::{
+    box_pool,
+    pool::boxed::{Box, BoxBlock},
+};
+use itertools::Itertools as _;
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
-use itertools::Itertools as _;
 
 use super::{DECT_EVENTS, DectEvent, DectPhy, Handle, MixedError};
 
@@ -163,13 +166,9 @@ impl DectPhy {
         let mut current_start_time = now + slack;
 
         fn handle_from_index(handle: usize) -> Handle {
-            handle
-                .try_into()
-                .ok()
-                .map(Handle)
-                .expect(
-                    "Carriers can't be so many this doesn't fit in the unmanaged portio of handles",
-                )
+            handle.try_into().ok().map(Handle).expect(
+                "Carriers can't be so many this doesn't fit in the unmanaged portio of handles",
+            )
         }
 
         for (handle, (multiples, carrier)) in carriers.iter().dedup_with_count().enumerate() {
