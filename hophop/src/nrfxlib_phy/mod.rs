@@ -18,7 +18,7 @@ mod rx;
 //
 // … or we just replace all of them with signalling into explicit expecters, leaving nothing that
 // gets exclusively processed by a single task.
-static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 4> =
+static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 32> =
     embassy_sync::channel::Channel::new();
 
 /// Newtype around the 32-bit `handle` mechanism by which events can be correlated to who sent
@@ -96,6 +96,11 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
                 init.err,
                 nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS
             );
+            // We could optimize here and not even emit this as an init event but start with a
+            // configured activation sequence right away. Not doing this yet because having things
+            // run in something more async-like is easier to read (and thus to maintain), we don't
+            // have any benchmarks that indicate otherwise, and if we manage to run on bare IPC,
+            // that'll be easier to integrate.
             DectEvent::Init
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_CONFIGURE => {

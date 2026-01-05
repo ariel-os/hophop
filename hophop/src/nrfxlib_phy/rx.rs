@@ -83,7 +83,7 @@ pub(crate) enum RecvResultBuilder {
 }
 
 impl RecvResultBuilder {
-    fn feed(&mut self, event: DectEvent) -> Result<core::ops::ControlFlow<()>, MixedError> {
+    pub fn feed(&mut self, event: DectEvent) -> Result<core::ops::ControlFlow<()>, MixedError> {
         use RecvResultBuilder::*;
         match (&self, event) {
             (Waiting, DectEvent::Pcc(start, pcc_len)) => {
@@ -115,7 +115,7 @@ impl RecvResultBuilder {
         Ok(core::ops::ControlFlow::Continue(()))
     }
 
-    fn finish<'a>(self) -> Option<RecvResult<'a>> {
+    pub fn finish<'a>(self) -> Option<RecvResult<'a>> {
         use RecvResultBuilder::*;
         let result = match self {
             Waiting => return None,
@@ -135,6 +135,14 @@ impl RecvResultBuilder {
             indices: result,
             _phantom: core::marker::PhantomData,
         })
+    }
+
+    pub fn is_ready(&self) -> bool {
+        match &self {
+            RecvResultBuilder::GotBoth(_) => true,
+            RecvResultBuilder::GotPcc(Err(_)) => true,
+            _ => false,
+        }
     }
 }
 
@@ -206,7 +214,7 @@ pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_e
     DectEvent::Pdc(data.len())
 }
 
-fn clear_recvbuf() {
+pub(crate) fn clear_recvbuf() {
     let mut recvbuf = RECVBUF
         .try_lock()
         .expect("Buffer in use; unsafe construction of DectPhy, or pending future was dropped.");

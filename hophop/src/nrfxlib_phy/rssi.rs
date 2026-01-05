@@ -154,6 +154,7 @@ impl DectPhy {
         &mut self,
         carriers: &[u16],
         mut on_event: impl AsyncFnMut(Box<RssiPool>),
+        mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult<'a>),
     ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
 
@@ -174,14 +175,28 @@ impl DectPhy {
         for (handle, (multiples, carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
             // We don't need them mut here, but it's easier than asking AsRef too.
-            let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
+            let params = nrfxlib_sys::nrf_modem_dect_phy_rx_params {
                 start_time: current_start_time,
                 handle: handle.0,
                 carrier: *carrier,
-                duration: (48 * multiples).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
-                reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
+                // duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
+                duration: u32::try_from(multiples).unwrap() * 691_200, // in time units
+                rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
+                // from here on it's RX params
+                filter: nrfxlib_sys::nrf_modem_dect_phy_rx_filter {
+                    short_network_id: 0,
+                    is_short_network_id_used: 0,
+                    receiver_identity: 0,
+                },
+                mode: nrfxlib_sys::nrf_modem_dect_phy_rx_mode_NRF_MODEM_DECT_PHY_RX_MODE_CONTINUOUS,
+                link_id: nrfxlib_sys::nrf_modem_dect_phy_link_id {
+                    short_network_id: 0,
+                    short_rd_id: 0,
+                },
+                network_id: 0x12345678, // like dect_shell defaults
+                rssi_level: 0,
             };
-            unsafe { nrfxlib_sys::nrf_modem_dect_phy_rssi(&raw const params) }.into_result()?;
+            unsafe { nrfxlib_sys::nrf_modem_dect_phy_rx(&raw const params) }.into_result()?;
             let duration = u64::try_from(multiples).unwrap() * 691_200 /* 10ms */;
             current_start_time = current_start_time.wrapping_add(duration);
             current_start_time = current_start_time.wrapping_add(
@@ -194,22 +209,44 @@ impl DectPhy {
             );
         }
 
+        let mut recv_result: super::rx::RecvResultBuilder;
+        super::rx::clear_recvbuf();
         for (handle, (multiples, _carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
+            recv_result = Default::default();
+            // FIXME: When should we clear the recvbuf?
             for _ in 0..multiples {
-                match DECT_EVENTS.receive().await.event {
-                    DectEvent::Rssi(received_handle, Some(res)) => {
-                        // Protect against AsMut impls that are not actually constant length.
-                        assert_eq!(handle, received_handle);
+                loop {
+                    match DECT_EVENTS.receive().await.event {
+                        DectEvent::Rssi(received_handle, Some(res)) => {
+                            // Protect against AsMut impls that are not actually constant length.
+                            assert_eq!(handle, received_handle);
 
-                        defmt::debug!("Got some RSSI at {}", res.start_time());
-
-                        on_event(res).await;
+                            defmt::debug!("Got some RSSI at {}", res.start_time());
+                            on_event(res).await;
+                            break;
+                        }
+                        DectEvent::Rssi(_received_handle, None) => {
+                            panic!("Async was not polled fast enough, could not empty RSSI buffers")
+                        }
+                        e @ (DectEvent::Pcc(..)
+                        | DectEvent::Pdc(..)
+                        | DectEvent::PccError(..)
+                        | DectEvent::PdcError) => {
+                            // Both the Break and the Error case only occur when feeding a
+                            // Completed, which we don't do.
+                            let _ = recv_result.feed(e)?;
+                            if recv_result.is_ready() {
+                                let result = core::mem::take(&mut recv_result);
+                                let result =
+                                    result.finish().expect("Done states have Some content");
+                                on_receive(result).await;
+                                super::rx::clear_recvbuf();
+                            }
+                            continue;
+                        }
+                        e => panic!("Sequence violation: {e:?}"),
                     }
-                    DectEvent::Rssi(_received_handle, None) => {
-                        panic!("Async was not polled fast enough, could not empty RSSI buffers")
-                    }
-                    e => panic!("Sequence violation: {e:?}"),
                 }
             }
             match DECT_EVENTS.receive().await.event {

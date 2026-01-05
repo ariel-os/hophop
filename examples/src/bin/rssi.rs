@@ -3,7 +3,10 @@
 #![no_main]
 #![no_std]
 
-use ariel_os::debug::{ExitCode, exit, log::{info, error}};
+use ariel_os::debug::{
+    ExitCode, exit,
+    log::{error, info},
+};
 
 #[ariel_os::task(autostart)]
 async fn main() {
@@ -16,23 +19,32 @@ async fn main() {
 
         info!("Scanning band 1");
         let scans = &[
-            1657,
-            1659,
-            1661,
-            1663,
-            1665,
-            1667,
-            1669,
-            1671,
-            1673,
-            1675,
-            1677,
+            1657, 1659, 1661, 1663, 1665, 1667, 1669, 1671, 1673, 1675, 1677,
         ];
         let mut scan_iterator = scans.iter();
-        if let Err(e) = dect.rssi_bulk(scans, async |result| {
-            let channel = scan_iterator.next().unwrap();
-            info!("RSSI for {} at {}: {:?}", channel, result.start_time(), result.data());
-        }).await {
+        if let Err(e) = dect
+            .rssi_bulk(
+                scans,
+                async |result| {
+                    let channel = scan_iterator.next().unwrap();
+                    info!(
+                        "RSSI for {} at {}: {:?}",
+                        channel,
+                        result.start_time(),
+                        result.data()
+                    );
+                },
+                async |recv| {
+                    info!(
+                        "Data received: time {:?}, PCC {:?}, PDC {:?}.",
+                        recv.pcc_time(),
+                        recv.pcc(),
+                        recv.pdc()
+                    );
+                },
+            )
+            .await
+        {
             error!("Failed to scan: {:?}", e);
         }
 
