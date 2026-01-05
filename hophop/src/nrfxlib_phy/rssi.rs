@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use heapless::{box_pool, pool::boxed::BoxBlock};
+use heapless::{box_pool, pool::boxed::{BoxBlock, Box}};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
+use itertools::Itertools as _;
 
 use super::{DECT_EVENTS, DectEvent, DectPhy, Handle, MixedError};
 
@@ -16,10 +17,12 @@ use super::{DECT_EVENTS, DectEvent, DectPhy, Handle, MixedError};
 // IRQ and the receiver in the consuming task.
 box_pool!(RssiPool: RssiEvent);
 
+const RSSI_POOL_SIZE: usize = 16;
+
 /// Initiates the RSSI pool.
 #[inline]
 pub(super) fn init() {
-    static RSSI_BUFFER: StaticCell<[BoxBlock<RssiEvent>; 16]> = StaticCell::new();
+    static RSSI_BUFFER: StaticCell<[BoxBlock<RssiEvent>; RSSI_POOL_SIZE]> = StaticCell::new();
     for b in RSSI_BUFFER.init_with(|| core::array::from_fn(|_| BoxBlock::new())) {
         RssiPool.manage(b);
     }
@@ -138,21 +141,20 @@ impl DectPhy {
 
     /// Reads multiple RSSI slots in sequence.
     ///
-    /// RSSI values are written into the provided slices (in .2 and .1, respectively).
-    ///
-    /// FIXME: This is using a different paradigm than the return-owned-data of
-    /// [`.rssi()`][Self::rssi()]. Let's play around with this discrepancy for the time being; if
-    /// it turns out to work well, it might make sense to move things into a "caller allocates, and
-    /// sends referecne to the ISR" pattern. This likely needs a bit of unsafe, as the reference
-    /// stored is short-lived, and (even on future on cancellation) needs to be removed reliably
-    /// from the ISR's reach. On the other hand, to be safe when working directly on IPC as opposed
-    /// to nrfxlib, we'd need to work on memory from a special source (first 128k RAM, and
-    /// specially cleared for secure mode), so maybe owned memory *is* the way to go.
-    pub async fn rssi_bulk(
+    /// If a carrier shows up multiple times, the readings are taken in a single go; this interface
+    /// is chosen as it enables pasing in a generic const value that can then be used to return the
+    /// result values.
+    pub async fn rssi_bulk<const N: usize>(
         &mut self,
-        // channel, start time to be populated, outputs
-        carriers: &mut [(u16, u64, impl AsMut<[[u8; 240]]>)],
-    ) -> Result<(), MixedError> {
+        carriers: &[u16; N],
+    ) -> Result<[Box<RssiPool>; N], MixedError> {
+        const {
+            assert!(
+                N <= RSSI_POOL_SIZE,
+                "Requesting more readings than could be buffered (would require a streaming interface)"
+            )
+        };
+
         let now = self.time_get().await?;
 
         // Rather than doing nothing until we start, we could also start recording now for some
@@ -173,19 +175,18 @@ impl DectPhy {
                 )
         }
 
-        for (handle, (carrier, _starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+        for (handle, (multiples, carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
             // We don't need them mut here, but it's easier than asking AsRef too.
-            let destbuffers = destbuffers.as_mut();
             let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
                 start_time: current_start_time,
                 handle: handle.0,
                 carrier: *carrier,
-                duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
+                duration: (48 * multiples).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
             };
             unsafe { nrfxlib_sys::nrf_modem_dect_phy_rssi(&raw const params) }.into_result()?;
-            let duration = u64::try_from(destbuffers.len()).unwrap() * 691_200 /* 10ms */;
+            let duration = u64::try_from(multiples).unwrap() * 691_200 /* 10ms */;
             current_start_time = current_start_time.wrapping_add(duration);
             current_start_time = current_start_time.wrapping_add(
                 u64::from(
@@ -197,19 +198,21 @@ impl DectPhy {
             );
         }
 
-        for (handle, (_carrier, starttime, destbuffers)) in carriers.iter_mut().enumerate() {
+        // FIXME: Could be optimized better to place them directly in the result -- but maybe not,
+        // if it manages to use the return value space as buffer in the optimizer?
+        let mut output = heapless::Vec::<_, N>::new();
+
+        for (handle, (multiples, _carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
-            for (destbufferindex, destbuffer) in destbuffers.as_mut().iter_mut().enumerate() {
+            for _ in 0..multiples {
                 match DECT_EVENTS.receive().await.event {
                     DectEvent::Rssi(received_handle, Some(res)) => {
                         // Protect against AsMut impls that are not actually constant length.
                         assert_eq!(handle, received_handle);
 
                         defmt::debug!("Got some RSSI at {}", res.start_time());
-                        if destbufferindex == 0 {
-                            *starttime = res.start_time();
-                        }
-                        destbuffer.copy_from_slice(res.data());
+
+                        output.push(res).ok().expect("Sizes were measured to match");
                     }
                     DectEvent::Rssi(_received_handle, None) => {
                         panic!("Async was not polled fast enough, could not empty RSSI buffers")
@@ -227,6 +230,6 @@ impl DectPhy {
             };
         }
 
-        Ok(())
+        Ok(output.into_array().unwrap())
     }
 }
