@@ -18,6 +18,9 @@ perchannel = {}
 abs_min = 0
 abs_max = -128
 
+rotate = False
+TICKS_PER_FRAME = 691200
+
 escapes = re.compile("\x1b\\[(.*?)m")
 
 for line in open(sys.argv[1]):
@@ -47,6 +50,11 @@ for line in open(sys.argv[1]):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         values = values + 0 * (1 / values)
+
+    if rotate:
+        start_in_frame = timestamp % TICKS_PER_FRAME
+        start_in_frame_in_readings = int(start_in_frame / TICKS_PER_FRAME * 240)
+        values = np.roll(values, start_in_frame_in_readings)
 
     abs_min = min(abs_min, min(values))
     abs_max = max(abs_max, max(values))
