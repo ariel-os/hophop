@@ -28,7 +28,6 @@ pub(super) fn init() {
 /// Resulting data slice of a single RSSI measurement.
 #[derive(Debug)]
 pub struct RssiEvent {
-    handle: Handle,
     start_time: u64,
     data: [u8; 240],
 }
@@ -66,7 +65,6 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
 
     let owned = if let Ok(result) = RssiPool.alloc(RssiEvent {
         start_time: rssi.meas_start_time,
-        handle,
         data: meas
             .try_into()
             // FIXME: As some point, we might also receive shorter RSSI data.
@@ -77,7 +75,7 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         None
     };
 
-    DectEvent::Rssi(owned)
+    DectEvent::Rssi(handle, owned)
 }
 
 impl DectPhy {
@@ -103,9 +101,10 @@ impl DectPhy {
         // - Requesting a duration of N gives 5*N readings. This is given in subslots, which for
         //   µ=1 is 2 subslots per slot, and thus matches 10 readings per slot, 5 per subslot.
 
+        let configured_handle = Handle(1234);
         let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
             start_time: 0,
-            handle: Handle(1234).0,
+            handle: configured_handle.0,
             carrier,
             duration: 48, // in subslots; 1 full report
             reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms
@@ -116,7 +115,8 @@ impl DectPhy {
 
         loop {
             match DECT_EVENTS.receive().await.event {
-                DectEvent::Rssi(res) => {
+                DectEvent::Rssi(handle, res) => {
+                    assert_eq!(handle, configured_handle);
                     result = Some(res);
                 }
                 DectEvent::Completed(Ok(())) => {
@@ -201,9 +201,9 @@ impl DectPhy {
             let handle = handle_from_index(handle);
             for (destbufferindex, destbuffer) in destbuffers.as_mut().iter_mut().enumerate() {
                 match DECT_EVENTS.receive().await.event {
-                    DectEvent::Rssi(Some(res)) => {
+                    DectEvent::Rssi(received_handle, Some(res)) => {
                         // Protect against AsMut impls that are not actually constant length.
-                        assert_eq!(handle, res.handle);
+                        assert_eq!(handle, received_handle);
 
                         defmt::debug!("Got some RSSI at {}", res.start_time());
                         if destbufferindex == 0 {
@@ -211,7 +211,7 @@ impl DectPhy {
                         }
                         destbuffer.copy_from_slice(res.data());
                     }
-                    DectEvent::Rssi(None) => {
+                    DectEvent::Rssi(_received_handle, None) => {
                         panic!("Async was not polled fast enough, could not empty RSSI buffers")
                     }
                     e => panic!("Sequence violation: {e:?}"),

@@ -61,7 +61,7 @@ enum DectEvent {
     PdcError,
     /// Length inside recvbuf
     Pdc(usize),
-    Rssi(Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
+    Rssi(Handle, Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
 }
 
 // FIXME: This is only pub while the DectPhy object doesn't have an init that calls the low-level
