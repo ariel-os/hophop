@@ -8,6 +8,7 @@
 import array
 import sys
 import re
+import warnings
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -37,7 +38,15 @@ for line in open(sys.argv[1]):
 
     (data, end, file_and_line) = tail.partition("]")
 
+    # going through array to easily get the actually-signed-integer semantics
     values = array.array("b", bytes(int(i) for i in data.split(", ")))
+    values = np.array(values, dtype='f')
+    # an easy "turn every 0 into a NaN", which it actually represents well:
+    # When getting RSSI from an RX operation, there are 0 while there's an
+    # actual message incoming.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        values = values + 0 * (1 / values)
 
     abs_min = min(abs_min, min(values))
     abs_max = max(abs_max, max(values))
@@ -53,7 +62,7 @@ percentiles = {q: [None for _ in bands] for q in [1, 5, 10, 25, 50, 75, 90, 95, 
 for (i, band) in enumerate(bands):
     for (q, qp) in percentiles.items():
         if band in perchannel:
-            qp[i] = np.percentile(perchannel[band], q)
+            qp[i] = np.nanpercentile(perchannel[band], q)
 
 print(f"Over all, {abs_min=} {abs_max=}")
 
