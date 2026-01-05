@@ -28,15 +28,12 @@ async fn main() {
             1675,
             1677,
         ];
-        match dect.rssi_bulk(scans).await {
-            Ok(results) => {
-                for (channel, result) in scans.iter().zip(results.into_iter()) {
-                    // Reporting just one item of data stays compatible with the older output
-                    // format, and right now we know that it's just one frame per band anyway.
-                    info!("RSSI for {} at {}: {:?}", channel, result.start_time(), result.data());
-                }
-            }
-            Err(e) => error!("Failed to scan: {:?}", e),
+        let mut scan_iterator = scans.iter();
+        if let Err(e) = dect.rssi_bulk(scans, async |result| {
+            let channel = scan_iterator.next().unwrap();
+            info!("RSSI for {} at {}: {:?}", channel, result.start_time(), result.data());
+        }).await {
+            error!("Failed to scan: {:?}", e);
         }
 
         // Not waiting: The rssi_bulk scan takes some time to start up anyway.

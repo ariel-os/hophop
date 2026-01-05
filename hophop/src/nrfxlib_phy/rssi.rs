@@ -144,17 +144,14 @@ impl DectPhy {
     /// If a carrier shows up multiple times, the readings are taken in a single go; this interface
     /// is chosen as it enables pasing in a generic const value that can then be used to return the
     /// result values.
-    pub async fn rssi_bulk<const N: usize>(
+    ///
+    /// The on_event function may keep or spool the [`RssiEvent`] events (eg. put them into a
+    /// queue), but needs to drop them reasonably quickly so that the pool does not run out.
+    pub async fn rssi_bulk(
         &mut self,
-        carriers: &[u16; N],
-    ) -> Result<[Box<RssiPool>; N], MixedError> {
-        const {
-            assert!(
-                N <= RSSI_POOL_SIZE,
-                "Requesting more readings than could be buffered (would require a streaming interface)"
-            )
-        };
-
+        carriers: &[u16],
+        mut on_event: impl AsyncFnMut(Box<RssiPool>),
+    ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
 
         // Rather than doing nothing until we start, we could also start recording now for some
@@ -198,10 +195,6 @@ impl DectPhy {
             );
         }
 
-        // FIXME: Could be optimized better to place them directly in the result -- but maybe not,
-        // if it manages to use the return value space as buffer in the optimizer?
-        let mut output = heapless::Vec::<_, N>::new();
-
         for (handle, (multiples, _carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
             for _ in 0..multiples {
@@ -212,7 +205,7 @@ impl DectPhy {
 
                         defmt::debug!("Got some RSSI at {}", res.start_time());
 
-                        output.push(res).ok().expect("Sizes were measured to match");
+                        on_event(res).await;
                     }
                     DectEvent::Rssi(_received_handle, None) => {
                         panic!("Async was not polled fast enough, could not empty RSSI buffers")
@@ -230,6 +223,6 @@ impl DectPhy {
             };
         }
 
-        Ok(output.into_array().unwrap())
+        Ok(())
     }
 }
