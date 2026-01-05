@@ -55,7 +55,7 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
     // Casting because it's not precisely a signed integer anyuway (and our buffer is just
     // bytes).
     let meas = unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
-    let handle = Handle::from_c(rssi.handle);
+    let handle = Handle(rssi.handle);
     defmt::trace!(
         "RSSI handle {} start {} carrier {}; {} measurements",
         handle,
@@ -77,11 +77,7 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         None
     };
 
-    if handle.is_managed() {
-        panic!("Currently there is no defined behavior for managed RSSI events")
-    } else {
-        DectEvent::Rssi(owned)
-    }
+    DectEvent::Rssi(owned)
 }
 
 impl DectPhy {
@@ -109,7 +105,7 @@ impl DectPhy {
 
         let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
             start_time: 0,
-            handle: Handle::new_unmanaged(1234).unwrap().to_c(),
+            handle: Handle(1234).0,
             carrier,
             duration: 48, // in subslots; 1 full report
             reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms
@@ -171,7 +167,7 @@ impl DectPhy {
             handle
                 .try_into()
                 .ok()
-                .and_then(Handle::new_unmanaged)
+                .map(Handle)
                 .expect(
                     "Carriers can't be so many this doesn't fit in the unmanaged portio of handles",
                 )
@@ -183,7 +179,7 @@ impl DectPhy {
             let destbuffers = destbuffers.as_mut();
             let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
                 start_time: current_start_time,
-                handle: handle.to_c(),
+                handle: handle.0,
                 carrier: *carrier,
                 duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway

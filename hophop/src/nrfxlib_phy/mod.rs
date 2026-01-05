@@ -28,31 +28,7 @@ static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, Dect
 /// - Unmanaged values generally result in the event being passed on to `DECT_EVENTS`.
 /// - Managed values cause an action directly in the ISR.
 #[derive(Debug, defmt::Format, Copy, Clone, PartialEq, Eq)]
-pub(crate) struct Handle(u32);
-
-const HANDLE_MANAGED_START: u32 = 0xffff0000;
-
-impl Handle {
-    fn new_unmanaged(value: u32) -> Option<Self> {
-        if value < HANDLE_MANAGED_START {
-            Some(Self(value))
-        } else {
-            None
-        }
-    }
-
-    pub fn is_managed(self) -> bool {
-        self.0 >= HANDLE_MANAGED_START
-    }
-
-    pub fn to_c(self) -> u32 {
-        self.0
-    }
-
-    pub fn from_c(value: u32) -> Self {
-        Self(value)
-    }
-}
+pub(crate) struct Handle(pub u32);
 
 // FIXME here and in DectEvent: I'd much rather just copy the few bytes around rather than
 // repacking and copying; but that's optimization, and right now I want to get things to run.
