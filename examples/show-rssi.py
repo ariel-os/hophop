@@ -55,8 +55,11 @@ for line in open(sys.argv[1]):
 
 minband = min(perchannel.keys())
 maxband = max(perchannel.keys())
+# Sometimes we take measurements on every single band, sometimes we leave gaps;
+# this helps the slider do something sensible.
+deltaband = min(big - small for (big, small) in zip(sorted(perchannel.keys())[1:], sorted(perchannel.keys())[:-1]))
 
-bands = list(range(minband, maxband + 1))
+bands = list(range(minband, maxband + 1, deltaband))
 percentiles = {q: [None for _ in bands] for q in [1, 5, 10, 25, 50, 75, 90, 95, 99]}
 
 for (i, band) in enumerate(bands):
@@ -89,7 +92,7 @@ slider = Slider(
     label="Absolute\nChannel\nNumber",
     valmin=minband,
     valmax=maxband,
-    valstep=1,
+    valstep=deltaband,
 )
 
 def update(val):
