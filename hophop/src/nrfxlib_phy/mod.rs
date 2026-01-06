@@ -55,11 +55,8 @@ enum DectEvent {
     PccError(rx::PccError),
     Pcc(rx::Pcc),
     PdcError,
-    /// Length inside recvbuf
-    // If we start doing multiple recvs, we can't just upgrade this to a range here and in PCD,
-    // also not to Option<Range> in case it didn't fit, but need to stream it out through a ring
-    // buffer with process-on-the-fly anyway.
-    Pdc(usize),
+    /// Owned PDC, or None when out of pool space.
+    Pdc(Option<heapless::pool::boxed::Box<rx::RecvPool>>),
     Rssi(Handle, Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
 }
 
@@ -191,6 +188,7 @@ impl DectPhy {
         defmt::trace!("Setting up own memory");
         // FIXME: Can we leave it to the user to allocate this?
         rssi::init();
+        rx::init();
 
         defmt::trace!("Setting DECT handler");
 

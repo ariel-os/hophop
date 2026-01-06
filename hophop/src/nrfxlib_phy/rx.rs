@@ -5,18 +5,35 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     mutex::{Mutex, MutexGuard},
 };
+use heapless::{
+    box_pool,
+    pool::boxed::{Box, BoxBlock},
+};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
+use static_cell::StaticCell;
 
 use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
 
-/// Kind of a bump allocator for received data, as that doesn't fit in small events.
-///
-/// Might later be turned into a ring buffer if any methods support stream-processing multiple
-/// events.
-///
-/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
-static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
-    Mutex::new(heapless::Vec::new());
+// Packet pool.
+//
+// FIXME: A better structure would be kind of a ring buffer that tracks droppings, or a dual bump
+// allocator (because most of the time the buffers are dropped in order), but right now, this will
+// do.
+box_pool!(RecvPool: heapless::Vec<u8, RECV_POOL_ITEM_SIZE>);
+
+const RECV_POOL_SIZE: usize = 16;
+const RECV_POOL_ITEM_SIZE: usize = 1024;
+
+/// Initiates the receive data pool.
+#[inline]
+pub(super) fn init() {
+    static RECV_BUFFER: StaticCell<
+        [BoxBlock<heapless::Vec<u8, RECV_POOL_ITEM_SIZE>>; RECV_POOL_SIZE],
+    > = StaticCell::new();
+    for b in RECV_BUFFER.init_with(|| core::array::from_fn(|_| BoxBlock::new())) {
+        RecvPool.manage(b);
+    }
+}
 
 #[derive(Debug, defmt::Format, Copy, Clone)]
 pub struct Pcc {
@@ -64,10 +81,23 @@ pub enum PccError {
     UnexpectedEventDetails,
 }
 
+// For error propagation out of an .as_ref() result
+impl From<&PccError> for PccError {
+    fn from(value: &PccError) -> Self {
+        value.clone()
+    }
+}
+
 #[derive(Debug, defmt::Format, Copy, Clone)]
 #[non_exhaustive]
 pub enum PdcError {
     CrcError,
+    /// Not enough storage available right now.
+    ///
+    /// In the current slab pool implementation, this can mean either "all pool items are used" or
+    /// "this is too big for our slabs". Left as one error because of the expectation that the slab
+    /// allocator might be replaced with something that is more in the style of slices in a ring
+    /// buffer (or two bump allocators).
     OutOfSpace,
     // Maybe if it straddled the timeout? I did observe this when sender and recipient timeouts
     // could have lined up.
@@ -75,29 +105,32 @@ pub enum PdcError {
     PccError(PccError),
 }
 
+// For error propagation out of an .as_ref() result
+impl From<&PdcError> for PdcError {
+    fn from(value: &PdcError) -> Self {
+        value.clone()
+    }
+}
+
 /// Details of a [`RecvResult`] that did result in data being received.
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct RecvOk {
     pub pcc: Pcc,
-    pub pdc_len: Result<usize, PdcError>,
+    pub pdc: Result<Box<RecvPool>, PdcError>,
 }
 
 /// Result of a single receive operation.
 ///
 /// This keeps a lock on the receive buffer, and must therefore be dropped before the next attempt
 /// to perform any other operation.
-pub struct RecvResult<'a> {
-    data: MutexGuard<'static, CriticalSectionRawMutex, heapless::Vec<u8, 2400>>,
+pub struct RecvResult {
     // FIXME: rename misnmomer (but in a separate commit)
     indices: Result<RecvOk, PccError>,
-    // This ensures that a .recv() result is used before the next attempt to receive something (as
-    // that would panic around locking RECV_BUF).
-    _phantom: core::marker::PhantomData<&'a mut ()>,
 }
 
-impl RecvResult<'_> {
+impl RecvResult {
     pub fn pcc_time(&self) -> Result<u64, PccError> {
-        Ok(self.indices?.pcc.time)
+        Ok(self.indices.as_ref()?.pcc.time)
     }
     pub fn pcc(&self) -> Result<&[u8], PccError> {
         Ok(self
@@ -109,9 +142,13 @@ impl RecvResult<'_> {
             .as_slice())
     }
     pub fn pdc(&self) -> Result<&[u8], PdcError> {
-        let pcc_and_rest = self.indices.map_err(PdcError::PccError)?;
-        let len = pcc_and_rest.pdc_len?;
-        self.data.get(..len).ok_or(PdcError::OutOfSpace)
+        Ok(self
+            .indices
+            .as_ref()
+            .map_err(|e| PdcError::PccError(*e))?
+            .pdc
+            .as_ref()?
+            .as_slice())
     }
 }
 
@@ -133,16 +170,16 @@ impl RecvResultBuilder {
             (Waiting, DectEvent::PccError(e)) => {
                 *self = GotPcc(Err(e));
             }
-            (GotPcc(Ok(pcc)), DectEvent::Pdc(pdc_len)) => {
+            (GotPcc(Ok(pcc)), DectEvent::Pdc(pdc)) => {
                 *self = GotBoth(RecvOk {
                     pcc: *pcc,
-                    pdc_len: Ok(pdc_len),
+                    pdc: pdc.ok_or(PdcError::OutOfSpace),
                 });
             }
             (GotPcc(Ok(pcc)), DectEvent::PdcError) => {
                 *self = GotBoth(RecvOk {
                     pcc: *pcc,
-                    pdc_len: Err(PdcError::CrcError),
+                    pdc: Err(PdcError::CrcError),
                 });
             }
             (_, DectEvent::Completed(c)) => {
@@ -154,25 +191,19 @@ impl RecvResultBuilder {
         Ok(core::ops::ControlFlow::Continue(()))
     }
 
-    pub fn finish<'a>(self) -> Option<RecvResult<'a>> {
+    pub fn finish(self) -> Option<RecvResult> {
         use RecvResultBuilder::*;
         let result = match self {
             Waiting => return None,
             GotPcc(Err(e)) => Err(e),
             GotPcc(Ok(pcc)) => Ok(RecvOk {
                 pcc,
-                pdc_len: Err(PdcError::NotReceived),
+                pdc: Err(PdcError::NotReceived),
             }),
             GotBoth(sll) => Ok(sll),
         };
 
-        Some(RecvResult {
-            data: RECVBUF
-                .try_lock()
-                .expect("Was checked before, and ISR users release this before returning"),
-            indices: result,
-            _phantom: core::marker::PhantomData,
-        })
+        Some(RecvResult { indices: result })
     }
 
     pub fn is_ready(&self) -> bool {
@@ -235,30 +266,15 @@ pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_e
         data,
     );
 
-    let mut recvbuf = RECVBUF
-        .try_lock()
-        .expect("Was checked when doing a request");
-
-    // Either it fits or it doesn't; the user will see when trying to access the buffer up
-    // to it.
-    // FIXME: Does it makes ense to store it as far as possible?
-    let _ = recvbuf.extend_from_slice(data);
-    DectEvent::Pdc(data.len())
-}
-
-pub(crate) fn clear_recvbuf() {
-    let mut recvbuf = RECVBUF
-        .try_lock()
-        .expect("Buffer in use; unsafe construction of DectPhy, or pending future was dropped.");
-    recvbuf.clear();
-    drop(recvbuf);
+    DectEvent::Pdc(
+        heapless::Vec::try_from(data)
+            .ok()
+            .and_then(|v| RecvPool.alloc(v).ok()),
+    )
 }
 
 impl DectPhy {
-    // FIXME: heapless is not great for signature yet
-    pub async fn rx(&mut self) -> Result<Option<RecvResult<'_>>, MixedError> {
-        clear_recvbuf();
-
+    pub async fn rx(&mut self) -> Result<Option<RecvResult>, MixedError> {
         unsafe {
             // FIXME: everything
             nrfxlib_sys::nrf_modem_dect_phy_rx(&nrfxlib_sys::nrf_modem_dect_phy_rx_params {

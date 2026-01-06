@@ -154,7 +154,7 @@ impl DectPhy {
         &mut self,
         carriers: &[u16],
         mut on_event: impl AsyncFnMut(Box<RssiPool>),
-        mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult<'a>),
+        mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
 
@@ -210,7 +210,6 @@ impl DectPhy {
         }
 
         let mut recv_result: super::rx::RecvResultBuilder;
-        super::rx::clear_recvbuf();
         for (handle, (multiples, _carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
             recv_result = Default::default();
@@ -241,7 +240,6 @@ impl DectPhy {
                                 let result =
                                     result.finish().expect("Done states have Some content");
                                 on_receive(result).await;
-                                super::rx::clear_recvbuf();
                             }
                             continue;
                         }
