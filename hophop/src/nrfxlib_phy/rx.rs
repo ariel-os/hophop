@@ -19,6 +19,45 @@ static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
     Mutex::new(heapless::Vec::new());
 
 #[derive(Debug, defmt::Format, Copy, Clone)]
+pub struct Pcc {
+    pub time: u64,
+    pub data: PccData,
+}
+
+#[derive(Debug, defmt::Format, Copy, Clone)]
+pub enum PccData {
+    Type1([u8; 5]),
+    Type2([u8; 10]),
+}
+
+impl PccData {
+    pub fn as_slice(&self) -> &[u8] {
+        match self {
+            PccData::Type1(data) => &data[..],
+            PccData::Type2(data) => &data[..],
+        }
+    }
+
+    /// Creates an owned PCC data value from a PCC event
+    ///
+    /// # Safety
+    ///
+    /// This is safe to use if the struct adheres to the nrfxlib C API; in particular, if the
+    /// event's hdr is initialized according to the phy_type.
+    ///
+    /// # Errors
+    ///
+    /// This returns successfully only on known phy_type values.
+    unsafe fn from_c(event: &nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> Result<Self, PccError> {
+        match event.phy_type {
+            0 => Ok(PccData::Type1(unsafe { event.hdr.type_1 })),
+            1 => Ok(PccData::Type2(unsafe { event.hdr.type_2 })),
+            _ => Err(PccError::UnexpectedEventDetails),
+        }
+    }
+}
+
+#[derive(Debug, defmt::Format, Copy, Clone)]
 #[non_exhaustive]
 pub enum PccError {
     CrcError,
@@ -39,8 +78,7 @@ pub enum PdcError {
 /// Details of a [`RecvResult`] that did result in data being received.
 #[derive(Copy, Clone)]
 pub struct RecvOk {
-    pub pcc_time: u64,
-    pub pcc_len: usize,
+    pub pcc: Pcc,
     pub pdc_len: Result<usize, PdcError>,
 }
 
@@ -50,6 +88,7 @@ pub struct RecvOk {
 /// to perform any other operation.
 pub struct RecvResult<'a> {
     data: MutexGuard<'static, CriticalSectionRawMutex, heapless::Vec<u8, 2400>>,
+    // FIXME: rename misnmomer (but in a separate commit)
     indices: Result<RecvOk, PccError>,
     // This ensures that a .recv() result is used before the next attempt to receive something (as
     // that would panic around locking RECV_BUF).
@@ -58,18 +97,21 @@ pub struct RecvResult<'a> {
 
 impl RecvResult<'_> {
     pub fn pcc_time(&self) -> Result<u64, PccError> {
-        Ok(self.indices?.pcc_time)
+        Ok(self.indices?.pcc.time)
     }
     pub fn pcc(&self) -> Result<&[u8], PccError> {
-        Ok(&self.data[..self.indices?.pcc_len])
+        Ok(self
+            .indices
+            .as_ref()
+            .map_err(Clone::clone)?
+            .pcc
+            .data
+            .as_slice())
     }
     pub fn pdc(&self) -> Result<&[u8], PdcError> {
         let pcc_and_rest = self.indices.map_err(PdcError::PccError)?;
-        let start = pcc_and_rest.pcc_len;
         let len = pcc_and_rest.pdc_len?;
-        self.data
-            .get(start..start + len)
-            .ok_or(PdcError::OutOfSpace)
+        self.data.get(..len).ok_or(PdcError::OutOfSpace)
     }
 }
 
@@ -77,8 +119,7 @@ impl RecvResult<'_> {
 pub(crate) enum RecvResultBuilder {
     #[default]
     Waiting,
-    // PCC time, PCC length
-    GotPcc(Result<(u64, usize), PccError>),
+    GotPcc(Result<Pcc, PccError>),
     GotBoth(RecvOk),
 }
 
@@ -86,23 +127,21 @@ impl RecvResultBuilder {
     pub fn feed(&mut self, event: DectEvent) -> Result<core::ops::ControlFlow<()>, MixedError> {
         use RecvResultBuilder::*;
         match (&self, event) {
-            (Waiting, DectEvent::Pcc(start, pcc_len)) => {
-                *self = GotPcc(Ok((start, pcc_len)));
+            (Waiting, DectEvent::Pcc(pcc)) => {
+                *self = GotPcc(Ok(pcc));
             }
             (Waiting, DectEvent::PccError(e)) => {
                 *self = GotPcc(Err(e));
             }
-            (GotPcc(Ok((pcc_start, pcc_len))), DectEvent::Pdc(pdc_len)) => {
+            (GotPcc(Ok(pcc)), DectEvent::Pdc(pdc_len)) => {
                 *self = GotBoth(RecvOk {
-                    pcc_time: *pcc_start,
-                    pcc_len: *pcc_len,
+                    pcc: *pcc,
                     pdc_len: Ok(pdc_len),
                 });
             }
-            (GotPcc(Ok((pcc_start, pcc_len))), DectEvent::PdcError) => {
+            (GotPcc(Ok(pcc)), DectEvent::PdcError) => {
                 *self = GotBoth(RecvOk {
-                    pcc_time: *pcc_start,
-                    pcc_len: *pcc_len,
+                    pcc: *pcc,
                     pdc_len: Err(PdcError::CrcError),
                 });
             }
@@ -120,9 +159,8 @@ impl RecvResultBuilder {
         let result = match self {
             Waiting => return None,
             GotPcc(Err(e)) => Err(e),
-            GotPcc(Ok((pcc_time, pcc_len))) => Ok(RecvOk {
-                pcc_time,
-                pcc_len,
+            GotPcc(Ok(pcc)) => Ok(RecvOk {
+                pcc,
                 pdc_len: Err(PdcError::NotReceived),
             }),
             GotBoth(sll) => Ok(sll),
@@ -155,14 +193,13 @@ pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_e
     // SAFETY: Checked the discriminator
     let pcc = unsafe { &*pcc };
 
-    let header_len = match pcc.phy_type {
-        0 => 5,
-        1 => 10,
-        _ => return DectEvent::PccError(PccError::UnexpectedEventDetails),
-    };
     // SAFETY: As per struct details.
-    // (Easier to pass this on as bytes and do our own field access later)
-    let header = &unsafe { pcc.hdr.type_2 }[..header_len];
+    let header = match unsafe { PccData::from_c(pcc) } {
+        Ok(h) => h,
+        // FIXME: Returning a PccError is not *quite* the right thing, as it'll upset later Pdc
+        // evengt processings.
+        Err(e) => return DectEvent::PccError(e),
+    };
     defmt::trace!(
         "PCC start {} handle {} phy_type {} rssi2 {} snr {} transaction {} hdr st {} hdr {:02x}",
         pcc.stf_start_time,
@@ -175,15 +212,10 @@ pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_e
         header
     );
 
-    let mut recvbuf = RECVBUF
-        .try_lock()
-        .expect("Was checked when doing a request");
-
-    assert_eq!(recvbuf.len(), 0);
-    recvbuf
-        .extend_from_slice(header)
-        .expect("Length is small enough to always fit");
-    DectEvent::Pcc(pcc.stf_start_time, header.len())
+    DectEvent::Pcc(Pcc {
+        time: pcc.stf_start_time,
+        data: header,
+    })
 }
 
 /// # Safety

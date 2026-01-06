@@ -53,13 +53,12 @@ enum DectEvent {
     /// This is both the `EVT_PCC_ERROR` that really is just CRC error, or failures during processing
     /// of a PCC.
     PccError(rx::PccError),
-    /// PCC with time and length inside recvbuf
+    Pcc(rx::Pcc),
+    PdcError,
+    /// Length inside recvbuf
     // If we start doing multiple recvs, we can't just upgrade this to a range here and in PCD,
     // also not to Option<Range> in case it didn't fit, but need to stream it out through a ring
     // buffer with process-on-the-fly anyway.
-    Pcc(u64, usize),
-    PdcError,
-    /// Length inside recvbuf
     Pdc(usize),
     Rssi(Handle, Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
 }
