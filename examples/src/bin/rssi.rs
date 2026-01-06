@@ -5,7 +5,7 @@
 
 use ariel_os::debug::{
     ExitCode, exit,
-    log::{error, info},
+    log::{error, info, warn},
 };
 
 #[ariel_os::task(autostart)]
@@ -34,13 +34,14 @@ async fn main() {
                         result.data()
                     );
                 },
-                async |recv| {
-                    info!(
+                async |recv| match recv {
+                    Ok(recv) => info!(
                         "Data received: time {:?}, PCC {:?}, PDC {:?}.",
-                        recv.pcc_time(),
+                        recv.pcc.time,
                         recv.pcc(),
                         recv.pdc()
-                    );
+                    ),
+                    Err(e) => warn!("Receive error: {:?}", e),
                 },
             )
             .await

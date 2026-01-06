@@ -37,11 +37,11 @@ async fn main(peripherals: pins::ButtonPeripherals) {
                 .await
                 .expect("Receive operation failed as a whole");
 
-            if let Some(received) = received {
-                let start = received.pcc_time();
+            if let Some(Ok(received)) = received {
+                let start = received.pcc.time;
                 let pcc = received.pcc();
                 let pdc = received.pdc();
-                if let (Ok(start), Ok(pcc), Ok(pdc)) = (start, pcc, pdc) {
+                if let Ok(pdc) = pdc {
                     let header = utils::mac_pdu::Header::parse(pdc);
                     info!("Received at {}: {:?}. PDC: {:?}", start, pcc, header);
                     if let Ok(header) = utils::mac_pdu::Header::parse(pdc)

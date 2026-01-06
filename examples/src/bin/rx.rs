@@ -73,17 +73,23 @@ async fn main() {
             .await
             .expect("Receive operation failed as a whole")
         {
-            let start = received.pcc_time();
-            let pcc = received.pcc();
-            let pdc = received.pdc();
-            if let (Ok(start), Ok(pcc), Ok(pdc)) = (start, pcc, pdc) {
-                info!("Received at {}: {:?} {:?}", start, pcc, pdc);
-                log_header(pcc);
-                info!("PCC: {:?}", utils::mac_pdu::Header::parse(pdc));
+            if let Ok(received) = received {
+                let start = received.pcc.time;
+                let pcc = received.pcc();
+                match received.pdc() {
+                    Ok(pdc) => {
+                        info!("Received at {}: {:?} {:?}", start, pcc, pdc);
+                        log_header(pcc);
+                        info!("PDC: {:?}", utils::mac_pdu::Header::parse(pdc));
+                    },
+                    Err(pdc) => {
+                        info!("Received at {}: {:?} but data was not received: {:?}", start, pcc, pdc);
+                        log_header(pcc);
+                    }
+                }
             } else {
                 warn!(
-                    "Received partial transmission: {:?} {:?} {:?}",
-                    start, pcc, pdc
+                    "Received partial transmission",
                 );
             }
         }

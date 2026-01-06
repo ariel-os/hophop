@@ -123,29 +123,17 @@ pub struct RecvOk {
 ///
 /// This keeps a lock on the receive buffer, and must therefore be dropped before the next attempt
 /// to perform any other operation.
-pub struct RecvResult {
-    // FIXME: rename misnmomer (but in a separate commit)
-    indices: Result<RecvOk, PccError>,
-}
+pub type RecvResult = Result<RecvOk, PccError>;
 
-impl RecvResult {
-    pub fn pcc_time(&self) -> Result<u64, PccError> {
-        Ok(self.indices.as_ref()?.pcc.time)
-    }
-    pub fn pcc(&self) -> Result<&[u8], PccError> {
-        Ok(self
-            .indices
-            .as_ref()
-            .map_err(Clone::clone)?
+impl RecvOk {
+    pub fn pcc(&self) -> &[u8] {
+        self
             .pcc
             .data
-            .as_slice())
+            .as_slice()
     }
     pub fn pdc(&self) -> Result<&[u8], PdcError> {
         Ok(self
-            .indices
-            .as_ref()
-            .map_err(|e| PdcError::PccError(*e))?
             .pdc
             .as_ref()?
             .as_slice())
@@ -203,7 +191,7 @@ impl RecvResultBuilder {
             GotBoth(sll) => Ok(sll),
         };
 
-        Some(RecvResult { indices: result })
+        Some(result)
     }
 
     pub fn is_ready(&self) -> bool {

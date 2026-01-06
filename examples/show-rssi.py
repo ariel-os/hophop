@@ -25,7 +25,11 @@ TICKS_PER_FRAME = 691200
 
 escapes = re.compile("\x1b\\[(.*?)m")
 
-received_pattern = re.compile(r".*Data received: time Ok\(([0-9]+)\), PCC Ok\(\[([^]]+)\]\), PDC Ok\(\[([^]]+)\]\).*")
+received_patterns = [
+        re.compile(r".*Data received: time Ok\(([0-9]+)\), PCC Ok\(\[([^]]+)\]\), PDC Ok\(\[([^]]+)\]\).*"),
+        re.compile(r".*Data received: time ([0-9]+), PCC \[([^]]+)\], PDC Ok\(\[([^]]+)\]\).*"),
+        re.compile(r".*Data received: time ([0-9]+), PCC \[([^]]+)\], PDC \[([^]]+)\].*"),
+        ]
 
 pending_received = None
 
@@ -34,10 +38,13 @@ for line in open(sys.argv[1]):
     # cargo run is redirected and thus doesn't produce color output
     line = escapes.sub("", line)
 
-    if received := received_pattern.match(line):
-        (pcc_time, pcc, pdc) = received.groups()
-        # Not emitting immediately because we'll want to put the time in context with the subsequent RSSI value
-        pending_received = (int(pcc_time), [int(i) for i in pcc.split(", ")], [int(i) for i in pdc.split(", ")])
+    for pattern in received_patterns:
+        # We had several styles over time; the old ones allow processing some stored files
+        if received := pattern.match(line):
+            (pcc_time, pcc, pdc) = received.groups()
+            # Not emitting immediately because we'll want to put the time in context with the subsequent RSSI value
+            pending_received = (int(pcc_time), [int(i) for i in pcc.split(", ")], [int(i) for i in pdc.split(", ")])
+            break
 
     (_, recognized, tail) = line.partition("[INFO ] RSSI for ")
     if not recognized:
@@ -82,9 +89,6 @@ for line in open(sys.argv[1]):
             column = (column + start_in_frame_in_readings) % 240
         received_messages[carrier][0].append(column)
         received_messages[carrier][1].append(row)
-
-print(len(perchannel[1665]))
-print(received_messages)
 
 minband = min(perchannel.keys())
 maxband = max(perchannel.keys())
