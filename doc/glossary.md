@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: Copyright Julian Dickert <julian@systemscape.de>
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 Most common abbreviations used in the context of DECT-2020/NR+ according to ETSI TS 103 636-1
 
 - **ARQ**: Automatic Repeat reQuest
@@ -17,6 +22,7 @@ Most common abbreviations used in the context of DECT-2020/NR+ according to ETSI
 - **FDMA**: [Frequency Division Multiple Access](https://en.wikipedia.org/wiki/Frequency-division_multiple_access)
 - **FEC**: [Forward Error Correction](https://en.wikipedia.org/wiki/Error_correction_code)
 - **FFT**: Fast Fourier Transform
+- **FT**: Fixed Termination point
 - **GI**: Guard Interval
 - **LBT**: Listen Before Talk
 - **MAC**: Medium Access Control
