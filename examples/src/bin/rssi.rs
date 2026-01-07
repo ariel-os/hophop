@@ -27,6 +27,10 @@ async fn main() {
                 scans,
                 async |result| {
                     let channel = scan_iterator.next().unwrap();
+                    let Some(result) = result else {
+                        info!("RSSI missed for channel {}.", channel);
+                        return;
+                    };
                     info!(
                         "RSSI for {} at {}: {:?}",
                         channel,

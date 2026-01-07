@@ -149,11 +149,13 @@ impl DectPhy {
     /// result values.
     ///
     /// The on_event function may keep or spool the [`RssiEvent`] events (eg. put them into a
-    /// queue), but needs to drop them reasonably quickly so that the pool does not run out.
+    /// queue), but needs to drop them reasonably quickly so that the pool does not run out;
+    /// otherwise it may receive None events that indicate the overflow (but are still emitted so
+    /// that the receiver knows which events were empty).
     pub async fn rssi_bulk(
         &mut self,
         carriers: &[u16],
-        mut on_event: impl AsyncFnMut(Box<RssiPool>),
+        mut on_event: impl AsyncFnMut(Option<Box<RssiPool>>),
         mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
@@ -217,16 +219,17 @@ impl DectPhy {
             for _ in 0..multiples {
                 loop {
                     match DECT_EVENTS.receive().await.event {
-                        DectEvent::Rssi(received_handle, Some(res)) => {
+                        DectEvent::Rssi(received_handle, res) => {
                             // Protect against AsMut impls that are not actually constant length.
                             assert_eq!(handle, received_handle);
 
-                            defmt::debug!("Got some RSSI at {}", res.start_time());
+                            if let Some(res) = &res {
+                                defmt::debug!("Got some RSSI at {}", res.start_time());
+                            } else {
+                                defmt::warn!("Got RSSI but data could not be allocate");
+                            }
                             on_event(res).await;
                             break;
-                        }
-                        DectEvent::Rssi(_received_handle, None) => {
-                            panic!("Async was not polled fast enough, could not empty RSSI buffers")
                         }
                         e @ (DectEvent::Pcc(..)
                         | DectEvent::Pdc(..)
