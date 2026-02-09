@@ -39,7 +39,6 @@ Most common abbreviations used in the context of DECT-2020/NR+ according to ETSI
 - **PTC**: Paging Transmission Control
 - **RAC**: Random Access Control
 - **RACH**: Random Access Channel
-- **RAN**: Radio Access Network
 - **RD**: Radio Device
 - **RF**: Radio Frequency
 - **RSSI**: Received Signal Strength Indicator
