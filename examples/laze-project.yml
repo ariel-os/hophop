@@ -4,13 +4,14 @@
 imports:
   - git:
       url: https://github.com/chrysn-pull-requests/ariel-os
-      #commit: for-hophop-202602
-      commit: 8d3af4cd0ffce8570a5161c188694fbd65600a1e
+      #commit: for-hophop-20260225 (which is https://github.com/ariel-os/ariel-os/pull/1819 plus https://github.com/ariel-os/ariel-os/pull/1613)
+      commit: b6815311c6578f3de21482eae57d5e870f88d85f
     dldir: ariel-os
 
 apps:
   - name: hophop-examples
     selects:
       - nrf91-modem
+      - nrf-radiocore-firmware-dect
       # Actually only for the tx example
       - has_buttons
