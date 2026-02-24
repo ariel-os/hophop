@@ -14,9 +14,7 @@ use ts_103_636_utils as utils;
 
 #[ariel_os::task(autostart, peripherals)]
 async fn main(peripherals: pins::ButtonPeripherals) {
-    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(
-        ariel_os::hal::modem::take_modem().await,
-    )
+    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
     .await
     .unwrap();
 

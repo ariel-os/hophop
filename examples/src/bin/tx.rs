@@ -13,9 +13,7 @@ use ariel_os_boards::pins;
 
 #[ariel_os::task(autostart, peripherals)]
 async fn blinky(peripherals: pins::ButtonPeripherals) {
-    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(
-        ariel_os::hal::modem::take_modem().await,
-    )
+    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
     .await
     .unwrap();
 
