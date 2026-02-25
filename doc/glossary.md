@@ -13,7 +13,7 @@ Abbreviations and terms relevant to hophop:
 - **BSC**: Beacon Scanning Control ([nr+])
 - **BRSKI**: Bootstrapping Remote Secure Key Infrastructure ([IETF](https://brski.org/))
 - **CCC**: Connection Configuration Control ([nr+])
-- **CCCH**: Connection control Channel ([nr+])
+- **CCCH**: Connection Control Channel ([nr+])
 - **CoAP**: Constrained Application Protocol ([RFC7252](https://datatracker.ietf.org/doc/html/rfc7252))
 - **CoJP**: Constrained Join Protocol ([RFC9031](https://www.rfc-editor.org/rfc/rfc9031.html))
 - **CP-OFDM**: Cyclic-Prefix [Orthogonal Frequency Division Multiplexing](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiplexing) ([generic](https://en.wikipedia.org/wiki/Cyclic_prefix), [nr+]; method for improving OFDM reception in multi-path environments)
