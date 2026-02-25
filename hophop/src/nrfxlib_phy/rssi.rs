@@ -69,13 +69,15 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         meas.len(),
     );
 
-    let owned = RssiPool.alloc(RssiEvent {
-        start_time: rssi.meas_start_time,
-        data: meas
-            .try_into()
-            // FIXME: As some point, we might also receive shorter RSSI data.
-            .unwrap(),
-    }).ok();
+    let owned = RssiPool
+        .alloc(RssiEvent {
+            start_time: rssi.meas_start_time,
+            data: meas
+                .try_into()
+                // FIXME: As some point, we might also receive shorter RSSI data.
+                .unwrap(),
+        })
+        .ok();
 
     DectEvent::Rssi(handle, owned)
 }

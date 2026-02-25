@@ -123,16 +123,10 @@ pub type RecvResult = Result<RecvOk, PccError>;
 
 impl RecvOk {
     pub fn pcc(&self) -> &[u8] {
-        self
-            .pcc
-            .data
-            .as_slice()
+        self.pcc.data.as_slice()
     }
     pub fn pdc(&self) -> Result<&[u8], PdcError> {
-        Ok(self
-            .pdc
-            .as_ref()?
-            .as_slice())
+        Ok(self.pdc.as_ref()?.as_slice())
     }
 }
 
@@ -191,7 +185,10 @@ impl RecvResultBuilder {
     }
 
     pub fn is_ready(&self) -> bool {
-        matches!(&self, RecvResultBuilder::GotBoth(_) | RecvResultBuilder::GotPcc(Err(_)))
+        matches!(
+            &self,
+            RecvResultBuilder::GotBoth(_) | RecvResultBuilder::GotPcc(Err(_))
+        )
     }
 }
 
