@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-include = "../build/imports/ariel-os/ariel-os-cargo.toml"
+include = ["../build/imports/ariel-os/ariel-os-cargo.toml"]
 
-[unstable]
-# This is needed so the "include" statement above works.
-config-include = true
+# no `unstable.config-include = true` needed: We're already running a nightly that is at least 1.94.

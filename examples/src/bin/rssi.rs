@@ -8,9 +8,7 @@ use ariel_os::time::Timer;
 
 #[ariel_os::task(autostart)]
 async fn main() {
-    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(
-        ariel_os::hal::modem::take_modem().await,
-    )
+    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
     .await
     .unwrap();
 
