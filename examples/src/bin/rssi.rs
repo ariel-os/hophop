@@ -11,8 +11,8 @@ use ariel_os::debug::{
 #[ariel_os::task(autostart)]
 async fn main() {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     for _ in 0..60 {
         info!("DECT time is {:?}", dect.time_get().await);

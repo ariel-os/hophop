@@ -64,8 +64,8 @@ fn log_header(header: &[u8]) {
 #[ariel_os::task(autostart)]
 async fn main() {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     for _ in 0..300 {
         if let Some(received) = dect
@@ -81,16 +81,17 @@ async fn main() {
                         info!("Received at {}: {:?} {:?}", start, pcc, pdc);
                         log_header(pcc);
                         info!("PDC: {:?}", utils::mac_pdu::Header::parse(pdc));
-                    },
+                    }
                     Err(pdc) => {
-                        info!("Received at {}: {:?} but data was not received: {:?}", start, pcc, pdc);
+                        info!(
+                            "Received at {}: {:?} but data was not received: {:?}",
+                            start, pcc, pdc
+                        );
                         log_header(pcc);
                     }
                 }
             } else {
-                warn!(
-                    "Received partial transmission",
-                );
+                warn!("Received partial transmission",);
             }
         }
     }

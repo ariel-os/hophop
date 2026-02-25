@@ -14,8 +14,8 @@ use ariel_os_boards::pins;
 #[ariel_os::task(autostart, peripherals)]
 async fn blinky(peripherals: pins::ButtonPeripherals) {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let mut button0 = ariel_os::gpio::Input::builder(peripherals.button0, ariel_os::gpio::Pull::Up)
         .build_with_interrupt()
@@ -40,9 +40,9 @@ async fn blinky(peripherals: pins::ButtonPeripherals) {
                 // Beacon as seen by the dect_shell
                 &[17, 120, 150, 24, 112],
                 &[
-                    1, 18, 52, 86, 0, 0, 0, 38, 73, 5, 176, 16, 6, 0, 13, 83, 7, 8, 12, 138, 160, 215,
-                    2, 100, 64, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0,
+                    1, 18, 52, 86, 0, 0, 0, 38, 73, 5, 176, 16, 6, 0, 13, 83, 7, 8, 12, 138, 160,
+                    215, 2, 100, 64, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
                 ],
             )
             .await
