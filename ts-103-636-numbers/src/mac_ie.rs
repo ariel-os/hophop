@@ -191,7 +191,14 @@ impl IEType5bit {
     )]
     #[must_use]
     pub const fn len(self) -> usize {
-        (self.0 >> 5) as _
+        self.len_u8() as _
+    }
+
+    /// Like [`Self::len()`], but using the knowlege that it fits in a u8.
+    #[must_use]
+    #[inline]
+    const fn len_u8(self) -> u8 {
+        self.0 >> 5
     }
 
     /// Returns the numeric value of the IE (5 bit)
@@ -283,7 +290,7 @@ impl defmt::Format for IEType5bit {
             defmt::write!(
                 f,
                 "IEType5bit {{ .len: {}, .value {:#04x}, description: {} }}",
-                self.len() as u8,
+                self.len_u8(),
                 self.value(),
                 description
             );
@@ -291,7 +298,7 @@ impl defmt::Format for IEType5bit {
             defmt::write!(
                 f,
                 "IEType5bit {{ .len {}, .value: {:#04x} }}",
-                self.len() as u8,
+                self.len_u8(),
                 self.value(),
             );
         }

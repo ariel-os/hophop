@@ -15,8 +15,8 @@ use ts_103_636_utils as utils;
 #[ariel_os::task(autostart, peripherals)]
 async fn main(peripherals: pins::ButtonPeripherals) {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
-    .await
-    .unwrap();
+        .await
+        .unwrap();
 
     let transmitter_id = &ariel_os::identity::interface_eui48(0).unwrap();
     let transmitter_id_short = u16::from_be_bytes(transmitter_id.0[..2].try_into().unwrap());
@@ -37,11 +37,11 @@ async fn main(peripherals: pins::ButtonPeripherals) {
                 .await
                 .expect("Receive operation failed as a whole");
 
-            if let Some(received) = received {
-                let start = received.pcc_time();
+            if let Some(Ok(received)) = received {
+                let start = received.pcc.time;
                 let pcc = received.pcc();
                 let pdc = received.pdc();
-                if let (Ok(start), Ok(pcc), Ok(pdc)) = (start, pcc, pdc) {
+                if let Ok(pdc) = pdc {
                     let header = utils::mac_pdu::Header::parse(pdc);
                     info!("Received at {}: {:?}. PDC: {:?}", start, pcc, header);
                     if let Ok(header) = utils::mac_pdu::Header::parse(pdc)

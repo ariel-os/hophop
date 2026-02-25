@@ -18,6 +18,15 @@ heapless = { version = "0.9.2", features = ["embedded-io-v0.7"] }
 embassy-sync = "0.7.2"
 defmt = "1"
 
-nrf-modem = { version = "*", features = ["dect", "nrf9151"] }
+nrf-modem = { version = "*", features = ["dect", "nrf9151", "defmt"] }
 ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
 ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
+static_cell = "2.1.1"
+itertools = { version = "0.14.0", default-features = false }
+
+[target.'cfg(not(target = "thumbv8m.main-none-eabihf"))'.dependencies]
+# We're using box_pool, and while that works on thumbv8m without portable
+# atomics, it needs them even on amd64 (which is where all the tests and checks
+# and rust-analyzer run, unless we go through greater lengths to make those
+# still smooth)
+heapless = { version = "0.9.2", features = ["portable-atomic"] }

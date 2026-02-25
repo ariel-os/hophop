@@ -1,10 +1,74 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::MutexGuard};
+use heapless::{
+    box_pool,
+    pool::boxed::{Box, BoxBlock},
+};
 use nrf_modem::{ErrorSource, nrfxlib_sys};
+use static_cell::StaticCell;
 
-use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError, RECVBUF};
+use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
+
+// Packet pool.
+//
+// FIXME: A better structure would be kind of a ring buffer that tracks droppings, or a dual bump
+// allocator (because most of the time the buffers are dropped in order), but right now, this will
+// do.
+box_pool!(RecvPool: heapless::Vec<u8, RECV_POOL_ITEM_SIZE>);
+
+const RECV_POOL_SIZE: usize = 16;
+const RECV_POOL_ITEM_SIZE: usize = 1024;
+
+/// Initiates the receive data pool.
+#[inline]
+pub(super) fn init() {
+    static RECV_BUFFER: StaticCell<
+        [BoxBlock<heapless::Vec<u8, RECV_POOL_ITEM_SIZE>>; RECV_POOL_SIZE],
+    > = StaticCell::new();
+    for b in RECV_BUFFER.init_with(|| core::array::from_fn(|_| BoxBlock::new())) {
+        RecvPool.manage(b);
+    }
+}
+
+#[derive(Debug, defmt::Format, Copy, Clone)]
+pub struct Pcc {
+    pub time: u64,
+    pub data: PccData,
+}
+
+#[derive(Debug, defmt::Format, Copy, Clone)]
+pub enum PccData {
+    Type1([u8; 5]),
+    Type2([u8; 10]),
+}
+
+impl PccData {
+    pub fn as_slice(&self) -> &[u8] {
+        match self {
+            PccData::Type1(data) => &data[..],
+            PccData::Type2(data) => &data[..],
+        }
+    }
+
+    /// Creates an owned PCC data value from a PCC event
+    ///
+    /// # Safety
+    ///
+    /// This is safe to use if the struct adheres to the nrfxlib C API; in particular, if the
+    /// event's hdr is initialized according to the phy_type.
+    ///
+    /// # Errors
+    ///
+    /// This returns successfully only on known phy_type values.
+    unsafe fn from_c(event: &nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> Result<Self, PccError> {
+        match event.phy_type {
+            0 => Ok(PccData::Type1(unsafe { event.hdr.type_1 })),
+            1 => Ok(PccData::Type2(unsafe { event.hdr.type_2 })),
+            _ => Err(PccError::UnexpectedEventDetails),
+        }
+    }
+}
 
 #[derive(Debug, defmt::Format, Copy, Clone)]
 #[non_exhaustive]
@@ -13,10 +77,23 @@ pub enum PccError {
     UnexpectedEventDetails,
 }
 
+// For error propagation out of an .as_ref() result
+impl From<&PccError> for PccError {
+    fn from(value: &PccError) -> Self {
+        *value
+    }
+}
+
 #[derive(Debug, defmt::Format, Copy, Clone)]
 #[non_exhaustive]
 pub enum PdcError {
     CrcError,
+    /// Not enough storage available right now.
+    ///
+    /// In the current slab pool implementation, this can mean either "all pool items are used" or
+    /// "this is too big for our slabs". Left as one error because of the expectation that the slab
+    /// allocator might be replaced with something that is more in the style of slices in a ring
+    /// buffer (or two bump allocators).
     OutOfSpace,
     // Maybe if it straddled the timeout? I did observe this when sender and recipient timeouts
     // could have lined up.
@@ -24,48 +101,157 @@ pub enum PdcError {
     PccError(PccError),
 }
 
+// For error propagation out of an .as_ref() result
+impl From<&PdcError> for PdcError {
+    fn from(value: &PdcError) -> Self {
+        *value
+    }
+}
+
 /// Details of a [`RecvResult`] that did result in data being received.
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct RecvOk {
-    pub pcc_time: u64,
-    pub pcc_len: usize,
-    pub pdc_len: Result<usize, PdcError>,
+    pub pcc: Pcc,
+    pub pdc: Result<Box<RecvPool>, PdcError>,
 }
 
 /// Result of a single receive operation.
 ///
 /// This keeps a lock on the receive buffer, and must therefore be dropped before the next attempt
 /// to perform any other operation.
-pub struct RecvResult<'a> {
-    data: MutexGuard<'static, CriticalSectionRawMutex, heapless::Vec<u8, 2400>>,
-    indices: Result<RecvOk, PccError>,
-    // This ensures that a .recv() result is used before the next attempt to receive something (as
-    // that would panic around locking RECV_BUF).
-    _phantom: core::marker::PhantomData<&'a mut ()>,
-}
+pub type RecvResult = Result<RecvOk, PccError>;
 
-impl RecvResult<'_> {
-    pub fn pcc_time(&self) -> Result<u64, PccError> {
-        Ok(self.indices?.pcc_time)
-    }
-    pub fn pcc(&self) -> Result<&[u8], PccError> {
-        Ok(&self.data[..self.indices?.pcc_len])
+impl RecvOk {
+    pub fn pcc(&self) -> &[u8] {
+        self.pcc.data.as_slice()
     }
     pub fn pdc(&self) -> Result<&[u8], PdcError> {
-        let pcc_and_rest = self.indices.map_err(PdcError::PccError)?;
-        let start = pcc_and_rest.pcc_len;
-        let len = pcc_and_rest.pdc_len?;
-        self.data
-            .get(start..start + len)
-            .ok_or(PdcError::OutOfSpace)
+        Ok(self.pdc.as_ref()?.as_slice())
     }
+}
+
+#[derive(Default)]
+pub(crate) enum RecvResultBuilder {
+    #[default]
+    Waiting,
+    GotPcc(Result<Pcc, PccError>),
+    GotBoth(RecvOk),
+}
+
+impl RecvResultBuilder {
+    pub fn feed(&mut self, event: DectEvent) -> Result<core::ops::ControlFlow<()>, MixedError> {
+        use RecvResultBuilder::*;
+        match (&self, event) {
+            (Waiting, DectEvent::Pcc(pcc)) => {
+                *self = GotPcc(Ok(pcc));
+            }
+            (Waiting, DectEvent::PccError(e)) => {
+                *self = GotPcc(Err(e));
+            }
+            (GotPcc(Ok(pcc)), DectEvent::Pdc(pdc)) => {
+                *self = GotBoth(RecvOk {
+                    pcc: *pcc,
+                    pdc: pdc.ok_or(PdcError::OutOfSpace),
+                });
+            }
+            (GotPcc(Ok(pcc)), DectEvent::PdcError) => {
+                *self = GotBoth(RecvOk {
+                    pcc: *pcc,
+                    pdc: Err(PdcError::CrcError),
+                });
+            }
+            (_, DectEvent::Completed(c)) => {
+                c?;
+                return Ok(core::ops::ControlFlow::Break(()));
+            }
+            _ => panic!("Sequence violation"),
+        }
+        Ok(core::ops::ControlFlow::Continue(()))
+    }
+
+    pub fn finish(self) -> Option<RecvResult> {
+        use RecvResultBuilder::*;
+        let result = match self {
+            Waiting => return None,
+            GotPcc(Err(e)) => Err(e),
+            GotPcc(Ok(pcc)) => Ok(RecvOk {
+                pcc,
+                pdc: Err(PdcError::NotReceived),
+            }),
+            GotBoth(sll) => Ok(sll),
+        };
+
+        Some(result)
+    }
+
+    pub fn is_ready(&self) -> bool {
+        matches!(
+            &self,
+            RecvResultBuilder::GotBoth(_) | RecvResultBuilder::GotPcc(Err(_))
+        )
+    }
+}
+
+/// # Safety
+///
+/// This function must only be called in the event handler, which is when libmodem implies that the
+/// pointers inside the event struct are valid.
+#[inline]
+pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let pcc = unsafe { &*pcc };
+
+    // SAFETY: As per struct details.
+    let header = match unsafe { PccData::from_c(pcc) } {
+        Ok(h) => h,
+        // FIXME: Returning a PccError is not *quite* the right thing, as it'll upset later Pdc
+        // evengt processings.
+        Err(e) => return DectEvent::PccError(e),
+    };
+    defmt::trace!(
+        "PCC start {} handle {} phy_type {} rssi2 {} snr {} transaction {} hdr st {} hdr {:02x}",
+        pcc.stf_start_time,
+        pcc.handle,
+        pcc.phy_type,
+        pcc.rssi_2,
+        pcc.snr,
+        pcc.transaction_id,
+        pcc.header_status,
+        header
+    );
+
+    DectEvent::Pcc(Pcc {
+        time: pcc.stf_start_time,
+        data: header,
+    })
+}
+
+/// # Safety
+///
+/// This function must only be called in the event handler, which is when libmodem implies that the
+/// pointers inside the event struct are valid.
+#[inline]
+pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_event) -> DectEvent {
+    // SAFETY: Checked the discriminator
+    let pdc = unsafe { &*pdc };
+    // SAFETY: Implied by the C API
+    let data = unsafe { core::slice::from_raw_parts(pdc.data as *const u8, pdc.len) };
+    defmt::trace!(
+        "PDC handle {} trns {} data {:02x}",
+        pdc.handle,
+        pdc.transaction_id,
+        data,
+    );
+
+    DectEvent::Pdc(
+        heapless::Vec::try_from(data)
+            .ok()
+            .and_then(|v| RecvPool.alloc(v).ok()),
+    )
 }
 
 impl DectPhy {
-    // FIXME: heapless is not great for signature yet
-    pub async fn rx(&mut self) -> Result<Option<RecvResult<'_>>, MixedError> {
-        self.clear_recvbuf();
-
+    pub async fn rx(&mut self) -> Result<Option<RecvResult>, MixedError> {
         unsafe {
             // FIXME: everything
             nrfxlib_sys::nrf_modem_dect_phy_rx(&nrfxlib_sys::nrf_modem_dect_phy_rx_params {
@@ -91,57 +277,13 @@ impl DectPhy {
         }
         .into_result()?;
 
-        let mut pcc = None;
-        let mut pdc = None;
+        let mut result_builder = RecvResultBuilder::default();
 
-        loop {
-            match DECT_EVENTS.receive().await.event {
-                DectEvent::Pcc(start, pcc_len) => {
-                    debug_assert!(pcc.is_none(), "Sequence violation");
-                    pcc = Some(Ok((start, pcc_len)));
-                }
-                DectEvent::PccError(e) => {
-                    debug_assert!(pcc.is_none(), "Sequence violation");
-                    pcc = Some(Err(e));
-                }
-                DectEvent::Pdc(pcd_len) => {
-                    debug_assert!(pdc.is_none(), "Sequence violation");
-                    pdc = Some(Ok(pcd_len));
-                }
-                DectEvent::PdcError => {
-                    debug_assert!(pdc.is_none(), "Sequence violation");
-                    pdc = Some(Err(PdcError::CrcError));
-                }
-                DectEvent::Completed(Ok(())) => {
-                    break;
-                }
-                DectEvent::Completed(e) => e?,
-                _ => panic!("Sequence violation"),
-            }
-        }
+        while result_builder
+            .feed(DECT_EVENTS.receive().await.event)?
+            .is_continue()
+        {}
 
-        let result = match (pcc, pdc) {
-            (None, None) => return Ok(None),
-            (Some(Err(e)), None) => Err(e),
-            (Some(Ok((pcc_time, pcc_len))), None) => Ok(RecvOk {
-                pcc_time,
-                pcc_len,
-                pdc_len: Err(PdcError::NotReceived),
-            }),
-            (Some(Ok((pcc_time, pcc_len))), Some(pdc_len)) => Ok(RecvOk {
-                pcc_time,
-                pcc_len,
-                pdc_len,
-            }),
-            _ => panic!("Sequence violation"),
-        };
-
-        Ok(Some(RecvResult {
-            data: RECVBUF
-                .try_lock()
-                .expect("Was checked before, and ISR users release this before returning"),
-            indices: result,
-            _phantom: core::marker::PhantomData,
-        }))
+        Ok(result_builder.finish())
     }
 }

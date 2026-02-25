@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! High-level wrappers around the DECT PHY.
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use nrf_modem::{Error, ErrorSource, nrfxlib_sys};
 
 mod error;
@@ -13,19 +13,25 @@ mod latency;
 mod rssi;
 mod rx;
 
+pub const TICKS_PER_SECOND: u64 = 69_120_000;
+pub const TICKS_PER_MILLISECOND: u64 = 69_120;
+
 // FIXME: What's a good length? Probably events can pile up, like "here's the last data and by the
 // way the transaction is now complete". And do we need the CS mutex?
-static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 4> =
+//
+// … or we just replace all of them with signalling into explicit expecters, leaving nothing that
+// gets exclusively processed by a single task.
+static DECT_EVENTS: embassy_sync::channel::Channel<CriticalSectionRawMutex, DectEventOuter, 32> =
     embassy_sync::channel::Channel::new();
 
-/// Kind of a bump allocator for data that doesn't fit in the events.
+/// Newtype around the 32-bit `handle` mechanism by which events can be correlated to who sent
+/// them, especially when multiple operations are enqueued.
 ///
-/// Might later be turned into a ring buffer if any methods support stream-processing multiple
-/// events.
-///
-/// Sized 2400 somewhat arbitrarily because it could take 10 runs of RSSI data.
-static RECVBUF: Mutex<CriticalSectionRawMutex, heapless::Vec<u8, 2400>> =
-    Mutex::new(heapless::Vec::new());
+/// This type encodes this library's convetion about how they are used:
+/// - Unmanaged values generally result in the event being passed on to `DECT_EVENTS`.
+/// - Managed values cause an action directly in the ISR.
+#[derive(Debug, defmt::Format, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct Handle(pub u32);
 
 // FIXME here and in DectEvent: I'd much rather just copy the few bytes around rather than
 // repacking and copying; but that's optimization, and right now I want to get things to run.
@@ -50,15 +56,11 @@ enum DectEvent {
     /// This is both the `EVT_PCC_ERROR` that really is just CRC error, or failures during processing
     /// of a PCC.
     PccError(rx::PccError),
-    /// PCC with time and length inside recvbuf
-    // If we start doing multiple recvs, we can't just upgrade this to a range here and in PCD,
-    // also not to Option<Range> in case it didn't fit, but need to stream it out through a ring
-    // buffer with process-on-the-fly anyway.
-    Pcc(u64, usize),
+    Pcc(rx::Pcc),
     PdcError,
-    /// Length inside recvbuf
-    Pdc(usize),
-    Rssi(u64, Option<core::ops::Range<usize>>),
+    /// Owned PDC, or None when out of pool space.
+    Pdc(Option<heapless::pool::boxed::Box<rx::RecvPool>>),
+    Rssi(Handle, Option<heapless::pool::boxed::Box<rssi::RssiPool>>),
 }
 
 // FIXME: This is only pub while the DectPhy object doesn't have an init that calls the low-level
@@ -93,6 +95,11 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
                 init.err,
                 nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS
             );
+            // We could optimize here and not even emit this as an init event but start with a
+            // configured activation sequence right away. Not doing this yet because having things
+            // run in something more async-like is easier to read (and thus to maintain), we don't
+            // have any benchmarks that indicate otherwise, and if we manage to run on bare IPC,
+            // that'll be easier to integrate.
             DectEvent::Init
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_CONFIGURE => {
@@ -114,31 +121,8 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
             DectEvent::Activate
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_RSSI => {
-            // SAFETY: Checked the discriminator
-            let rssi = unsafe { &arg.__bindgen_anon_1.rssi };
-            // SAFETY: It is valid now, which is as long as we use it
-            // Casting because it's not precisely a signed integer anyuway (and our buffer is just
-            // bytes).
-            let meas =
-                unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
-            defmt::trace!(
-                "RSSI handle {} start {} carrier {}; {} measurements",
-                rssi.handle,
-                rssi.meas_start_time,
-                rssi.carrier,
-                meas.len(),
-            );
-
-            if let Ok(mut recvbuf) = RECVBUF.try_lock() {
-                let start = recvbuf.len();
-                if recvbuf.extend_from_slice(meas).is_ok() {
-                    DectEvent::Rssi(rssi.meas_start_time, Some(start..(start + meas.len())))
-                } else {
-                    DectEvent::Rssi(rssi.meas_start_time, None)
-                }
-            } else {
-                DectEvent::Rssi(rssi.meas_start_time, None)
-            }
+            // SAFETY: Checked the discriminator, and function
+            unsafe { rssi::event(&raw const arg.__bindgen_anon_1.rssi) }
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_COMPLETED => {
             // SAFETY: Checked the discriminator
@@ -163,86 +147,23 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
             );
             DectEvent::TimeGet
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PCC => 'eventresult: {
-            // SAFETY: Checked the discriminator
-            let pcc = unsafe { &arg.__bindgen_anon_1.pcc };
-
-            let header_len = match pcc.phy_type {
-                0 => 5,
-                1 => 10,
-                _ => break 'eventresult DectEvent::PccError(rx::PccError::UnexpectedEventDetails),
-            };
-            // SAFETY: As per struct details.
-            // (Easier to pass this on as bytes and do our own field access later)
-            let header = &unsafe { pcc.hdr.type_2 }[..header_len];
-            defmt::trace!(
-                "PCC start {} handle {} phy_type {} rssi2 {} snr {} transaction {} hdr st {} hdr {:02x}",
-                pcc.stf_start_time,
-                pcc.handle,
-                pcc.phy_type,
-                pcc.rssi_2,
-                pcc.snr,
-                pcc.transaction_id,
-                pcc.header_status,
-                header
-            );
-
-            let mut recvbuf = RECVBUF
-                .try_lock()
-                .expect("Was checked when doing a request");
-
-            assert_eq!(recvbuf.len(), 0);
-            recvbuf
-                .extend_from_slice(header)
-                .expect("Length is small enough to always fit");
-            DectEvent::Pcc(pcc.stf_start_time, header.len())
+        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PCC => {
+            // SAFETY: Checked the discriminator, and function
+            unsafe { rx::event_pcc(&raw const arg.__bindgen_anon_1.pcc) }
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PCC_ERROR => {
             DectEvent::PccError(rx::PccError::CrcError)
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PDC => {
-            // SAFETY: Checked the discriminator
-            let pdc = unsafe { &arg.__bindgen_anon_1.pdc };
-            // SAFETY: Implied by the C API
-            let data = unsafe { core::slice::from_raw_parts(pdc.data as *const u8, pdc.len) };
-            defmt::trace!(
-                "PDC handle {} trns {} data {:02x}",
-                pdc.handle,
-                pdc.transaction_id,
-                data,
-            );
-
-            let mut recvbuf = RECVBUF
-                .try_lock()
-                .expect("Was checked when doing a request");
-
-            // Either it fits or it doesn't; the user will see when trying to access the buffer up
-            // to it.
-            // FIXME: Does it makes ense to store it as far as possible?
-            let _ = recvbuf.extend_from_slice(data);
-            DectEvent::Pdc(data.len())
+            // SAFETY: Checked the discriminator, and function
+            unsafe { rx::event_pdc(&raw const arg.__bindgen_anon_1.pdc) }
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PDC_ERROR => {
             DectEvent::PdcError
         }
         nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_LATENCY => {
-            // SAFETY: Checked the discriminator
-            let latency = unsafe { &arg.__bindgen_anon_1.latency_get };
-            assert_eq!(
-                latency.err,
-                nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS,
-            );
-            // SAFETY: Implied by the C API
-            let latency = unsafe { &*latency.latency_info };
-
-            // If and when this triggers, we'll know better which pieces we need of it.
-            assert!(
-                latency::latency_is_expected(latency),
-                "Latency changed compared to known firmware versions."
-            );
-
-            defmt::trace!("Latency confirmed: {:?}", defmt::Debug2Format(&latency));
-            DectEvent::LatencyGet
+            // SAFETY: Checked the discriminator, and function
+            unsafe { latency::event(&raw const arg.__bindgen_anon_1.latency_get) }
         }
         _ => {
             defmt::warn!("Event had no known handler");
@@ -267,6 +188,11 @@ impl DectPhy {
     /// parameters); the `()` tuple is a stand-in that will evolve as Ariel OS's `take_modem()`
     /// will evolve.
     pub async fn init_after_modem_init(_modem_is_set_up: ()) -> Result<Self, Error> {
+        defmt::trace!("Setting up own memory");
+        // FIXME: Can we leave it to the user to allocate this?
+        rssi::init();
+        rx::init();
+
         defmt::trace!("Setting DECT handler");
 
         // Note that unlike typical C callbacks, this callback setup takes no argument -- if it did, we
@@ -343,18 +269,6 @@ impl DectPhy {
         };
 
         Ok(time)
-    }
-
-    /// Dual purpose:
-    /// * Clear out message
-    /// * Debug tool: This ensures that the panic won't happen in the ISR. (That'd be kind'a fine,
-    ///   but it's easier debugging this way).
-    fn clear_recvbuf(&mut self) {
-        let mut recvbuf = RECVBUF.try_lock().expect(
-            "Buffer in use; unsafe construction of DectPhy, or pending future was dropped.",
-        );
-        recvbuf.clear();
-        drop(recvbuf);
     }
 
     /// Transmit a message at the indicated time, or immediately if `start_time` is 0.

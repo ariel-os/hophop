@@ -27,7 +27,7 @@ impl PhyResultExt for u16 {
 }
 
 /// Error type that encompasses both styles of errors returned by the libmodem APIs.
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum MixedError {
     General(Error),
     Phy(PhyErr),
