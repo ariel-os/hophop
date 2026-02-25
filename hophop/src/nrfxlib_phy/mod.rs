@@ -13,6 +13,9 @@ mod latency;
 mod rssi;
 mod rx;
 
+pub const TICKS_PER_SECOND: u64 = 69_120_000;
+pub const TICKS_PER_MILLISECOND: u64 = 69_120;
+
 // FIXME: What's a good length? Probably events can pile up, like "here's the last data and by the
 // way the transaction is now complete". And do we need the CS mutex?
 //

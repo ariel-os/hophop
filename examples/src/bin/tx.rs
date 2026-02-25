@@ -50,8 +50,4 @@ async fn blinky(peripherals: pins::ButtonPeripherals) {
         }
         info!("Release: Not sending.");
     }
-
-    panic!(
-        "If we want to be able to re-flash, we better things at some point to avoid going through unlock again."
-    );
 }

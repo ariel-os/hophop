@@ -69,17 +69,13 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         meas.len(),
     );
 
-    let owned = if let Ok(result) = RssiPool.alloc(RssiEvent {
+    let owned = RssiPool.alloc(RssiEvent {
         start_time: rssi.meas_start_time,
         data: meas
             .try_into()
             // FIXME: As some point, we might also receive shorter RSSI data.
             .unwrap(),
-    }) {
-        Some(result)
-    } else {
-        None
-    };
+    }).ok();
 
     DectEvent::Rssi(handle, owned)
 }
@@ -148,7 +144,7 @@ impl DectPhy {
     /// is chosen as it enables pasing in a generic const value that can then be used to return the
     /// result values.
     ///
-    /// The on_event function may keep or spool the [`RssiEvent`] events (eg. put them into a
+    /// The on_event function may keep or spool the `RssiEvent` events (eg. put them into a
     /// queue), but needs to drop them reasonably quickly so that the pool does not run out;
     /// otherwise it may receive None events that indicate the overflow (but are still emitted so
     /// that the receiver knows which events were empty).
@@ -164,9 +160,9 @@ impl DectPhy {
         // slices, and use the first incoming data to calculate the remaining points. However, that
         // requires the first slice to be long (minimum somewhere between 2 and 8, and I think
         // above 4), so let's start with the generalized approach.
-        let slack = 69120 * 1; // 1ms should suffice, given that no data needs to be copied around.
+        let slack_ms = 1; // 1ms should suffice, given that no data needs to be copied around.
 
-        let mut current_start_time = now + slack;
+        let mut current_start_time = now + slack_ms * super::TICKS_PER_MILLISECOND;
 
         fn handle_from_index(handle: usize) -> Handle {
             handle.try_into().ok().map(Handle).expect(

@@ -80,7 +80,7 @@ pub enum PccError {
 // For error propagation out of an .as_ref() result
 impl From<&PccError> for PccError {
     fn from(value: &PccError) -> Self {
-        value.clone()
+        *value
     }
 }
 
@@ -104,7 +104,7 @@ pub enum PdcError {
 // For error propagation out of an .as_ref() result
 impl From<&PdcError> for PdcError {
     fn from(value: &PdcError) -> Self {
-        value.clone()
+        *value
     }
 }
 
@@ -191,11 +191,7 @@ impl RecvResultBuilder {
     }
 
     pub fn is_ready(&self) -> bool {
-        match &self {
-            RecvResultBuilder::GotBoth(_) => true,
-            RecvResultBuilder::GotPcc(Err(_)) => true,
-            _ => false,
-        }
+        matches!(&self, RecvResultBuilder::GotBoth(_) | RecvResultBuilder::GotPcc(Err(_)))
     }
 }
 
