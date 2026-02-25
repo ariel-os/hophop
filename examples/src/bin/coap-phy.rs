@@ -12,7 +12,7 @@ use ariel_os::time::Timer;
 use ariel_os_boards::pins;
 
 use coap_handler_implementations::{
-    GetRenderable, HandlerBuilder, TypeHandler, new_dispatcher, with_get,
+    GetRenderable, HandlerBuilder, SimpleRendered, TypeHandler, new_dispatcher, with_get,
 };
 
 #[ariel_os::task(autostart, peripherals)]
@@ -80,6 +80,14 @@ async fn transmit_beacon_on_button(
 
 async fn run_coap_with_dect(dect: DectByReference<'_>) -> ! {
     let handler = new_dispatcher()
+        // That's not what we'll want to use for advertising who we are, but as long as this is
+        // what Jelly queries, it doesn't hurt.
+        .at(
+            &["jelly", "board"],
+            SimpleRendered(ariel_os::buildinfo::BOARD),
+        )
+        .at(&["jelly", "ver"], SimpleRendered("unversioned hophop demo"))
+        // Those will need a better description too
         .at_with_attributes(
             &["phy", "time"],
             &[],
