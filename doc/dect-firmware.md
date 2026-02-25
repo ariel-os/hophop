@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 For any of the code here to work, the nRF9151's network core
 (which is not usually programmed by Ariel OS or any other RTOS)
 needs to be flashed with dedicated firmware provided by Nordic
-(`mfw-nr+_nrf91x1_1.1.0.zip`).
+(`mfw-nr+-phy_nrf91x1_2.0.0.zip`).
 
 This image is currently available through Nordic's "DECT NR+ early access program".
 To obtain it,
@@ -28,8 +28,10 @@ but not to those using typical Rust workflows:
 * Run `nrfutil install 91`, which downloads extra code into your home directory (`~/.nrfutil`).
 * Ensure that Segger's JLink is installed in the exact location nrfutil expects it to be
   (eg. by unpacking <https://www.segger.com/downloads/jlink/JLink_Linux_V880_x86_64.tgz> in /opt/SEGGER/JLink).
-* Run `nrfutil 91 modem-firmware-upgrade --firmware mfw-nr+_nrf91x1_1.1.0.zip --all-jlinks`
+* Run `nrfutil 91 modem-firmware-upgrade --firmware mfw-nr+-phy_nrf91x1_2.0.0.zip --all-jlinks`
   (or specify the concrete JLink device).
+  * If there is any error, try factory resetting the device: `nrfutil device recover --serial-number 001....`
+    (unlike the firmware-upgrade, this has no `--all-jlinks` option).
 
 ## Going back to the cellular firmware
 
