@@ -8,10 +8,17 @@ edition = "2024"
 [dependencies]
 hophop.path = "../hophop"
 
-# external-interrupts only for TX's gpio input builder
-ariel-os = { path = "build/imports/ariel-os/src/ariel-os", features = ["time", "external-interrupts"] }
+# * external-interrupts only for TX's gpio input builder
+# * threading … we don't use threads, but we abuse their blocking function to await in a non-async CoAP function.
+ariel-os = { path = "build/imports/ariel-os/src/ariel-os", features = ["time", "external-interrupts", "threading"] }
 ariel-os-boards = { path = "build/imports/ariel-os/src/ariel-os-boards" }
 heapless = { version = "0.9.2", features = ["embedded-io-v0.7"] }
 
 ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
 ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
+embassy-futures = "0.1.2"
+
+# only for coap
+coap-handler-implementations = "0.6.2"
+minicbor = { version = "2", features = ["derive"] }
+coap-message-utils = { version = "0.3.9", features = ["error_max_age"] }
