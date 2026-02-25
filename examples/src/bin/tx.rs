@@ -17,12 +17,14 @@ async fn blinky(peripherals: pins::ButtonPeripherals) {
     .await
     .unwrap();
 
-    let button0 = ariel_os::gpio::Input::new(peripherals.button0, ariel_os::gpio::Pull::Up);
+    let mut button0 = ariel_os::gpio::Input::builder(peripherals.button0, ariel_os::gpio::Pull::Up)
+        .build_with_interrupt()
+        .unwrap();
 
     loop {
         // Gives the pull-up time to actually pull up
         Timer::after_millis(5).await;
-        while button0.is_high() {}
+        button0.wait_for_low().await;
 
         info!("Press: Starting to transmit.");
         let mut last_tx = dect.time_get().await.unwrap();
