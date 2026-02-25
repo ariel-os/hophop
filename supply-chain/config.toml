@@ -219,10 +219,6 @@ criteria = "safe-to-deploy"
 version = "0.8.8"
 criteria = "safe-to-deploy"
 
-[[exemptions.rustc_version]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.rustversion]]
 version = "1.0.22"
 criteria = "safe-to-deploy"
