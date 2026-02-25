@@ -24,6 +24,7 @@ Abbreviations and terms relevant to hophop:
 - **DL**: Downlink (generic, [nr+])
 - **DLC**: Data Link Control ([nr+])
 - **DTCH**: Dedicated Traffic Channel ([nr+])
+- **edge**: Connection between two nodes. **We mostly avoid this term** due to ambiguity, as it is also used for edge computing, where it refers to a node between two parts of a network.
 - **EDHOC**: Ephemeral Diffie-Hellman Over COSE ([RFC9528](https://www.rfc-editor.org/rfc/rfc9528.html); asymmetric key establishment that provides all relevant security properties for CoAP; works in tandem with OSCORE)
 - **EP**: Endpoint (generic, but here: [nr+] endpoint; beware that CoAP and OAuth have different and more specific definition)
 - **FDMA**: Frequency Division Multiple Access ([generic](https://en.wikipedia.org/wiki/Frequency-division_multiple_access), [nr+])
@@ -33,8 +34,12 @@ Abbreviations and terms relevant to hophop:
 - **GI**: Guard Interval ([generic](https://en.wikipedia.org/wiki/Guard_interval), [nr+])
 - **LBT**: Listen Before Talk ([generic](https://en.wikipedia.org/wiki/Contention-based_protocol), [nr+])
 - **MAC**: Medium Access Control (generic, but here: the [nr+] MAC)
+- **mesh network**: A multiply connected network, which has more connections than spanning tree.
+  **We mostly avoid this term** due to ambiguity: It is used in the nr+ context to merely indicate a tree beyond a star,
+  whereas other networks realize actual mutli-parent topologies.
 - **MIMO**: Multiple Input Multiple Output ([generic](https://en.wikipedia.org/wiki/MIMO), [nr+])
 - **MTCH**: Multicast (Broadcast) Traffic Channel ([nr+])
+- **node**: Participant in a generic radio network (especially mesh), especially in the context of network topology ([generic](https://en.wikipedia.org/wiki/Node)<!-- pointing to disambiguation as that also has the 'entity in a mesh network' entry -->)
 - **NR**: New Radio ([nr+])
 - **OFDM**: Orthogonal Frequency Division Multiplexing ([generic](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiplexing), [nr+])
 - **OSCORE**: Object Security for Constrained RESTful Environments ([RFC8613](https://datatracker.ietf.org/doc/html/rfc8613); symmetric security for CoAP, set up through EDHOC)
