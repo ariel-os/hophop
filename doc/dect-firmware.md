@@ -33,6 +33,17 @@ but not to those using typical Rust workflows:
   * If there is any error, try factory resetting the device: `nrfutil device recover --serial-number 001....`
     (unlike the firmware-upgrade, this has no `--all-jlinks` option).
 
+## Supported firmware variants
+
+As of writing, there were no observable differences in the way
+the 2.0 PHY firmware (`mfw-nr+-phy_nrf91x1_2.0.0`) and the 2.0 MAC (`mfw-nr+_nrf91x1_2.0.0`)
+behave when used for PHY operations;
+either will work.
+
+Older versions (1.1) currently fail a start-up test we perform (checking whether the latencies changed from our expectations);
+that check could be relaxed to allow older firmware versions to run
+until we start using any features of the new version.
+
 ## Going back to the cellular firmware
 
 While there is no known way to read the network core's firmware
