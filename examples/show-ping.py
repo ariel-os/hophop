@@ -101,7 +101,7 @@ plot_groups = [
     ('kx', seen_by_both_x, seen_by_both_y, f"Seen by both {party_a} and {party_b}"),
 ]
 # This is not taking into account any relative movement, but let's start simple.
-avg_drift = np.mean([np.polyfit(g[1], g[2], deg=1)[0] for g in plot_groups])
+avg_drift = np.mean([np.polyfit(g[1], g[2], deg=1)[0] for g in plot_groups if g[1]])
 print(f"Relative full-experiment clock drift between the clocks is {avg_drift * 1000000:.2g}ppm")
 
 # Correcting
@@ -111,6 +111,8 @@ if args.global_undrift:
 
 fig, ax = plt.subplots()
 for (color, x, y, label) in plot_groups:
+    if not x:
+        continue
     ax.plot(x, y, color, label=label)
     ax.set_xlabel(f"Average time between {party_a} and {party_b}")
     if args.global_undrift:

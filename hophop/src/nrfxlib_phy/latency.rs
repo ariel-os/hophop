@@ -19,18 +19,18 @@ macro_rules! latency_info {
                 nrf_modem_dect_phy_latency_info__bindgen_ty_1 {
                     scheduled_operation_transition: 25920,
                     scheduled_operation_startup: 87782,
-                    radio_mode_transition: [45273, 6912, 21427],
+                    radio_mode_transition: [47001, 6912, 21427],
                 },
                 nrf_modem_dect_phy_latency_info__bindgen_ty_1 {
                     scheduled_operation_transition: 26956,
                     scheduled_operation_startup: 42854,
-                    radio_mode_transition: [45273, 41472, 21427],
+                    radio_mode_transition: [47001, 41472, 21427],
                 },
             ],
             operation: nrf_modem_dect_phy_latency_info__bindgen_ty_2 {
                 receive: nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_1 {
-                    idle_to_active: 22118,
-                    active_to_idle_rssi: 13132,
+                    idle_to_active: 24192,
+                    active_to_idle_rssi: 13824,
                     active_to_idle_rx: 12441,
                     active_to_idle_rx_rssi: 16588,
                     stop_to_rf_off: 14169,
@@ -51,7 +51,7 @@ macro_rules! latency_info {
     };
 }
 
-/// Latency as reported by nRF nr+ firmware 1.1.0.
+/// Latency as reported by nRF nr+ firmware PHY 2.0.
 ///
 /// Until we find that we actually need all of this, checking at startup allows us to reach into
 /// the const for access whenever we need it, without needing to worry about how to get data
