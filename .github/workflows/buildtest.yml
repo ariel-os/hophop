@@ -22,7 +22,7 @@ jobs:
       - name: Install laze and other tools
         uses: taiki-e/install-action@v2
         with:
-          tool: laze@0.1,cargo-doc2readme
+          tool: laze@0.1,cargo-doc2readme,cargo-vet
 
       - name: "Installing Ariel OS prerequisites through apt (plus pipx for reuse.software)"
         run: sudo apt-get install ninja-build gcc-arm-none-eabi pipx
