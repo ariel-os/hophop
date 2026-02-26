@@ -68,6 +68,10 @@ version = "1.2.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.defmt]]
+version = "0.3.100"
+criteria = "safe-to-deploy"
+
+[[exemptions.defmt]]
 version = "1.0.1"
 criteria = "safe-to-deploy"
 
@@ -125,6 +129,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.itertools]]
 version = "0.13.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.itertools]]
+version = "0.14.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.libc]]
@@ -229,6 +237,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.stable_deref_trait]]
 version = "1.2.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.static_cell]]
+version = "2.1.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.syn]]
