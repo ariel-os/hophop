@@ -1,4 +1,8 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.rustc_version]]
+who = "JuliDi <20155974+JuliDi@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.2.3"
+notes = "Small crate (~130 lines). Runs `$RUSTC -vV` (if available, else `rustc -vV`) and parses output. No unsafe code, no filesystem/network access beyond expected process spawning. Straightforward string parsing with correct bounds checks."
