@@ -51,10 +51,6 @@ criteria = "safe-to-deploy"
 version = "0.13.2"
 criteria = "safe-to-deploy"
 
-[[exemptions.bitflags]]
-version = "2.10.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.cfg-if]]
 version = "1.0.4"
 criteria = "safe-to-deploy"
@@ -189,14 +185,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.prettyplease]]
 version = "0.2.37"
-criteria = "safe-to-deploy"
-
-[[exemptions.proc-macro-error-attr2]]
-version = "2.0.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.proc-macro-error2]]
-version = "2.0.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.proc-macro2]]
