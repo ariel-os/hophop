@@ -238,7 +238,12 @@ mod callbacks {
     unsafe extern "C" fn association_release_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params,
     ) {
-        todo!()
+        // SAFETY: implied in C API
+        let params = unsafe { &*params };
+        warn!(
+            "Association is gone: cause {}, peer 0x{:x}",
+            params.release_cause, params.long_rd_id
+        );
     }
     unsafe extern "C" fn cluster_ch_load_change_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_ch_load_change_ntf_cb_params,
