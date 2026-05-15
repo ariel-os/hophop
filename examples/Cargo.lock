@@ -1807,6 +1807,8 @@ dependencies = [
  "ariel-os-boards",
  "heapless 0.9.2",
  "hophop",
+ "nrf-modem",
+ "nrfxlib-sys",
  "ts-103-636-numbers",
  "ts-103-636-utils",
 ]
@@ -2089,8 +2091,9 @@ dependencies = [
 
 [[package]]
 name = "nrf-modem"
-version = "0.10.0"
-source = "git+https://github.com/chrysn-pull-requests/nrf-modem?rev=f7ec75392991cc5fc6fb518f5a41f0bb415554a2#f7ec75392991cc5fc6fb518f5a41f0bb415554a2"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d35a7f0d855e9c79900047ccd03bab927c3135581e8f4afa4b28ff007269a1c"
 dependencies = [
  "arrayvec",
  "at-commands",
@@ -2129,8 +2132,8 @@ dependencies = [
 
 [[package]]
 name = "nrfxlib-sys"
-version = "3.0.2"
-source = "git+https://github.com/nrf-rs/nrfxlib-sys?rev=0550640e9666a7231defb24e274663174f1ab0d1#0550640e9666a7231defb24e274663174f1ab0d1"
+version = "3.1.0+3.3.0"
+source = "git+https://github.com/chrysn-pull-requests/nrfxlib-sys?branch=nrfxlib330#6d36a4a4f9542d62cf5d9a2f20ed10103c6b35e9"
 dependencies = [
  "bindgen",
  "llvm-tools",
@@ -3332,3 +3335,8 @@ source = "git+https://github.com/ariel-os/esp-hal?rev=531c629afdd80ea464682ce7f4
 name = "esp-radio-rtos-driver"
 version = "0.2.0"
 source = "git+https://github.com/ariel-os/esp-hal?rev=531c629afdd80ea464682ce7f4db8baed97967a6#531c629afdd80ea464682ce7f4db8baed97967a6"
+
+[[patch.unused]]
+name = "nrf-modem"
+version = "0.10.0"
+source = "git+https://github.com/chrysn-pull-requests/nrf-modem?rev=f7ec75392991cc5fc6fb518f5a41f0bb415554a2#f7ec75392991cc5fc6fb518f5a41f0bb415554a2"
