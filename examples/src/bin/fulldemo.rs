@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::debug::log::{Hex, info, warn};
+use ariel_os::debug::log::{Hex, error, info, warn};
 
 use nrf_modem::ErrorSource;
 use nrfxlib_sys;
@@ -131,6 +131,9 @@ mod callbacks {
             err::display(params.status),
             params.long_rd_id
         );
+        if params.status != 0 {
+            return;
+        }
         info!(
             "  RX signal info: MCS {}, TX power {}, RSSI2 {}, SNR {}",
             params.rx_signal_info.mcs,
@@ -208,16 +211,21 @@ mod callbacks {
     ) {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
-        info!(
-            "Scan came back with status {} channels {}",
-            err::display(params.status),
-            params.num_scanned_channels
-        );
+        // Ignoring num_channels; not sure why how that'd be new information
+        // FIXME: should we ignore the status because cancellation could have legitimately happened?
+        if params.status == 0 {
+            SINGLETON_EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn network_scan_stop(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop_cb_params,
     ) {
-        todo!()
+        // SAFETY: implied in C API
+        let params = unsafe { &*params };
+        // FIXME: should *this one* ignore the status?
+        if params.status == 0 {
+            SINGLETON_EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn rssi_scan(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params,
@@ -279,6 +287,15 @@ mod callbacks {
             params.network_id,
             params.number_of_ies
         );
+        // It's a bit unfortunate that we have to copy around here rather than just re-owning a
+        // pool message, but we can still try to do better when we see what's in the actual IPC
+        // API.
+        let _ = BEACON_EVENTS.try_send(ClusterBeacon {
+            channel: params.channel,
+            transmitter_short_rd_id: params.transmitter_short_rd_id,
+            transmitter_long_rd_id: params.transmitter_long_rd_id,
+            network_id: params.network_id,
+        });
     }
     unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params,
@@ -336,8 +353,13 @@ mod callbacks {
 /// Singleton represnting control over the DECT operation of libmodem and that the callbacks are
 /// set up.
 ///
-/// Does it make sense for this to be smart and do higher level stuff, or better just have an
-/// idiomatic async wrapper around the lib?
+/// This is built to be a good async representation of the nrfxlib API, and should not include any
+/// operations logic.
+///
+/// Error handling is rather on the panicky side: The caller is expected to adhere to the
+/// underlying API's (currently implicit) requirements on sequences, such as not starting an
+/// association while a scan is running. Only API violations (FIXME: currently: should) cause
+/// panics, everything else is handled through errors.
 ///
 /// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
 struct DectMac(());
@@ -350,7 +372,21 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 /// Events which are only generated while the [`DectMac`] is in a `&mut self` operation that has no
 /// other events. Typically, this is all kinds of global mode changes.
-static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();
+///
+/// Length is 2 to allow use for scan and scan_stop: If a scan is stopped before time, confirmation
+/// of the end of scan and of the stop command will both arrive. They will be indistinguishable,
+/// and that doesn't matter.
+static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, (), 2> = Channel::new();
+
+/// Events during a scan (maybe also during associated operation).
+///
+/// FIXME: How should overflow be indicated?
+static BEACON_EVENTS: Channel<
+    CriticalSectionRawMutex,
+    ClusterBeacon,
+    // FIXME: What's a good number?
+    2,
+> = Channel::new();
 
 impl DectMac {
     /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context
@@ -403,6 +439,65 @@ impl DectMac {
         }.into_result().expect("Failed to set functional mode");
         SINGLETON_EVENTS.receive().await;
     }
+
+    /// Starts a network scan.
+    ///
+    /// Scan results are available inside the async closure. If the scan times out, the closure is
+    /// dropped. If the closure completes, the scan is stopped before returning from this function.
+    // &mut is probably not needed. FIXME: ask if C API can be enhanced
+    async fn mac_network_scan<R>(
+        &mut self,
+        params: &mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params,
+        callback: impl AsyncFnOnce(ScanReceiver<'_>) -> R,
+    ) -> Option<R> {
+        unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan(params) }
+            .into_result()
+            .expect("Failed to start the scan");
+
+        use embassy_futures::select::{Either::*, select};
+
+        match select(
+            SINGLETON_EVENTS.receive(),
+            callback(ScanReceiver(Default::default())),
+        )
+        .await
+        {
+            First(()) => None,
+            Second(r) => {
+                unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop() }
+                    .into_result()
+                    .expect("Failed to stop the scan");
+
+                // One of those is the First that never happened / was cancelled.
+                SINGLETON_EVENTS.receive().await;
+                SINGLETON_EVENTS.receive().await;
+
+                // FIXME: cancel and await two end events
+                Some(r)
+            }
+        }
+    }
+}
+
+// Almost nrf_modem_dect_mac_cluster_beacon_ntf_cb_params, but dropping the ies -- not because we
+// really want to (I'd rather memcpy than create a new struct), but because that pointer makes the
+// whole type not Send, and it comes from the ISR. We wouldn't touch it, but are in no position to
+// impl Send on it.
+struct ClusterBeacon {
+    pub channel: u16,
+    pub transmitter_short_rd_id: u16,
+    pub transmitter_long_rd_id: u32,
+    pub network_id: u32,
+}
+
+#[derive(Copy, Clone)]
+struct ScanReceiver<'brand>(core::marker::PhantomData<&'brand ()>);
+
+impl<'brand> ScanReceiver<'brand> {
+    // FIXME dress up in non _sys dependent API
+    async fn next(self) -> ClusterBeacon {
+        BEACON_EVENTS.receive().await
+    }
 }
 
 #[ariel_os::task(autostart)]
@@ -442,26 +537,37 @@ async fn main() {
 
     dect.control_functional_mode_set_activate().await;
 
-    info!("Attempting a scan");
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_mac_network_scan(&mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
+    // Making this standalone should make it easier later to give strategies such as "scan our
+    // preferred channel for a few seconds, then the whole band".
+    let find_our_network = async |r: ScanReceiver| {
+        loop {
+            let params = r.next().await;
+
+            if params.network_id == 0x87654321 {
+                // That's the demo network we are looking for, mostly following the DECT shell defaults.
+                //
+                // (What is missing is that we'd use that to dig up keys and then reconfigure the
+                // keying)
+                break params;
+            }
+        }
+    };
+
+    let params = dect.mac_network_scan(&mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
         band: 0, //nrfxlib_sys::nrf_modem_dect_mac_band_NRF_MODEM_DECT_MAC_PHY_BAND1,
         num_channels: 1, //0
         channel_list: [1665; 20], // so it terminates fast
         scan_time: 3_000, // ms -- 60s is the maximum. I guess this is per band?
         network_id_filter_mode: nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_NONE,
         network_id_filter: 0,
-    })
-    }.into_result().expect("Failed to start the scan");
+    }, find_our_network).await;
 
-    // We'd have to wait way longer actually -- scan time is, like, 3s * 21 bands
-    //
-    // And we have to wait for the scan to complete, or the association would be "not allowed"
-    ariel_os::time::Timer::after_millis(4_000).await;
+    let Some(params) = params else {
+        error!("Scanning for 3s found no beacon of our network, exiting.");
+        return;
+    };
 
-    info!(
-        "While scanning, attempting association with PT at programmer ..2646 (TX long ID 0x70d1776d)"
-    );
+    info!("Now that scanning is complete, attempting association with the found FT");
     // Can we do 0? (We can't put NULL in it, that'd be rejected even at function call time)
     // Probably not and makes no sense. Funnily, peers can't even `dect tx` and we don't get pings
     // if we don't put the "High layer signalling - flow 1" in. (At least a user data flow alone
@@ -479,10 +585,10 @@ async fn main() {
     unsafe {
         nrfxlib_sys::nrf_modem_dect_mac_association(
             &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
-                // FIXME: get from scan
-                long_rd_id: 0x70d1776d,
-                // FIXME: get from scan
-                network_id: 0x87654321,
+                // FIXME where do we use the channel information? Did the MAC remember? (Probably:
+                // After all, it's not just channel but the whole info stuff from the beacon).
+                long_rd_id: params.transmitter_long_rd_id,
+                network_id: params.network_id,
                 info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
                     // FIXME: this is a guess
                     num_beacon_rx_failures: 1,
