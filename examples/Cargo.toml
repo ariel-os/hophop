@@ -20,6 +20,7 @@ ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "*", features = ["dect-mac"] }
+embassy-sync = { version = "0.8.0", features = ["defmt"] }
 
 # we have to do this in build/imports/ariel-os/ariel-os-cargo.toml -- you'll
 # find that when you notice that your nrfxlib-sys crate doesn't have a dect-mac

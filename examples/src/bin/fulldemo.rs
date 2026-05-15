@@ -94,6 +94,9 @@ mod callbacks {
             "Functional mode set completed: {}",
             err::display(params.status)
         );
+        if params.status == 0 {
+            EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn control_configure(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_configure_cb_params,
@@ -104,6 +107,9 @@ mod callbacks {
             "Control configure was accepted: {}",
             err::display(params.status)
         );
+        if params.status == 0 {
+            EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn control_systemmode(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_systemmode_cb_params,
@@ -111,6 +117,9 @@ mod callbacks {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
         info!("System mode set completed: {}", err::display(params.status));
+        if params.status == 0 {
+            EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn association(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_cb_params,
@@ -319,81 +328,112 @@ mod callbacks {
     }
 }
 
+/// Singleton represnting control over the DECT operation of libmodem and that the callbacks are
+/// set up.
+///
+/// Does it make sense for this to be smart and do higher level stuff, or better just have an
+/// idiomatic async wrapper around the lib?
+///
+/// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
+struct DectMac(());
+
+// This should evolve a bit
+//
+// So far, this is only used for the lockstepping parts, when exactly one thing is possible and
+// exactly one thing happens.
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
+static EVENTS: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();
+
+impl DectMac {
+    /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context
+    ///
+    /// This immediately starts setting up the MAC system mode. If we later find out we don't want
+    /// that, there'll probably be some kind of "desiccated" form of this object where a user can
+    /// first initialize the desiccated form and then do a "set MAC system mode" function, both
+    /// which steps this combines.
+    fn create(_modem_is_set_up: ()) -> Self {
+        // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
+        unsafe {
+            nrfxlib_sys::nrf_modem_dect_mac_callback_set(
+                &callbacks::OP_CALLBACKS,
+                &callbacks::MAC_NTF_CALLBACKS,
+            )
+        }
+        .into_result()
+        .expect("Unsuccessful operation would mean we passed NULL or had a None in the callbacks.");
+
+        Self(())
+    }
+
+    async fn systemmode_set_mac(&mut self) {
+        unsafe {
+            nrfxlib_sys::nrf_modem_dect_control_systemmode_set(
+                nrfxlib_sys::nrf_modem_dect_control_systemmode_NRF_MODEM_DECT_MODE_MAC,
+            )
+        }
+        .into_result()
+        .expect("Failed to set system mode");
+        EVENTS.receive().await;
+    }
+
+    // &mut is probably not needed. FIXME: ask if C API can be enhanced
+    async fn control_configure(
+        &mut self,
+        params: &mut nrfxlib_sys::nrf_modem_dect_control_configure_params,
+    ) {
+        unsafe { nrfxlib_sys::nrf_modem_dect_control_configure(params) }
+            .into_result()
+            .expect("Failed to set configuration params");
+        EVENTS.receive().await;
+    }
+
+    async fn control_functional_mode_set_activate(&mut self) {
+        unsafe {
+            nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(
+                nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
+            )
+        }.into_result().expect("Failed to set functional mode");
+        EVENTS.receive().await;
+    }
+}
+
 #[ariel_os::task(autostart)]
 async fn main() {
-    //     // highly unsure but maybe?
-    //     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
-    //         .await
-    //         .unwrap();
-
-    // It is expected that as earlier with the PHY functions, some of this moves into hophop. But
-    // not now.
-
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_mac_callback_set(
-            &callbacks::OP_CALLBACKS,
-            &callbacks::MAC_NTF_CALLBACKS,
-        )
-    }
-    .into_result()
-    .expect("Unsuccessful operation would mean we passed NULL or had a None in the callbacks.");
-    info!("Callbacks are set up.");
+    let mut dect = DectMac::create(());
 
-    info!("Setting system mode");
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_control_systemmode_set(
-            nrfxlib_sys::nrf_modem_dect_control_systemmode_NRF_MODEM_DECT_MODE_MAC,
-        )
-    }
-    .into_result()
-    .expect("Failed to set system mode");
-    warn!("Could take some time until system mode is set?");
-    ariel_os::time::Timer::after_millis(2_000).await;
+    dect.systemmode_set_mac().await;
 
-    info!("Setting configuration params");
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_control_configure(
-            // FIXME: check if they might mean `*const` in C
-            &mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
-                // FIXME: Decide (this is a "let's keep it civilized" guess)
-                max_tx_power:
-                    nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
-                // FIXME: take from hardware
-                max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
-                // FIXME: Decide (this is what the vendor examples default to)
-                expected_mcs1_rx_rssi_level: -68,
-                // FIXME: make configurable
-                long_rd_id: 0xf00feaae,
-                // FIXME: configure
-                phy_band_group_index: nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
-                // FIXME: configure
-                power_save: true,
-                security: nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
-                    // FIXME: That we set this means we'll have to change the configuration params
-                    // late (when we have *actual* keys). Can we just change the params later w/o
-                    // leaving functional mode?
-                    mode: nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_NONE,
-                    integrity_key: [0; _],
-                    cipher_key: [0; _],
-                },
-                // FIXME: Decide (this is what the vendor uses in their examples)
-                stats_averaging_length: 2,
-            },
-        )
-    }
-    .into_result().expect("Failed to set configuration params");
-    warn!("Could take some time until config is set?");
-    ariel_os::time::Timer::after_millis(2_000).await;
+    dect.control_configure(&mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
+        // FIXME: Decide (this is a "let's keep it civilized" guess)
+        max_tx_power: nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
+        // FIXME: take from hardware
+        max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
+        // FIXME: Decide (this is what the vendor examples default to)
+        expected_mcs1_rx_rssi_level: -68,
+        // FIXME: make configurable
+        long_rd_id: 0xf00feaae,
+        // FIXME: configure
+        phy_band_group_index:
+            nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
+        // FIXME: configure
+        power_save: true,
+        security: nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
+            // FIXME: That we set this means we'll have to change the configuration params
+            // late (when we have *actual* keys). Can we just change the params later w/o
+            // leaving functional mode?
+            mode:
+                nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_NONE,
+            integrity_key: [0; _],
+            cipher_key: [0; _],
+        },
+        // FIXME: Decide (this is what the vendor uses in their examples)
+        stats_averaging_length: 2,
+    })
+    .await;
 
-    info!("Setting functional mode");
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(
-            nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
-        )
-    }.into_result().expect("Failed to set functional mode");
-    warn!("Could take some time until functional mode is set?");
-    ariel_os::time::Timer::after_millis(2_000).await;
+    dect.control_functional_mode_set_activate().await;
 
     info!("Attempting a scan");
     unsafe {
