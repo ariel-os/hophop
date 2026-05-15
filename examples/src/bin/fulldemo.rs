@@ -95,7 +95,7 @@ mod callbacks {
             err::display(params.status)
         );
         if params.status == 0 {
-            EVENTS.try_send(()).unwrap();
+            SINGLETON_EVENTS.try_send(()).unwrap();
         }
     }
     unsafe extern "C" fn control_configure(
@@ -108,7 +108,7 @@ mod callbacks {
             err::display(params.status)
         );
         if params.status == 0 {
-            EVENTS.try_send(()).unwrap();
+            SINGLETON_EVENTS.try_send(()).unwrap();
         }
     }
     unsafe extern "C" fn control_systemmode(
@@ -118,7 +118,7 @@ mod callbacks {
         let params = unsafe { &*params };
         info!("System mode set completed: {}", err::display(params.status));
         if params.status == 0 {
-            EVENTS.try_send(()).unwrap();
+            SINGLETON_EVENTS.try_send(()).unwrap();
         }
     }
     unsafe extern "C" fn association(
@@ -348,7 +348,9 @@ struct DectMac(());
 // exactly one thing happens.
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-static EVENTS: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();
+/// Events which are only generated while the [`DectMac`] is in a `&mut self` operation that has no
+/// other events. Typically, this is all kinds of global mode changes.
+static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();
 
 impl DectMac {
     /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context
@@ -379,7 +381,7 @@ impl DectMac {
         }
         .into_result()
         .expect("Failed to set system mode");
-        EVENTS.receive().await;
+        SINGLETON_EVENTS.receive().await;
     }
 
     // &mut is probably not needed. FIXME: ask if C API can be enhanced
@@ -390,7 +392,7 @@ impl DectMac {
         unsafe { nrfxlib_sys::nrf_modem_dect_control_configure(params) }
             .into_result()
             .expect("Failed to set configuration params");
-        EVENTS.receive().await;
+        SINGLETON_EVENTS.receive().await;
     }
 
     async fn control_functional_mode_set_activate(&mut self) {
@@ -399,7 +401,7 @@ impl DectMac {
                 nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
             )
         }.into_result().expect("Failed to set functional mode");
-        EVENTS.receive().await;
+        SINGLETON_EVENTS.receive().await;
     }
 }
 
