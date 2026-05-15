@@ -13,5 +13,12 @@ apps:
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
-      # Actually only for the tx example
+      # Actually only for the tx and coap example
       - has_buttons
+      # Actually only for the coap example
+      #
+      # FIXME: Only the tx example sets this up, for the others, this has the
+      # ugly side-effect of starving slipmux (at some point, we'll have to split the examples)
+      - coap-server
+      # Can't do OSCORE yet because we don't have the RNG; that is WIP in Ariel OS
+      - coap-server-config-unprotected
