@@ -252,7 +252,12 @@ mod callbacks {
     unsafe extern "C" fn dlc_data_tx(
         params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_cb_params,
     ) {
-        todo!()
+        // SAFETY: implied in C API
+        let params = unsafe { &*params };
+        // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
+        if params.status == 0 {
+            SINGLETON_EVENTS.try_send(()).unwrap();
+        }
     }
     unsafe extern "C" fn dlc_data_discard(
         params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_discard_cb_params,
@@ -555,6 +560,31 @@ impl DectMac {
             }
         }
     }
+
+    /// Transmits data in one of the flows.
+    ///
+    /// This is a primitive wrapper in that it only returns after transmission; a better version
+    /// would return once successfully enqueued and signal completion later.
+    async fn dlc_data_tx(&mut self, flow_id: u8, destination: u32, data: &[u8]) {
+        unsafe {
+            nrfxlib_sys::nrf_modem_dect_dlc_data_tx(
+                &mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_params {
+                    // FIXME use when managing those; right now any value is good
+                    transaction_id: 0,
+                    flow_id: flow_id,
+                    // send to our neighbor
+                    long_rd_id: destination,
+                    // FIXME: verify that the C API really doesn't want to write there
+                    data: data as *const _ as *mut _,
+                    data_len: data.len(),
+                },
+            )
+        }
+        .into_result()
+        // FIXME: Can this fail just because the slice is bad?
+        .expect("Failed to start TX attempt");
+        SINGLETON_EVENTS.receive().await;
+    }
 }
 
 // Almost nrf_modem_dect_mac_cluster_beacon_ntf_cb_params, but dropping the ies -- not because we
@@ -650,8 +680,16 @@ async fn main() {
     // Probably not and makes no sense. Funnily, peers can't even `dect tx` and we don't get pings
     // if we don't put the "High layer signalling - flow 1" in. (At least a user data flow alone
     // replacing it is insufficient.)
-    let mut tx_flow_configs: [nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config; 1] =
-        [nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+    let mut tx_flow_configs = [
+        nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+            flow_id: 6, // "User plane data -- flow 4"
+            priority: 4,
+            dlc_service_type:
+                nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
+            dlc_sdu_lifetime:
+                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_1_MS,
+        },
+        nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
             //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
             flow_id: 1, // "Higher layer signalling - flow 1"
             priority: 0,
@@ -659,7 +697,8 @@ async fn main() {
                 nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
             dlc_sdu_lifetime:
                 nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_1_MS,
-        }];
+        },
+    ];
     unsafe {
         nrfxlib_sys::nrf_modem_dect_mac_association(
             &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
@@ -681,4 +720,22 @@ async fn main() {
     }
     .into_result()
     .expect("Failed to start association attempt");
+
+    ariel_os::time::Timer::after_millis(4_000).await;
+
+    // OK thisis funny: Data from all channels arrives at the dect_shell's IP stack, as evidenced
+    // by both counts here going into the bytes received of `net stats`.
+    //
+    // So all channels are dumped into the IP stack indiscriminately? Can't be right, but OTOH, we
+    // can work with that for something minimal, and set it right later.
+
+    dect.dlc_data_tx(6, params.transmitter_long_rd_id, b"hello hello");
+    info!("Sent on flow 6");
+
+    dect.dlc_data_tx(
+        1,
+        params.transmitter_long_rd_id,
+        b"00112233445566778899aabbccddeeff",
+    );
+    info!("Sent on flow 1");
 }
