@@ -416,10 +416,28 @@ mod callbacks {
 /// This is built to be a good async representation of the nrfxlib API, and should not include any
 /// operations logic.
 ///
+/// ## Error handling
+///
 /// Error handling is rather on the panicky side: The caller is expected to adhere to the
 /// underlying API's (currently implicit) requirements on sequences, such as not starting an
 /// association while a scan is running. Only API violations (FIXME: currently: should) cause
 /// panics, everything else is handled through errors.
+///
+/// ## Drop safety
+///
+/// None of this type's async methods are drop safe; dropping them gets the channels out of
+/// sync, causing panics. FIXME: Find out a good alternative; options are:
+///
+/// * just document it,
+/// * panic on drop,
+/// * taint the object on drop (likely panicing other functions again),
+/// * handle dropping for abortable functions such as dlc_data_tx,
+/// * do that for others too, which for many means that every next user of self will wait
+///   before its action is initialized. (In that case, the only reason to await completion after a
+///   first poll, or if we move the action to before polling which we might do, is to get the error
+///   out at the right place).
+///
+/// ## Further development
 ///
 /// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
 struct DectMac(());
