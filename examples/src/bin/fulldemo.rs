@@ -380,7 +380,13 @@ mod callbacks {
     unsafe extern "C" fn network_beacon_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_beacon_ntf_cb_params,
     ) {
-        todo!()
+        // SAFETY: implied in C API
+        let params = unsafe { &*params };
+        info!(
+            "Got network beacon on channel {} from 0x{:x} on network 0x{:x}",
+            params.channel, params.transmitter_long_rd_id, params.network_id,
+        );
+        // FIXME: do we *do* anything with those, esp. w/rt sending them to the scan process?
     }
     unsafe extern "C" fn capability_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_capability_ntf_cb_params,
