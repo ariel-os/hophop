@@ -304,7 +304,7 @@ mod callbacks {
     unsafe extern "C" fn association_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_ntf_cb_params,
     ) {
-        todo!()
+        todo!("Only relevant for FTs")
     }
     unsafe extern "C" fn association_release_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params,
@@ -319,22 +319,22 @@ mod callbacks {
     unsafe extern "C" fn cluster_ch_load_change_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_ch_load_change_ntf_cb_params,
     ) {
-        todo!()
+        todo!("Only relevant for FTs")
     }
     unsafe extern "C" fn neighbor_inactivity_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_inactivity_ntf_cb_params,
     ) {
-        todo!()
+        todo!("Only relevant for FTs")
     }
     unsafe extern "C" fn neighbor_paging_failure_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_paging_failure_ntf_cb_params,
     ) {
-        todo!()
+        todo!("Only relevant for FTs")
     }
     unsafe extern "C" fn rssi_scan_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_ntf_cb_params,
     ) {
-        todo!()
+        todo!("Only relevant for FTs")
     }
     unsafe extern "C" fn cluster_beacon_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_ntf_cb_params,
