@@ -147,7 +147,7 @@ Running the example building on the full Nordic stack
     desh:~$ dect sett --dev_type FT
     desh:~$ dect activate
     desh:~$ dect sett --sec_mode=none
-    desh:~$ dect nw_beacon_start -c 1665
+    desh:~$ dect cluster_start 1665
     ```
 
     If anything fails, compare against my settings:
