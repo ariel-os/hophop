@@ -25,9 +25,19 @@ static_cell = "2.1.1"
 itertools = { version = "0.14.0", default-features = false }
 embassy-futures = "0.1.2"
 
+# Once nrf-modem provides the switches to pass this on, we won't need the
+# dependency here any more. (Then we can also properly introduce features for
+# this rather than just always pulling in everything).
+nrfxlib-sys = { version = "*", features = ["dect-mac"] }
+
 [target.'cfg(not(target = "thumbv8m.main-none-eabihf"))'.dependencies]
 # We're using box_pool, and while that works on thumbv8m without portable
 # atomics, it needs them even on amd64 (which is where all the tests and checks
 # and rust-analyzer run, unless we go through greater lengths to make those
 # still smooth)
 heapless = { version = "0.9.2", features = ["portable-atomic"] }
+
+# See ../examples/Cargo.toml -- this won't do in builds, but it helps IDEs
+[patch.crates-io]
+# from https://github.com/nrf-rs/nrfxlib-sys/pull/20
+nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }
