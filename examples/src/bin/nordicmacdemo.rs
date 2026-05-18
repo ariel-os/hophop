@@ -257,6 +257,10 @@ mod callbacks {
         // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
         if params.status == 0 {
             SINGLETON_EVENTS.try_send(()).unwrap();
+        } else {
+            warn!("Could not TX: {}", err::display(params.status));
+            // FIXME: send that there was an error.
+            SINGLETON_EVENTS.try_send(()).unwrap();
         }
     }
     unsafe extern "C" fn dlc_data_discard(
@@ -419,6 +423,13 @@ mod callbacks {
             params.long_rd_id,
             Hex(data)
         );
+        if let Ok(vec) = data.try_into() {
+            if PACKETS.try_send(vec).is_err() {
+                warn!("Could not enqueue: queue full");
+            }
+        } else {
+            warn!("Could not enqueue: too big for heapless vec");
+        };
     }
     unsafe extern "C" fn dlc_flow_control_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_dlc_flow_control_ntf_cb_params,
@@ -481,6 +492,15 @@ static BEACON_EVENTS: Channel<
     ClusterBeacon,
     // FIXME: What's a good number?
     2,
+> = Channel::new();
+
+// FIXME: We definitely want to use something smarter; ideally ownership of net pool entries when
+// we better understand who allocates what.
+static PACKETS: Channel<
+    CriticalSectionRawMutex,
+    // If we make it bigger, we might easily exceed the ISR stack
+    heapless::vec::Vec<u8, 100>,
+    1,
 > = Channel::new();
 
 impl DectMac {
@@ -699,7 +719,7 @@ async fn main() {
             dlc_service_type:
                 nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
             dlc_sdu_lifetime:
-                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_1_MS,
+                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S
         },
         nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
             //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
@@ -708,7 +728,8 @@ async fn main() {
             dlc_service_type:
                 nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
             dlc_sdu_lifetime:
-                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_1_MS,
+                // picking something long, I think right now we can only TX right after a beacon
+                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
         },
     ];
     unsafe {
@@ -750,4 +771,32 @@ async fn main() {
         b"00112233445566778899aabbccddeeff",
     );
     info!("Sent on flow 1");
+
+    // FIXME: *don't* implement an IP stack, either pass data on to embassy-net or UART via slipmux.
+    // (and not going into any FIXME worthy items down here, this is clearly a quick and stupid
+    // hack)
+    loop {
+        info!("Idling with our own very primitive ping responder");
+        let mut packet = PACKETS.receive().await;
+        info!("Got packet {}", Hex(packet.as_slice()));
+        if packet[6] != 0x3a {
+            info!("Received packet is not ICMPv6, ignoring");
+            continue;
+        }
+        packet[8..40].rotate_right(16); // or left :-)
+        if packet[40] != 128 {
+            info!("Received packet is not Echo Request, ignoring");
+            continue;
+        }
+        packet[40] = 129; // Echo Reply
+        // Not bothering to fix the ICMP checksum: the dect_shell is happy enough to report the
+        // error well enough
+        info!("Sending response");
+        dect.dlc_data_tx(
+            1,
+            // Actually could be from someone else as well
+            params.transmitter_long_rd_id,
+            packet.as_slice(),
+        ).await;
+    }
 }
