@@ -192,7 +192,9 @@ mod callbacks {
             "Functional mode set completed: {:?}",
             params.status.as_mac_status(),
         );
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn control_configure(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_configure_cb_params,
@@ -203,7 +205,9 @@ mod callbacks {
             "Control configure was accepted: {:?}",
             params.status.as_mac_status(),
         );
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn control_systemmode(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_systemmode_cb_params,
@@ -214,7 +218,9 @@ mod callbacks {
             "System mode set completed: {:?}",
             params.status.as_mac_status()
         );
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn association(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_cb_params,
@@ -295,7 +301,9 @@ mod callbacks {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
         // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn dlc_data_discard(
         params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_discard_cb_params,
@@ -313,14 +321,18 @@ mod callbacks {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
         // Ignoring num_channels; not sure why how that'd be new information
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn network_scan_stop(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop_cb_params,
     ) {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
-        SINGLETON_EVENTS.try_send(params.status.as_mac_status()).unwrap();
+        SINGLETON_EVENTS
+            .try_send(params.status.as_mac_status())
+            .unwrap();
     }
     unsafe extern "C" fn rssi_scan(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params,
@@ -519,8 +531,7 @@ use embassy_sync::channel::Channel;
 /// Length is 2 to allow use for scan and scan_stop: If a scan is stopped before time, confirmation
 /// of the end of scan and of the stop command will both arrive. They will be indistinguishable,
 /// and that doesn't matter.
-static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, Result<(), MacError>, 2> =
-    Channel::new();
+static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, Result<(), MacError>, 2> = Channel::new();
 
 /// Events during a scan (maybe also during associated operation).
 ///
@@ -584,7 +595,9 @@ impl DectMac {
         unsafe { nrfxlib_sys::nrf_modem_dect_control_configure(params) }
             .into_result()
             .expect("Failed to set configuration params");
-        SINGLETON_EVENTS.receive().await
+        SINGLETON_EVENTS
+            .receive()
+            .await
             .expect("Failed to set configuration params");
     }
 
@@ -594,7 +607,8 @@ impl DectMac {
                 nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
             )
         }.into_result().expect("Failed to set functional mode");
-        SINGLETON_EVENTS.receive()
+        SINGLETON_EVENTS
+            .receive()
             .await
             .expect("Failed to set functional mode");
     }
@@ -624,7 +638,7 @@ impl DectMac {
             First(e) => {
                 e.unwrap();
                 None
-            },
+            }
             Second(r) => {
                 unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop() }
                     .into_result()
@@ -644,7 +658,12 @@ impl DectMac {
     ///
     /// This is a primitive wrapper in that it only returns after transmission; a better version
     /// would return once successfully enqueued and signal completion later.
-    async fn dlc_data_tx(&mut self, flow_id: u8, destination: u32, data: &[u8]) -> Result<(), MacError> {
+    async fn dlc_data_tx(
+        &mut self,
+        flow_id: u8,
+        destination: u32,
+        data: &[u8],
+    ) -> Result<(), MacError> {
         unsafe {
             nrfxlib_sys::nrf_modem_dect_dlc_data_tx(
                 &mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_params {
@@ -809,14 +828,18 @@ async fn main() {
     // So all channels are dumped into the IP stack indiscriminately? Can't be right, but OTOH, we
     // can work with that for something minimal, and set it right later.
 
-    dect.dlc_data_tx(6, params.transmitter_long_rd_id, b"hello hello").await.unwrap();
+    dect.dlc_data_tx(6, params.transmitter_long_rd_id, b"hello hello")
+        .await
+        .unwrap();
     info!("Sent on flow 6");
 
     dect.dlc_data_tx(
         1,
         params.transmitter_long_rd_id,
         b"00112233445566778899aabbccddeeff",
-    ).await.unwrap();
+    )
+    .await
+    .unwrap();
     info!("Sent on flow 1");
 
     // FIXME: *don't* implement an IP stack, either pass data on to embassy-net or UART via slipmux.
@@ -845,6 +868,7 @@ async fn main() {
             params.transmitter_long_rd_id,
             packet.as_slice(),
         )
-        .await.unwrap();
+        .await
+        .unwrap();
     }
 }
