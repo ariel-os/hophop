@@ -5,7 +5,7 @@ mod debug_helpers;
 mod shared_queues;
 
 use defmt::info;
-use nrf_modem::{nrfxlib_sys, ErrorSource};
+use nrf_modem::{ErrorSource, nrfxlib_sys};
 
 use error::MacError;
 use shared_queues::*;
@@ -48,7 +48,6 @@ pub mod hack {
 ///
 /// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
 pub struct DectMac(());
-
 
 impl DectMac {
     /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context

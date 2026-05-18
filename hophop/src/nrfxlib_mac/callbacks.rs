@@ -6,10 +6,10 @@
 use defmt::{info, warn};
 use nrf_modem::nrfxlib_sys;
 
+use super::ClusterBeacon;
+use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
-use super::debug_helpers::debug_ies;
-use super::ClusterBeacon;
 
 pub(super) static OP_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_op_callbacks =
     nrfxlib_sys::nrf_modem_dect_mac_op_callbacks {
@@ -162,9 +162,7 @@ unsafe extern "C" fn neighbor_list(
 ) {
     todo!()
 }
-unsafe extern "C" fn dlc_data_tx(
-    params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_cb_params,
-) {
+unsafe extern "C" fn dlc_data_tx(params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
@@ -201,9 +199,7 @@ unsafe extern "C" fn network_scan_stop(
         .try_send(params.status.as_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn rssi_scan(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params,
-) {
+unsafe extern "C" fn rssi_scan(params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params) {
     todo!()
 }
 unsafe extern "C" fn rssi_scan_stop(
@@ -279,9 +275,7 @@ unsafe extern "C" fn cluster_beacon_ntf(
             params.network_id,
             params.number_of_ies
         );
-        debug_ies(unsafe {
-            core::slice::from_raw_parts(params.ies, params.number_of_ies as _)
-        });
+        debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
     }
 }
 unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
@@ -331,9 +325,7 @@ unsafe extern "C" fn dlc_data_rx_ntf(
     let data = core::slice::from_raw_parts(params.data as *mut u8, params.data_len);
     info!(
         "Got DLC data RX: flow {}, peer 0x{:x}, data 0x{:02x}",
-        params.flow_id,
-        params.long_rd_id,
-        data
+        params.flow_id, params.long_rd_id, data
     );
     if let Ok(vec) = data.try_into() {
         if PACKETS.try_send(vec).is_err() {
