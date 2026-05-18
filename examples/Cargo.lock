@@ -897,9 +897,6 @@ name = "embassy-futures"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc2d050bdc5c21e0862a89256ed8029ae6c290a93aecefc73084b3002cdebb01"
-dependencies = [
- "defmt",
-]
 
 [[package]]
 name = "embassy-hal-internal"
@@ -1086,21 +1083,6 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "heapless 0.8.0",
-]
-
-[[package]]
-name = "embassy-sync"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bbd85cf5a5ae56bdf26f618364af642d1d0a4e245cdd75cd9aabda382f65a81"
-dependencies = [
- "cfg-if",
- "critical-section",
- "defmt",
- "embedded-io-async 0.7.0",
- "futures-core",
- "futures-sink",
- "heapless 0.9.2",
 ]
 
 [[package]]
@@ -1808,6 +1790,7 @@ name = "hophop"
 version = "0.0.1"
 dependencies = [
  "defmt",
+ "embassy-futures",
  "embassy-sync 0.7.2",
  "heapless 0.9.2",
  "itertools 0.14.0",
@@ -1823,9 +1806,6 @@ version = "0.0.0"
 dependencies = [
  "ariel-os",
  "ariel-os-boards",
- "defmt",
- "embassy-futures",
- "embassy-sync 0.8.0",
  "heapless 0.9.2",
  "hophop",
  "nrf-modem",
