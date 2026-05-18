@@ -20,6 +20,9 @@ use shared_queues::*;
 /// This is built to be a good async representation of the nrfxlib API, and should not include any
 /// operations logic.
 ///
+/// On the long run, while the design will stay nrfxlib specific in its API calls, all uses of
+/// `nrfxlib-sys` should be removed.
+///
 /// ## Error handling
 ///
 /// Error handling is rather on the panicky side: The caller is expected to adhere to the
