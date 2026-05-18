@@ -14,10 +14,10 @@
 use defmt::{info, warn};
 use nrf_modem::nrfxlib_sys;
 
-use super::ClusterBeacon;
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
+use super::{ClusterBeacon, DlcDataRx};
 
 pub(super) static OP_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_op_callbacks =
     nrfxlib_sys::nrf_modem_dect_mac_op_callbacks {
@@ -340,7 +340,14 @@ unsafe extern "C" fn dlc_data_rx_ntf(
         params.flow_id, params.long_rd_id, data
     );
     if let Ok(vec) = data.try_into() {
-        if PACKETS.try_send(vec).is_err() {
+        if PACKETS
+            .try_send(DlcDataRx {
+                long_rd_id: params.long_rd_id,
+                flow_id: params.flow_id,
+                data: vec,
+            })
+            .is_err()
+        {
             warn!("Could not enqueue: queue full");
         }
     } else {

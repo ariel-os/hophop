@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
-/// Global queues (implemented in channels) for transporting information back from interrupts into
-/// the application.
+//! Global queues (implemented in channels) for transporting information back from interrupts into
+//! the application.
 
-use super::ClusterBeacon;
 use super::error::MacError;
+use super::{ClusterBeacon, DlcDataRx};
 
 // This should evolve a bit
 //
@@ -37,9 +37,9 @@ pub(crate) static BEACON_EVENTS: Channel<
 
 // FIXME: We definitely want to use something smarter; ideally ownership of net pool entries when
 // we better understand who allocates what.
-pub static PACKETS: Channel<
+pub(crate) static PACKETS: Channel<
     CriticalSectionRawMutex,
     // If we make it bigger, we might easily exceed the ISR stack
-    heapless::vec::Vec<u8, 100>,
+    DlcDataRx,
     1,
 > = Channel::new();

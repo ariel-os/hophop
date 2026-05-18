@@ -14,13 +14,6 @@ use nrf_modem::{ErrorSource, nrfxlib_sys};
 use error::MacError;
 use shared_queues::*;
 
-/// Public re-exports that should go away soon-ish and are only used for the duration of migrating
-/// parts of the nordicmacdemo.
-pub mod hack {
-    // when removing, make pub(crate) again
-    pub use super::shared_queues::PACKETS;
-}
-
 /// Singleton represnting control over the DECT operation of libmodem and that the callbacks are
 /// set up.
 ///
@@ -239,6 +232,10 @@ impl DectMac {
         .expect("Failed to start TX attempt");
         SINGLETON_EVENTS.receive().await
     }
+
+    pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
+        PACKETS.receive().await
+    }
 }
 
 // Almost nrf_modem_dect_mac_cluster_beacon_ntf_cb_params, but dropping the ies -- not because we
@@ -259,5 +256,21 @@ impl<'brand> ScanReceiver<'brand> {
     // FIXME dress up in non _sys dependent API
     pub async fn next(self) -> ClusterBeacon {
         BEACON_EVENTS.receive().await
+    }
+}
+
+pub struct DlcDataRx {
+    pub(crate) long_rd_id: u32,
+    pub(crate) flow_id: u8,
+    pub(crate) data: heapless::vec::Vec<u8, 100>,
+}
+
+impl DlcDataRx {
+    pub fn sender(&self) -> u32 {
+        self.long_rd_id
+    }
+
+    pub fn data(&self) -> &[u8] {
+        self.data.as_slice()
     }
 }

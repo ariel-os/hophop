@@ -113,8 +113,12 @@ async fn main() {
     // hack)
     loop {
         info!("Idling with our own very primitive ping responder");
-        let mut packet = hophop::nrfxlib_mac::hack::PACKETS.receive().await;
-        info!("Got packet {}", Hex(packet.as_slice()));
+        let packet = dect.dlc_data_rx().await;
+        info!("Got packet from 0x{:x}: {}", packet.sender(), Hex(packet.data()));
+        // Since we added the abstraction, we can't edit in place any more -- but that was a weird
+        // hack anyway. Editing in place would be fine again once we get owned items in a network
+        // packet pool.
+        let mut packet = heapless::Vec::<u8, 100>::try_from(packet.data()).unwrap();
         if packet[6] != 0x3a {
             info!("Received packet is not ICMPv6, ignoring");
             continue;
