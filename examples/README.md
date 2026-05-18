@@ -194,7 +194,7 @@ Running the example building on the full Nordic stack
 * Run the example:
 
     ```console
-    $ laze build -b nrf9151-dk -D LOG=info run --bin fulldemo
+    $ laze build -b nrf9151-dk -D LOG=info run --bin nordicmacdemo
     ```
 
 * Observe on the device being eventually associated with the shell FT:
