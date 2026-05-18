@@ -155,6 +155,61 @@ impl DectMac {
         }
     }
 
+    /// Starts association as a PT.
+    ///
+    /// The function completes successfully when an association is made; the association may be
+    /// lost at any time (FIXME: find a way for the app to obtain the events).
+    // FIXME allow configuring flows
+    pub async fn mac_association(
+        &mut self,
+        long_rd_id: u32,
+        network_id: u32,
+    ) -> Result<(), MacError> {
+        let mut tx_flow_configs = [
+            nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+                flow_id: 6, // "User plane data -- flow 4"
+                priority: 4,
+                dlc_service_type:
+                    nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
+                dlc_sdu_lifetime:
+                    nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
+            },
+            nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+                //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
+                flow_id: 1, // "Higher layer signalling - flow 1"
+                priority: 0,
+                dlc_service_type:
+                    nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
+                dlc_sdu_lifetime:
+                    // picking something long, I think right now we can only TX right after a beacon
+                    nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
+            },
+        ];
+        unsafe {
+            nrfxlib_sys::nrf_modem_dect_mac_association(
+                &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
+                    // FIXME where do we use the channel information? Did the MAC remember? (Probably:
+                    // After all, it's not just channel but the whole info stuff from the beacon).
+                    long_rd_id,
+                    network_id,
+                    info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
+                        // FIXME: this is a guess
+                        num_beacon_rx_failures: 1,
+                    },
+                    num_flows: tx_flow_configs
+                        .len()
+                        .try_into()
+                        .expect("Absurd number of configs"),
+                    tx_flow_configs: &mut tx_flow_configs as _,
+                },
+            )
+        }
+        .into_result()
+        .expect("Failed to start association attempt");
+
+        SINGLETON_EVENTS.receive().await
+    }
+
     /// Transmits data in one of the flows.
     ///
     /// This is a primitive wrapper in that it only returns after transmission; a better version

@@ -134,6 +134,10 @@ unsafe extern "C" fn association(
     );
     debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
     // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
+
+    SINGLETON_EVENTS
+        .try_send(params.status.as_mac_status())
+        .unwrap();
 }
 unsafe extern "C" fn association_release(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_cb_params,

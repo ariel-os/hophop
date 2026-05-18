@@ -78,51 +78,13 @@ async fn main() {
     };
 
     info!("Now that scanning is complete, attempting association with the found FT");
-    // Can we do 0? (We can't put NULL in it, that'd be rejected even at function call time)
-    // Probably not and makes no sense. Funnily, peers can't even `dect tx` and we don't get pings
-    // if we don't put the "High layer signalling - flow 1" in. (At least a user data flow alone
-    // replacing it is insufficient.)
-    let mut tx_flow_configs = [
-        nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
-            flow_id: 6, // "User plane data -- flow 4"
-            priority: 4,
-            dlc_service_type:
-                nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
-            dlc_sdu_lifetime:
-                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
-        },
-        nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
-            //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
-            flow_id: 1, // "Higher layer signalling - flow 1"
-            priority: 0,
-            dlc_service_type:
-                nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
-            dlc_sdu_lifetime:
-                // picking something long, I think right now we can only TX right after a beacon
-                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
-        },
-    ];
-    unsafe {
-        nrfxlib_sys::nrf_modem_dect_mac_association(
-            &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
-                // FIXME where do we use the channel information? Did the MAC remember? (Probably:
-                // After all, it's not just channel but the whole info stuff from the beacon).
-                long_rd_id: params.transmitter_long_rd_id,
-                network_id: params.network_id,
-                info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
-                    // FIXME: this is a guess
-                    num_beacon_rx_failures: 1,
-                },
-                num_flows: tx_flow_configs
-                    .len()
-                    .try_into()
-                    .expect("Absurd number of configs"),
-                tx_flow_configs: &mut tx_flow_configs as _,
-            },
-        )
+    match dect.mac_association(params.transmitter_long_rd_id, params.network_id).await {
+        Ok(()) => info!("Associated; continuing demo"),
+        Err(_) => {
+            warn!("Association didn't work, stopping program.");
+            return;
+        }
     }
-    .into_result()
-    .expect("Failed to start association attempt");
 
     ariel_os::time::Timer::after_millis(4_000).await;
 
