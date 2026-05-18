@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+/// Global queues (implemented in channels) for transporting information back from interrupts into
+/// the application.
+
 use super::ClusterBeacon;
 use super::error::MacError;
 

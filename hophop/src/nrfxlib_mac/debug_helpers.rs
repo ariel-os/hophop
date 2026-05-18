@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Tools for defmt-printing recurring `nrfxlib` structs.
+
 use defmt::info;
 use nrf_modem::nrfxlib_sys;
 

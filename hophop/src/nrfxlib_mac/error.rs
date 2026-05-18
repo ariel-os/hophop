@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Error types that are produced by `nrfxlib` in the MAC layer.
+
 use nrf_modem::nrfxlib_sys;
 
 // Having MacError used in a Result transparently only works if it can use the zero niche.
@@ -52,6 +56,7 @@ impl defmt::Format for MacError {
     }
 }
 
+// FIXME: Our APIs should be tight enough that this is not needed outside.
 pub trait MacErrorExt {
     fn as_mac_status(self) -> Result<(), MacError>;
 }

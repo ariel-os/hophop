@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! High-level wrappers around the Nordic's DECT MAC.
+
 pub mod error;
 
 mod callbacks;

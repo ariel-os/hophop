@@ -1,3 +1,11 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Global callbacks used with JNordic's DECT MAC.
+//!
+//! All their output goes into global channels set up in [`super::shared_queues`] -- the underlying
+//! `libmodem` doesn't cater for a `*void` context, and while that'd good general practice, it'd
+//! only make sense if the whole library carried some "which DECT device" pointers, and for their
+//! hardware there just are no multiples.
 #![allow(
     unused_variables,
     reason = "stop complaining while there are todo!() items"
