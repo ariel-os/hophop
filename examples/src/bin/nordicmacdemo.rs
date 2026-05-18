@@ -214,7 +214,10 @@ mod callbacks {
     ) {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
-        info!("System mode set completed: {:?}", params.status.as_mac_status());
+        info!(
+            "System mode set completed: {:?}",
+            params.status.as_mac_status()
+        );
         if params.status == 0 {
             SINGLETON_EVENTS.try_send(()).unwrap();
         }
@@ -391,12 +394,15 @@ mod callbacks {
         // It's a bit unfortunate that we have to copy around here rather than just re-owning a
         // pool message, but we can still try to do better when we see what's in the actual IPC
         // API.
-        if BEACON_EVENTS.try_send(ClusterBeacon {
-            channel: params.channel,
-            transmitter_short_rd_id: params.transmitter_short_rd_id,
-            transmitter_long_rd_id: params.transmitter_long_rd_id,
-            network_id: params.network_id,
-        }).is_ok() {
+        if BEACON_EVENTS
+            .try_send(ClusterBeacon {
+                channel: params.channel,
+                transmitter_short_rd_id: params.transmitter_short_rd_id,
+                transmitter_long_rd_id: params.transmitter_long_rd_id,
+                network_id: params.network_id,
+            })
+            .is_ok()
+        {
             // Abusing the fill level of BEACON_EVENTS for sensible debugging: If someone is
             // listening, we're in scanning mode, and it makes sense to debug. Otherwise, we're in
             // regular operation just receiving the becon of the cell we're in, and that'd just
@@ -412,7 +418,9 @@ mod callbacks {
                 params.network_id,
                 params.number_of_ies
             );
-            debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
+            debug_ies(unsafe {
+                core::slice::from_raw_parts(params.ies, params.number_of_ies as _)
+            });
         }
     }
     unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
@@ -762,7 +770,7 @@ async fn main() {
             dlc_service_type:
                 nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
             dlc_sdu_lifetime:
-                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S
+                nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
         },
         nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
             //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
@@ -840,6 +848,7 @@ async fn main() {
             // Actually could be from someone else as well
             params.transmitter_long_rd_id,
             packet.as_slice(),
-        ).await;
+        )
+        .await;
     }
 }
