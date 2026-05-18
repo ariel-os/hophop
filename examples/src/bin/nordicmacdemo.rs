@@ -341,26 +341,32 @@ mod callbacks {
     ) {
         // SAFETY: implied in C API
         let params = unsafe { &*params };
-        // Note that this happens both during scanning and when associated
-        info!(
-            "Got cluster beacon! Channel {}, TX short 0x{:x}, TX long 0x{:x}, network 0x{:x}, {} IEs",
-            params.channel,
-            params.transmitter_short_rd_id,
-            params.transmitter_long_rd_id,
-            params.network_id,
-            params.number_of_ies
-        );
-        debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
-
         // It's a bit unfortunate that we have to copy around here rather than just re-owning a
         // pool message, but we can still try to do better when we see what's in the actual IPC
         // API.
-        let _ = BEACON_EVENTS.try_send(ClusterBeacon {
+        if BEACON_EVENTS.try_send(ClusterBeacon {
             channel: params.channel,
             transmitter_short_rd_id: params.transmitter_short_rd_id,
             transmitter_long_rd_id: params.transmitter_long_rd_id,
             network_id: params.network_id,
-        });
+        }).is_ok() {
+            // Abusing the fill level of BEACON_EVENTS for sensible debugging: If someone is
+            // listening, we're in scanning mode, and it makes sense to debug. Otherwise, we're in
+            // regular operation just receiving the becon of the cell we're in, and that'd just
+            // produce clutter.
+            //
+            // (We spill some when we fill up the queue, but that's fine).
+
+            info!(
+                "Got cluster beacon! Channel {}, TX short 0x{:x}, TX long 0x{:x}, network 0x{:x}, {} IEs",
+                params.channel,
+                params.transmitter_short_rd_id,
+                params.transmitter_long_rd_id,
+                params.network_id,
+                params.number_of_ies
+            );
+            debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
+        }
     }
     unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
         params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params,
