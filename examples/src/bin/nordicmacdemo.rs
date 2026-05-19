@@ -86,6 +86,8 @@ async fn main() {
         }
     }
 
+    run(&mut ariel_os::net::user_net_runner().await, &mut dect).await;
+
     ariel_os::time::Timer::after_millis(4_000).await;
 
     // OK thisis funny: Data from all channels arrives at the dect_shell's IP stack, as evidenced
@@ -140,5 +142,47 @@ async fn main() {
         )
         .await
         .unwrap();
+    }
+}
+
+/// An embassy network driver that transmits and receives packets via the Nordic nrfxlib MAC.
+///
+/// This is implemented in terms of [`embassy_net_driver_channel`], and thus takes a
+/// [Runner][embassy_net_driver_channel::Runner].
+async fn run<'d, const MTU: usize>(runner: &mut embassy_net_driver_channel::Runner<'d, MTU>, dect: &mut hophop::nrfxlib_mac::DectMac) {
+    use embassy_net_driver::LinkState;
+
+    runner.set_link_state(LinkState::Up);
+
+    loop {
+        use embassy_futures::select::{select, Either};
+
+        match select(
+            // of all the dect functions, this one fortunately is already cancel safe
+            dect.dlc_data_rx(),
+            runner.tx_buf()
+        ).await {
+            Either::First(received) => {
+                if let Some(rx_buf) = runner.try_rx_buf() {
+                    let len = received.data().len();
+                    rx_buf[..len].copy_from_slice(received.data());
+                    runner.rx_done(len);
+                } else {
+                    warn!("Dropping packet -- overflow");
+                }
+            }
+            Either::Second(tx_buf) => {
+                dect.dlc_data_tx(
+                    1,
+                    // BIG FIXME -- probably the solution will be to pretend to be MAC or 802154
+                    // and cram these MAC addresses into their fields (but we'd have to parse them
+                    // out and put them into the buffer, right)?
+                    0x70d1776d,
+                    tx_buf,
+                ).await;
+                // FIXME: Actually we don't have to await the dlc_data_tx to mark it as done
+                runner.tx_done();
+            }
+        }
     }
 }
