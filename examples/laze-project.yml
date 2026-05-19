@@ -4,8 +4,8 @@
 imports:
   - git:
       url: https://github.com/chrysn-pull-requests/ariel-os
-      #commit: for-hophop-20260225 (which is https://github.com/ariel-os/ariel-os/pull/1819 plus https://github.com/ariel-os/ariel-os/pull/1613)
-      commit: b6815311c6578f3de21482eae57d5e870f88d85f
+      # currently just main, which works for the nrfmacdemo and prepares it for https://github.com/ariel-os/ariel-os/pull/2101
+      commit: b57531b660ee9bf8103b6eb025f2fb218fd97218
     dldir: ariel-os
 
 apps:

@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::debug::log::{Hex, error, info, warn};
+use ariel_os::log::{Hex, error, info, warn};
 
 use nrf_modem::ErrorSource;
 use nrfxlib_sys;

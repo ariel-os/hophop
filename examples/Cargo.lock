@@ -30,7 +30,7 @@ checksum = "c583acf993cf4245c4acb0a2cc2ab1f9cc097de73411bb6d3647ff6af2b1013d"
 
 [[package]]
 name = "ariel-os"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-boards",
  "ariel-os-buildinfo",
@@ -38,6 +38,7 @@ dependencies = [
  "ariel-os-embassy",
  "ariel-os-hal",
  "ariel-os-identity",
+ "ariel-os-log",
  "ariel-os-macros",
  "ariel-os-power",
  "ariel-os-rt",
@@ -49,9 +50,9 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-alloc"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "ariel-os-debug",
+ "ariel-os-log",
  "ariel-os-utils",
  "embedded-alloc",
  "esp-alloc",
@@ -70,32 +71,21 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-buildinfo"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-utils",
 ]
 
 [[package]]
 name = "ariel-os-debug"
-version = "0.3.0"
-dependencies = [
- "ariel-os-debug-log",
- "ariel-os-utils",
- "const-str",
- "embassy-sync 0.7.2",
- "featurecomb",
-]
-
-[[package]]
-name = "ariel-os-debug-log"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "featurecomb",
 ]
 
 [[package]]
 name = "ariel-os-embassy"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-boards",
  "ariel-os-buildinfo",
@@ -103,10 +93,10 @@ dependencies = [
  "ariel-os-embassy-common",
  "ariel-os-hal",
  "ariel-os-identity",
+ "ariel-os-log",
  "ariel-os-macros",
  "ariel-os-rt",
  "ariel-os-utils",
- "cfg-if",
  "const_panic",
  "critical-section",
  "embassy-executor",
@@ -121,38 +111,33 @@ dependencies = [
  "embedded-hal-async",
  "embedded-io 0.6.1",
  "embedded-io-async 0.6.1",
- "heapless 0.8.0",
  "linkme",
- "once_cell",
  "portable-atomic",
  "static_cell",
 ]
 
 [[package]]
 name = "ariel-os-embassy-common"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-buildinfo",
  "ariel-os-utils",
  "const-sha1",
  "embassy-executor",
- "embassy-time",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
 ]
 
 [[package]]
 name = "ariel-os-esp"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "ariel-os-debug",
  "ariel-os-embassy-common",
+ "ariel-os-log",
  "ariel-os-rt",
  "ariel-os-utils",
- "cfg-if",
  "critical-section",
  "embassy-executor",
- "embassy-time",
  "embassy-time-driver",
  "embassy-time-queue-utils",
  "embedded-hal 1.0.0",
@@ -161,14 +146,13 @@ dependencies = [
  "esp-hal",
  "esp-rom-sys",
  "esp-sync",
- "once_cell",
  "paste",
  "static_cell",
 ]
 
 [[package]]
 name = "ariel-os-hal"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-embassy-common",
  "ariel-os-esp",
@@ -176,7 +160,6 @@ dependencies = [
  "ariel-os-nrf",
  "ariel-os-rp",
  "ariel-os-stm32",
- "cfg-if",
  "const_panic",
  "embassy-executor",
  "embassy-hal-internal",
@@ -188,15 +171,23 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-identity"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-embassy-common",
  "ariel-os-hal",
 ]
 
 [[package]]
+name = "ariel-os-log"
+version = "0.4.0"
+dependencies = [
+ "ariel-os-debug",
+ "featurecomb",
+]
+
+[[package]]
 name = "ariel-os-macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -206,12 +197,12 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-native"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-buildinfo",
  "ariel-os-debug",
  "ariel-os-embassy-common",
- "cfg-if",
+ "ariel-os-log",
  "embassy-executor",
  "embassy-net-tuntap",
  "embassy-time",
@@ -221,12 +212,11 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-nrf"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "ariel-os-debug",
  "ariel-os-embassy-common",
+ "ariel-os-log",
  "ariel-os-rt",
- "cfg-if",
  "embassy-executor",
  "embassy-nrf",
  "embassy-sync 0.7.2",
@@ -238,21 +228,19 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-power"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "cfg-if",
  "cortex-m",
  "esp-hal",
 ]
 
 [[package]]
 name = "ariel-os-rp"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "ariel-os-debug",
  "ariel-os-embassy-common",
+ "ariel-os-log",
  "ariel-os-utils",
- "cfg-if",
  "embassy-executor",
  "embassy-rp",
  "embedded-hal-async",
@@ -261,12 +249,12 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-rt"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-alloc",
  "ariel-os-debug",
+ "ariel-os-log",
  "ariel-os-utils",
- "cfg-if",
  "cortex-m",
  "cortex-m-rt",
  "embassy-rp",
@@ -274,16 +262,16 @@ dependencies = [
  "ld-memory",
  "linkme",
  "portable-atomic",
+ "riscv",
 ]
 
 [[package]]
 name = "ariel-os-stm32"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ariel-os-embassy-common",
  "ariel-os-stm32-mapping",
  "ariel-os-utils",
- "cfg-if",
  "embassy-executor",
  "embassy-stm32",
  "embedded-hal-async",
@@ -295,14 +283,14 @@ dependencies = [
 
 [[package]]
 name = "ariel-os-stm32-mapping"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "embassy-stm32",
 ]
 
 [[package]]
 name = "ariel-os-utils"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "const-str",
  "const_panic",
@@ -574,9 +562,9 @@ checksum = "0d8a42181e0652c2997ae4d217f25b63c5337a52fd2279736e97b832fa0a3cff"
 
 [[package]]
 name = "const-str"
-version = "0.7.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0664d2867b4a32697dfe655557f5c3b187e9b605b38612a748e5ec99811d160"
+checksum = "18f12cc9948ed9604230cdddc7c86e270f9401ccbe3c2e98a4378c5e7632212f"
 
 [[package]]
 name = "const_panic"
@@ -916,13 +904,13 @@ checksum = "524eb3c489760508f71360112bca70f6e53173e6fe48fc5f0efd0f5ab217751d"
 
 [[package]]
 name = "embassy-net-driver-channel"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7b2739fbcf6cd206ae08779c7d709087b16577d255f2ea4a45bc4bbbf305b3f"
+checksum = "a07d2eb9f05a6fc876500949856ea1be40773d866d8cb99384f72d0ae4568c16"
 dependencies = [
  "embassy-futures",
  "embassy-net-driver",
- "embassy-sync 0.7.2",
+ "embassy-sync 0.8.0",
 ]
 
 [[package]]
@@ -1086,9 +1074,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "embassy-sync"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bbd85cf5a5ae56bdf26f618364af642d1d0a4e245cdd75cd9aabda382f65a81"
+dependencies = [
+ "cfg-if",
+ "critical-section",
+ "embedded-io-async 0.7.0",
+ "futures-core",
+ "futures-sink",
+ "heapless 0.9.2",
+]
+
+[[package]]
 name = "embassy-time"
-version = "0.5.0"
-source = "git+https://github.com/ariel-os/embassy?rev=32919cd38e4a5ad5fc21dfb339abd45a74bd1dc9#32919cd38e4a5ad5fc21dfb339abd45a74bd1dc9"
+version = "0.5.1"
+source = "git+https://github.com/ariel-os/embassy?rev=3c1b5fbf28237ea7144ae970c3aec11c38023c3f#3c1b5fbf28237ea7144ae970c3aec11c38023c3f"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -1103,9 +1105,9 @@ dependencies = [
 
 [[package]]
 name = "embassy-time-driver"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a244c7dc22c8d0289379c8d8830cae06bb93d8f990194d0de5efb3b5ae7ba6"
+checksum = "6ee71af1b3a0deaa53eaf2d39252f83504c853646e472400b763060389b9fcc9"
 dependencies = [
  "document-features",
 ]
@@ -1122,16 +1124,18 @@ dependencies = [
 
 [[package]]
 name = "embassy-usb"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc4462e48b19a4f401a11901bdd981aab80c6a826608016a0bdc73cbbab31954"
+checksum = "a25746d8b152b72fbf2a217f489a083dbbe243f281f09184a1f2cfbe9bbb245f"
 dependencies = [
+ "bitflags 2.11.0",
  "embassy-futures",
  "embassy-net-driver-channel",
- "embassy-sync 0.7.2",
+ "embassy-sync 0.8.0",
+ "embassy-time",
  "embassy-usb-driver",
- "embedded-io-async 0.6.1",
- "heapless 0.8.0",
+ "embedded-io-async 0.7.0",
+ "heapless 0.9.2",
 ]
 
 [[package]]
@@ -1146,8 +1150,7 @@ dependencies = [
 [[package]]
 name = "embassy-usb-synopsys-otg"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "288751f8eaa44a5cf2613f13cee0ca8e06e6638cb96e897e6834702c79084b23"
+source = "git+https://github.com/ariel-os/embassy?rev=478df29985c8e0d0ff2e915440c8ca15e36f4403#478df29985c8e0d0ff2e915440c8ca15e36f4403"
 dependencies = [
  "critical-section",
  "embassy-sync 0.7.2",
@@ -1553,9 +1556,9 @@ dependencies = [
 
 [[package]]
 name = "featurecomb"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f153f6b80e9a75303a62296e48cb4b908030c6aaa3362872e29e8999132a1c4d"
+checksum = "c7e7f5693e76a8c91fabda6c50c4134d3ec25a28c20c72b4009aadad45680bcc"
 dependencies = [
  "featurecomb-schema",
  "proc-macro2",
@@ -1795,6 +1798,7 @@ dependencies = [
  "heapless 0.9.2",
  "itertools 0.14.0",
  "nrf-modem",
+ "nrfxlib-sys",
  "static_cell",
  "ts-103-636-numbers",
  "ts-103-636-utils",
@@ -2092,9 +2096,9 @@ dependencies = [
 
 [[package]]
 name = "nrf-modem"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d35a7f0d855e9c79900047ccd03bab927c3135581e8f4afa4b28ff007269a1c"
+checksum = "f4726c9f304d5e28867cd13e37c1d9c37496ee3959e2d1e2e6283401c3943c5e"
 dependencies = [
  "arrayvec",
  "at-commands",
@@ -2178,16 +2182,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "once_cell"
-version = "1.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
-dependencies = [
- "critical-section",
- "portable-atomic",
 ]
 
 [[package]]
@@ -2371,7 +2365,7 @@ version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "219cb19e96be00ab2e37d6e299658a0cfa83e52429179969b0f0121b4ac46983"
 dependencies = [
- "toml_edit 0.23.10+spec-1.0.0",
+ "toml_edit",
 ]
 
 [[package]]
@@ -2682,11 +2676,11 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
-version = "0.6.9"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
+checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
 dependencies = [
- "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -2970,23 +2964,15 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.8.23"
+version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
+checksum = "81f3d15e84cbcd896376e6730314d59fb5a87f31e4b038454184435cd57defee"
 dependencies = [
- "serde",
+ "serde_core",
  "serde_spanned",
- "toml_datetime 0.6.11",
- "toml_edit 0.22.27",
-]
-
-[[package]]
-name = "toml_datetime"
-version = "0.6.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
-dependencies = [
- "serde",
+ "toml_datetime 1.1.1+spec-1.1.0",
+ "toml_parser",
+ "winnow 1.0.3",
 ]
 
 [[package]]
@@ -2999,16 +2985,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_edit"
-version = "0.22.27"
+name = "toml_datetime"
+version = "1.1.1+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
+checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
 dependencies = [
- "indexmap",
- "serde",
- "serde_spanned",
- "toml_datetime 0.6.11",
- "winnow",
+ "serde_core",
 ]
 
 [[package]]
@@ -3020,16 +3002,16 @@ dependencies = [
  "indexmap",
  "toml_datetime 0.7.5+spec-1.1.0",
  "toml_parser",
- "winnow",
+ "winnow 0.7.14",
 ]
 
 [[package]]
 name = "toml_parser"
-version = "1.0.9+spec-1.1.0"
+version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "702d4415e08923e7e1ef96cd5727c0dfed80b4d2fa25db9647fe5eb6f7c5a4c4"
+checksum = "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
 dependencies = [
- "winnow",
+ "winnow 1.0.3",
 ]
 
 [[package]]
@@ -3265,6 +3247,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "winnow"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
+
+[[package]]
 name = "xtensa-lx"
 version = "0.13.0"
 source = "git+https://github.com/ariel-os/esp-hal?rev=531c629afdd80ea464682ce7f4db8baed97967a6#531c629afdd80ea464682ce7f4db8baed97967a6"
@@ -3319,8 +3307,8 @@ source = "git+https://github.com/ariel-os/embassy?rev=603583d9#603583d94cb7ba14b
 
 [[patch.unused]]
 name = "embassy-net"
-version = "0.7.1"
-source = "git+https://github.com/ariel-os/embassy?rev=f88320aea64cf24026dd95ce3405ac23253b1117#f88320aea64cf24026dd95ce3405ac23253b1117"
+version = "0.8.0"
+source = "git+https://github.com/ariel-os/embassy?rev=3b185bf1b3852867e4b932456600621f86f78bce#3b185bf1b3852867e4b932456600621f86f78bce"
 
 [[patch.unused]]
 name = "esp-println"
@@ -3336,8 +3324,3 @@ source = "git+https://github.com/ariel-os/esp-hal?rev=531c629afdd80ea464682ce7f4
 name = "esp-radio-rtos-driver"
 version = "0.2.0"
 source = "git+https://github.com/ariel-os/esp-hal?rev=531c629afdd80ea464682ce7f4db8baed97967a6#531c629afdd80ea464682ce7f4db8baed97967a6"
-
-[[patch.unused]]
-name = "nrf-modem"
-version = "0.10.0"
-source = "git+https://github.com/chrysn-pull-requests/nrf-modem?rev=f7ec75392991cc5fc6fb518f5a41f0bb415554a2#f7ec75392991cc5fc6fb518f5a41f0bb415554a2"
