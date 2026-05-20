@@ -187,15 +187,18 @@ pub enum MacCommonHeader<'buf> {
     RdBroadcast(RdBroadcast<'buf>),
 }
 
+#[deprecated(note = "renamed to Message")]
+pub type Header<'buf> = Message<'buf>;
+
 #[derive(Debug)]
-pub struct Header<'buf> {
+pub struct Message<'buf> {
     pub head: MacHeaderType,
     pub common: MacCommonHeader<'buf>,
     /// IE items; best used with the [`Self::tail_items()`] iterator
     pub tail: &'buf [u8],
 }
 
-impl<'buf> Header<'buf> {
+impl<'buf> Message<'buf> {
     /// Parses a buffer as a MAC PDU, with a header indicating the common header type, a common
     /// header, and a tail of IEs.
     ///
@@ -263,11 +266,11 @@ impl<'buf> Header<'buf> {
 }
 
 #[cfg(feature = "defmt")]
-impl defmt::Format for Header<'_> {
+impl defmt::Format for Message<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Header {{ .head.mac security: {=u8}, .common: ",
+            "Message {{ .head.mac security: {=u8}, .common: ",
             self.head.mac_security(),
         );
         match &self.common {
