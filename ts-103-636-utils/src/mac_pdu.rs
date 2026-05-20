@@ -270,6 +270,10 @@ impl defmt::Format for Message<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
+            // Version not shown because it is asserted at parse time that this is the one that
+            // exists.
+            //
+            // Header type not shown because that is shown right after in .common's type name.
             "Message {{ .head.mac security: {=u8}, .common: ",
             self.head.mac_security(),
         );
