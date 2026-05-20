@@ -23,6 +23,12 @@ ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
 ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
 static_cell = "2.1.1"
 itertools = { version = "0.14.0", default-features = false }
+embassy-futures = "0.1.2"
+
+# Once nrf-modem provides the switches to pass this on, we won't need the
+# dependency here any more. (Then we can also properly introduce features for
+# this rather than just always pulling in everything).
+nrfxlib-sys = { version = "*", features = ["dect-mac"] }
 
 [target.'cfg(not(target = "thumbv8m.main-none-eabihf"))'.dependencies]
 # We're using box_pool, and while that works on thumbv8m without portable

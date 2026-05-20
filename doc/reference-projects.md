@@ -4,13 +4,15 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 # Available baseline tools
 
+## PHY based tools
+
 As a baseline for any trouble related to getting the PHY working, see those two projects from <https://github.com/nrfconnect/sdk-nrf>:
 
 * [samples/dect/dect_phy/hello_dect](https://github.com/nrfconnect/sdk-nrf/tree/main/samples/dect/dect_phy/hello_dect)
 * [samples/dect/dect_phy/dect_shell](https://github.com/nrfconnect/sdk-nrf/tree/main/samples/dect/dect_phy/dect_shell)
 
 Both are based on Zephyr and the Nordic SDK;
-if you are not familiar with that, they are set up like this:
+if you are not familiar with that, they are set up as below.
 
 Additional apps (not tested so far):
 
@@ -20,19 +22,27 @@ Additional apps (not tested so far):
   
   Sniffer and Wireshark dissector (which appears to use a different format than the Wireshark 4.6 built-in DECT NR+ dissector).
 
+## MAC based tools
+
+* [samples/dect/dect_shell](https://github.com/nrfconnect/sdk-nrf/tree/main/samples/dect/dect_shell) has a full IPv6 FT and PT implementation
+
 ## Building and installing using the Nordic toolchain
 
 Based on <https://docs.nordicsemi.com/bundle/ncs-3.2.0-preview2/page/nrf/installation/install_ncs.html>
 
 * [Ensure the DECT firmware is flashed](./dect-firmware.md) (or don't, just to see which errors happen)
+* `pipx install west`
+* `pipx runpip west install jsonschema`
 * `nrfutil install sdk-manager` (installs into `~/.nrfutil`)
-* `nrfutil sdk-manager install v3.2.0-preview2` (installs into `~/ncs/`)
-* `nrfutil sdk-manager toolchain launch --ncs-version v3.2.0-preview2 --shell` (spawns new shell with many environment variables set)
-* `cd ~/ncs/v3.2.0-preview2/nrf/samples/dect/dect_phy/dect_shell/`
+* `nrfutil sdk-manager install v3.3.0` (installs into `~/ncs/`)
+* `nrfutil sdk-manager toolchain launch --ncs-version v3.3.0 --shell` (spawns new shell with many environment variables set)
+* `source ~/ncs/v3.3.0/zephyr/zephyr-env.sh` (or with added `-- -DEXTRA_CONF_FILE=overlay-eu.conf` for the hello)
+* `cd ~/ncs/v3.3.0/nrf/samples/dect/dect_phy/dect_shell/`
+  (or `samples/dect/dect_shell` for the MAC-based firmware)
 * `west update`
-* `source ~/ncs/v3.2.0-preview2/zephyr/zephyr-env.sh` (or with added `-- -DEXTRA_CONF_FILE=overlay-eu.conf` for the hello)
 * `west build -p -b nrf9151dk/nrf9151/ns`
 * `west flash`, or `probe-rs download --protocol swd --chip nRF9160_xxAA build/merged.hex --binary-format ihex`
+* `socat - /dev/ttyACM0,cfmakeraw,b115200`
 
 ## Failure modes
 

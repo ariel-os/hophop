@@ -4,8 +4,8 @@
 imports:
   - git:
       url: https://github.com/chrysn-pull-requests/ariel-os
-      #commit: for-hophop-20260225 (which is https://github.com/ariel-os/ariel-os/pull/1819 plus https://github.com/ariel-os/ariel-os/pull/1613)
-      commit: b6815311c6578f3de21482eae57d5e870f88d85f
+      # branch "for-hophop-20260519", which merges https://github.com/ariel-os/ariel-os/pull/2101 and https://github.com/ariel-os/ariel-os/pull/2102
+      commit: 715d677b2ee1b7518070ea692fe05c09fff83aa4
     dldir: ariel-os
 
 apps:
@@ -15,3 +15,9 @@ apps:
       - nrf-radiocore-firmware-dect
       # Actually only for the tx example
       - has_buttons
+      # Actually only for the nrfmacdemo
+      - ipv6 # has to be before network
+      - network
+      - user-net-driver-channel
+    conflicts:
+      - ipv4

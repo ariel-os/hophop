@@ -8,3 +8,5 @@
 #![allow(clippy::pedantic)]
 
 pub mod nrfxlib_phy;
+
+pub mod nrfxlib_mac;

@@ -6,7 +6,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::debug::log::{info, warn};
+use ariel_os::log::{info, warn};
 use ariel_os_boards::pins;
 
 use ts_103_636_numbers as numbers;
