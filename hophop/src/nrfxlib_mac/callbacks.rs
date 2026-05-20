@@ -65,10 +65,10 @@ unsafe extern "C" fn control_functional_mode(
     let params = unsafe { &*params };
     info!(
         "Functional mode set completed: {:?}",
-        params.status.as_mac_status(),
+        params.status.into_mac_status(),
     );
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn control_configure(
@@ -78,10 +78,10 @@ unsafe extern "C" fn control_configure(
     let params = unsafe { &*params };
     info!(
         "Control configure was accepted: {:?}",
-        params.status.as_mac_status(),
+        params.status.into_mac_status(),
     );
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn control_systemmode(
@@ -91,10 +91,10 @@ unsafe extern "C" fn control_systemmode(
     let params = unsafe { &*params };
     info!(
         "System mode set completed: {:?}",
-        params.status.as_mac_status()
+        params.status.into_mac_status()
     );
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn association(
@@ -104,7 +104,7 @@ unsafe extern "C" fn association(
     let params = unsafe { &*params };
     info!(
         "Association callback, status {:?}, long_rd_id 0x{:x}",
-        params.status.as_mac_status(),
+        params.status.into_mac_status(),
         params.long_rd_id
     );
     if params.status != 0 {
@@ -136,7 +136,7 @@ unsafe extern "C" fn association(
     // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
 
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn association_release(
@@ -179,7 +179,7 @@ unsafe extern "C" fn dlc_data_tx(params: *mut nrfxlib_sys::nrf_modem_dect_dlc_da
     let params = unsafe { &*params };
     // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn dlc_data_discard(
@@ -199,7 +199,7 @@ unsafe extern "C" fn network_scan(
     let params = unsafe { &*params };
     // Ignoring num_channels; not sure why how that'd be new information
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn network_scan_stop(
@@ -208,7 +208,7 @@ unsafe extern "C" fn network_scan_stop(
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     SINGLETON_EVENTS
-        .try_send(params.status.as_mac_status())
+        .try_send(params.status.into_mac_status())
         .unwrap();
 }
 unsafe extern "C" fn rssi_scan(params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params) {

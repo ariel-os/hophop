@@ -58,11 +58,11 @@ impl defmt::Format for MacError {
 
 // FIXME: Our APIs should be tight enough that this is not needed outside.
 pub trait MacErrorExt {
-    fn as_mac_status(self) -> Result<(), MacError>;
+    fn into_mac_status(self) -> Result<(), MacError>;
 }
 
 impl MacErrorExt for u8 {
-    fn as_mac_status(self) -> Result<(), MacError> {
+    fn into_mac_status(self) -> Result<(), MacError> {
         if let Ok(nonzero) = self.try_into() {
             Err(MacError(nonzero))
         } else {
