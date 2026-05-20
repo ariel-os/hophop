@@ -78,7 +78,10 @@ async fn main() {
     };
 
     info!("Now that scanning is complete, attempting association with the found FT");
-    match dect.mac_association(params.transmitter_long_rd_id, params.network_id).await {
+    match dect
+        .mac_association(params.transmitter_long_rd_id, params.network_id)
+        .await
+    {
         Ok(()) => info!("Associated; continuing demo"),
         Err(_) => {
             warn!("Association didn't work, stopping program.");
@@ -116,7 +119,11 @@ async fn main() {
     loop {
         info!("Idling with our own very primitive ping responder");
         let packet = dect.dlc_data_rx().await;
-        info!("Got packet from 0x{:x}: {}", packet.sender(), Hex(packet.data()));
+        info!(
+            "Got packet from 0x{:x}: {}",
+            packet.sender(),
+            Hex(packet.data())
+        );
         // Since we added the abstraction, we can't edit in place any more -- but that was a weird
         // hack anyway. Editing in place would be fine again once we get owned items in a network
         // packet pool.
@@ -149,19 +156,24 @@ async fn main() {
 ///
 /// This is implemented in terms of [`embassy_net_driver_channel`], and thus takes a
 /// [Runner][embassy_net_driver_channel::Runner].
-async fn run<'d, const MTU: usize>(runner: &mut embassy_net_driver_channel::Runner<'d, MTU>, dect: &mut hophop::nrfxlib_mac::DectMac) {
+async fn run<'d, const MTU: usize>(
+    runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
+    dect: &mut hophop::nrfxlib_mac::DectMac,
+) {
     use embassy_net_driver::LinkState;
 
     runner.set_link_state(LinkState::Up);
 
     loop {
-        use embassy_futures::select::{select, Either};
+        use embassy_futures::select::{Either, select};
 
         match select(
             // of all the dect functions, this one fortunately is already cancel safe
             dect.dlc_data_rx(),
-            runner.tx_buf()
-        ).await {
+            runner.tx_buf(),
+        )
+        .await
+        {
             Either::First(received) => {
                 if let Some(rx_buf) = runner.try_rx_buf() {
                     let len = received.data().len();
@@ -177,9 +189,9 @@ async fn run<'d, const MTU: usize>(runner: &mut embassy_net_driver_channel::Runn
                     // BIG FIXME -- probably the solution will be to pretend to be MAC or 802154
                     // and cram these MAC addresses into their fields (but we'd have to parse them
                     // out and put them into the buffer, right)?
-                    0x70d1776d,
-                    tx_buf,
-                ).await;
+                    0x70d1776d, tx_buf,
+                )
+                .await;
                 // FIXME: Actually we don't have to await the dlc_data_tx to mark it as done
                 runner.tx_done();
             }
