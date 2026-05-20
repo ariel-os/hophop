@@ -156,6 +156,11 @@ async fn main() {
 ///
 /// This is implemented in terms of [`embassy_net_driver_channel`], and thus takes a
 /// [Runner][embassy_net_driver_channel::Runner].
+///
+/// This is compatible with the DECT shell, but not necessarily proper IPv6 over nr+ (ETSI TS 103
+/// 874-3). Implementing this for the time being, but
+/// <https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3> is
+/// pending to clarify whether we're just missing .
 async fn run<'d, const MTU: usize>(
     runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
     dect: &mut hophop::nrfxlib_mac::DectMac,
