@@ -8,7 +8,6 @@ mod callbacks;
 mod debug_helpers;
 mod shared_queues;
 
-use defmt::info;
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 
 use error::MacError;
@@ -221,7 +220,7 @@ impl DectMac {
                 &mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_params {
                     // FIXME use when managing those; right now any value is good
                     transaction_id: 0,
-                    flow_id: flow_id,
+                    flow_id,
                     // send to our neighbor
                     long_rd_id: destination,
                     // FIXME: verify that the C API really doesn't want to write there
@@ -271,6 +270,10 @@ pub struct DlcDataRx {
 impl DlcDataRx {
     pub fn sender(&self) -> u32 {
         self.long_rd_id
+    }
+
+    pub fn flow_id(&self) -> u8 {
+        self.flow_id
     }
 
     pub fn data(&self) -> &[u8] {

@@ -334,7 +334,7 @@ unsafe extern "C" fn dlc_data_rx_ntf(
     // SAFETY: implied in C API (and we're only using it in this callback)
     // FIXME: Can we get a `_mut`? (Not that I'd know what to use it for, given we have to copy
     // the data out in the ISR)
-    let data = core::slice::from_raw_parts(params.data as *mut u8, params.data_len);
+    let data = unsafe { core::slice::from_raw_parts(params.data as *mut u8, params.data_len) };
     info!(
         "Got DLC data RX: flow {}, peer 0x{:x}, data 0x{:02x}",
         params.flow_id, params.long_rd_id, data
