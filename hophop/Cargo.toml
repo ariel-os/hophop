@@ -36,7 +36,3 @@ nrfxlib-sys = { version = "*", features = ["dect-mac"] }
 # and rust-analyzer run, unless we go through greater lengths to make those
 # still smooth)
 heapless = { version = "0.9.2", features = ["portable-atomic"] }
-
-[patch.crates-io]
-# from https://github.com/nrf-rs/nrfxlib-sys/pull/20
-nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }
