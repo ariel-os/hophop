@@ -69,7 +69,7 @@ async fn main() {
 
     for _ in 0..300 {
         if let Some(received) = dect
-            .rx()
+            .rx(1665, 0x87654321)
             .await
             .expect("Receive operation failed as a whole")
         {

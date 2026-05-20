@@ -33,7 +33,7 @@ async fn main(peripherals: pins::ButtonPeripherals) {
         // moment we can just leave it at that.
         if button0.is_high() {
             let received = dect
-                .rx()
+                .rx(1665, 0)
                 .await
                 .expect("Receive operation failed as a whole");
 
