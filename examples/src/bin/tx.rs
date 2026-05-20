@@ -6,7 +6,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::debug::log::info;
+use ariel_os::log::info;
 use ariel_os::time::Timer;
 
 use ariel_os_boards::pins;

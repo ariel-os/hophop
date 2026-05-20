@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::debug::log::{Hex, info, warn};
+use ariel_os::log::{Hex, info, warn};
 
 use ts_103_636_numbers as numbers;
 use ts_103_636_utils as utils;
