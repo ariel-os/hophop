@@ -80,7 +80,10 @@ async fn main() {
                     Ok(pdc) => {
                         info!("Received at {}: {:?} {:?}", start, pcc, pdc);
                         log_header(pcc);
-                        info!("PDC: {:?}", utils::mac_pdu::Header::parse(pdc));
+                        match utils::mac_pdu::Message::parse(pdc) {
+                            Ok(pdc) => info!("PDC: {:?}", pdc),
+                            Err(e) => warn!("PDC parse error: {:?}", e),
+                        };
                     }
                     Err(pdc) => {
                         info!(

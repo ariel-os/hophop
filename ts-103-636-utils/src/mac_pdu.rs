@@ -283,20 +283,15 @@ impl defmt::Format for Message<'_> {
             MacCommonHeader::Unicast(inner) => inner.format(fmt),
             MacCommonHeader::RdBroadcast(inner) => inner.format(fmt),
         }
-        defmt::write!(fmt, ", IEs: [");
-        let mut first = true;
+        defmt::write!(fmt, ", IEs: [\n    ");
         for ie in self.tail_items() {
-            if first {
-                first = false;
-            } else {
-                defmt::write!(fmt, ", ");
-            }
             if let Ok(ie) = ie {
                 ie.format(fmt);
             } else {
                 defmt::write!(fmt, "unparsable; full tail is {=[u8]:02x}", self.tail);
                 break;
             }
+            defmt::write!(fmt, ",\n    ");
         }
         defmt::write!(fmt, "] }}");
     }

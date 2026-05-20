@@ -41,13 +41,16 @@ impl core::fmt::Debug for InformationElement<'_> {
 #[cfg(feature = "defmt")]
 impl defmt::Format for InformationElement<'_> {
     fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(
-            fmt,
-            "InformationElement {{ head: {}, head ie: {}, payload: {} }}",
-            self.head,
-            self.ie_number(),
-            self.payload,
-        );
+        if self.ie_number().is_padding() && self.payload.iter().all(|x| *x == 0) {
+            defmt::write!(
+                fmt,
+                "{}, {} byte 0x00",
+                self.ie_number(),
+                self.payload.len()
+            );
+            return;
+        }
+        defmt::write!(fmt, "{}, payload: {=[u8]}", self.ie_number(), self.payload,);
     }
 }
 
@@ -59,6 +62,18 @@ impl defmt::Format for InformationElement<'_> {
 pub enum AnyIeType {
     Type6bit(numbers::mac_ie::IEType6bit),
     Type5bit(numbers::mac_ie::IEType5bit),
+}
+
+impl AnyIeType {
+    fn is_padding(&self) -> bool {
+        match self {
+            AnyIeType::Type6bit(numbers::mac_ie::ie6bit::PADDING) => true,
+            AnyIeType::Type5bit(
+                numbers::mac_ie::ie5bit_len0::PADDING | numbers::mac_ie::ie5bit_len1::PADDING,
+            ) => true,
+            _ => false,
+        }
+    }
 }
 
 // Convenience while we don't use a unified enum (for `.ie_number() == constant`)
