@@ -32,6 +32,9 @@ done
 # next step, but only once these stabilize a little.
 
 cd examples
+# We enable IPv6, and current Ariel needs something in there
+export CONFIG_NET_IPV6_STATIC_ADDRESS=fe80::1
+export CONFIG_NET_IPV6_STATIC_GATEWAY_ADDRESS=::
 # FIXME: Going through `run` but not really -- because a plain build fails due to the multiple binaries.
 for EX in rx tx rssi ping
 do
