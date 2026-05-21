@@ -274,7 +274,7 @@ impl defmt::Format for Message<'_> {
             // exists.
             //
             // Header type not shown because that is shown right after in .common's type name.
-            "Message {{ .head.mac security: {=u8}, .common: ",
+            "Security: {=u8}, ",
             self.head.mac_security(),
         );
         match &self.common {
@@ -283,17 +283,15 @@ impl defmt::Format for Message<'_> {
             MacCommonHeader::Unicast(inner) => inner.format(fmt),
             MacCommonHeader::RdBroadcast(inner) => inner.format(fmt),
         }
-        defmt::write!(fmt, ", IEs: [\n    ");
+        defmt::write!(fmt, ", IEs:");
         for ie in self.tail_items() {
             if let Ok(ie) = ie {
-                ie.format(fmt);
+                defmt::write!(fmt, "\n    - {}", ie);
             } else {
-                defmt::write!(fmt, "unparsable; full tail is {=[u8]:02x}", self.tail);
+                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", self.tail);
                 break;
             }
-            defmt::write!(fmt, ",\n    ");
         }
-        defmt::write!(fmt, "] }}");
     }
 }
 
