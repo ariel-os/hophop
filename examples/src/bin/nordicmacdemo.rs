@@ -89,7 +89,7 @@ async fn main() {
         }
     }
 
-    run(&mut ariel_os::net::user_net_runner().await, &mut dect).await;
+    run(&mut ariel_os::net::user_net_runner().await, &mut dect, params.transmitter_long_rd_id).await;
 
     ariel_os::time::Timer::after_millis(4_000).await;
 
@@ -161,9 +161,13 @@ async fn main() {
 /// 874-3). Implementing this for the time being, but
 /// <https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3> is
 /// pending to clarify whether we're just missing .
+///
+/// FIXME: `gateway_long` is the long RD address of the FT; in a sense, the MAC address of the
+/// default gateway. We shouldn't need that on the long run.
 async fn run<'d, const MTU: usize>(
     runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
     dect: &mut hophop::nrfxlib_mac::DectMac,
+    gateway_long: u32,
 ) {
     use embassy_net_driver::LinkState;
 
@@ -194,7 +198,7 @@ async fn run<'d, const MTU: usize>(
                     // BIG FIXME -- probably the solution will be to pretend to be MAC or 802154
                     // and cram these MAC addresses into their fields (but we'd have to parse them
                     // out and put them into the buffer, right)?
-                    0x70d1776d, tx_buf,
+                    gateway_long, tx_buf,
                 )
                 .await;
                 // FIXME: Actually we don't have to await the dlc_data_tx to mark it as done
