@@ -84,7 +84,7 @@ impl defmt::Format for Beacon<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Beacon {{ network id: {=u32}, transmitter address: {=u32} }}",
+            "Beacon {{ network id: 0x{=u32:06x}, transmitter address: 0x{=u32:08x} }}",
             self.network_id(),
             self.transmitter_address(),
         );
@@ -131,7 +131,7 @@ impl defmt::Format for Unicast<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Unicast {{ reset: {=bool}, sequence number: {=u16}, receiver address: {=u32}, transmitter address: {=u32} }}",
+            "Unicast {{ reset: {=bool}, sequence number: {=u16}, receiver address: 0x{=u32:08x}, transmitter address: 0x{=u32:08x} }}",
             self.reset(),
             self.sequence_number(),
             self.receiver_address(),
@@ -170,7 +170,7 @@ impl defmt::Format for RdBroadcast<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "RdBroadcast {{ reset: {=bool}, sequence number: {=u16}, transmitter address: {=u32} }}",
+            "RdBroadcast {{ reset: {=bool}, sequence number: {=u16}, transmitter address: 0x{=u32:08x} }}",
             self.reset(),
             self.sequence_number(),
             self.transmitter_address(),

@@ -31,7 +31,7 @@ fn log_header(header: &[u8]) {
     match header.len() {
         5 => {
             info!(
-                "Header details: format {} length {} {}, nid {}, from {}, tx power {}, df_mcs {}",
+                "Header details: format {} length {} {}, nid 0x{:02x}, from 0x{:04x}, tx power {}, df_mcs {}",
                 hdr_format,
                 packet_len,
                 packet_len_units,
@@ -46,7 +46,7 @@ fn log_header(header: &[u8]) {
             // Ignoring remaining feedback info for the moment; its interpretation depends on hdr_format
             // (although that really only tells if that's reserved or used).
             info!(
-                "Header details: format {} length {} {}, nid {}, from {} to {}, tx power {}, df_mcs {}",
+                "Header details: format {} length {} {}, nid 0x{:02x}, from 0x{:04x} to 0x{:04x}, tx power {}, df_mcs {}",
                 hdr_format,
                 packet_len,
                 packet_len_units,
