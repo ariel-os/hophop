@@ -1831,6 +1831,8 @@ version = "0.0.1"
 dependencies = [
  "defmt",
  "embassy-futures",
+ "embassy-net-driver",
+ "embassy-net-driver-channel",
  "embassy-sync 0.7.2",
  "heapless 0.9.2",
  "itertools 0.14.0",
@@ -1847,9 +1849,6 @@ version = "0.0.0"
 dependencies = [
  "ariel-os",
  "ariel-os-boards",
- "embassy-futures",
- "embassy-net-driver",
- "embassy-net-driver-channel",
  "heapless 0.9.2",
  "hophop",
  "nrf-modem",

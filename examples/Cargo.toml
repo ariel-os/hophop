@@ -22,10 +22,6 @@ nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "*", features = ["dect-mac"] }
 
-embassy-net-driver-channel = "0.4.0"
-embassy-net-driver = "0.2.0"
-embassy-futures = "0.1.2"
-
 [patch.crates-io]
 # from https://github.com/nrf-rs/nrfxlib-sys/pull/20
 nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }

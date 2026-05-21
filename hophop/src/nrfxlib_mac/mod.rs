@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! High-level wrappers around the Nordic's DECT MAC.
 
+pub mod embassy_net;
 pub mod error;
 
 mod callbacks;
