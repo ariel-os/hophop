@@ -944,8 +944,8 @@ dependencies = [
 
 [[package]]
 name = "embassy-nrf"
-version = "0.8.0"
-source = "git+https://github.com/ariel-os/embassy?rev=3940a79a29ae578a35625cae949bea473abf21d1#3940a79a29ae578a35625cae949bea473abf21d1"
+version = "0.9.0"
+source = "git+https://github.com/nponsard/embassy-ariel?rev=b05028962a13f3dca32487ddb505dd3a6c300601#b05028962a13f3dca32487ddb505dd3a6c300601"
 dependencies = [
  "bitflags 2.11.0",
  "cfg-if",
@@ -954,6 +954,7 @@ dependencies = [
  "critical-section",
  "document-features",
  "embassy-embedded-hal",
+ "embassy-futures",
  "embassy-hal-internal",
  "embassy-sync 0.7.2",
  "embassy-time",
@@ -2162,9 +2163,8 @@ dependencies = [
 
 [[package]]
 name = "nrf-pac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d334027d6703534f2a80de0794ae435c0e029358d28278533d3935e69b221b01"
+version = "0.2.0"
+source = "git+https://github.com/embassy-rs/nrf-pac.git?rev=074935b9b24ab302fe812f91725937f57cd082cf#074935b9b24ab302fe812f91725937f57cd082cf"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",

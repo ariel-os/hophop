@@ -4,8 +4,8 @@
 imports:
   - git:
       url: https://github.com/chrysn-pull-requests/ariel-os
-      # branch "for-hophop-20260519", which merges https://github.com/ariel-os/ariel-os/pull/2101 and https://github.com/ariel-os/ariel-os/pull/2102
-      commit: 715d677b2ee1b7518070ea692fe05c09fff83aa4
+      # branch "for-hophop-20260519", which merges https://github.com/ariel-os/ariel-os/pull/2101 and https://github.com/ariel-os/ariel-os/pull/2102 and https://github.com/ariel-os/ariel-os/pull/1804
+      commit: 1993e1ea46078455da988646757cbe3c0f9eb4cc
     dldir: ariel-os
 
 apps:
