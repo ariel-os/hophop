@@ -97,16 +97,22 @@ impl DectMac {
             .expect("Failed to set configuration params");
     }
 
-    pub async fn control_functional_mode_set_activate(&mut self) {
-        unsafe {
-            nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(
-                nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
-            )
-        }.into_result().expect("Failed to set functional mode");
+    async fn control_functional_mode_set(&mut self, mode: u8) {
+        unsafe { nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(mode) }
+            .into_result()
+            .expect("Failed to set functional mode");
         SINGLETON_EVENTS
             .receive()
             .await
             .expect("Failed to set functional mode");
+    }
+
+    pub async fn control_functional_mode_set_deactivate(&mut self) {
+        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_DEACTIVATE).await
+    }
+
+    pub async fn control_functional_mode_set_activate(&mut self) {
+        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE).await
     }
 
     /// Starts a network scan.
