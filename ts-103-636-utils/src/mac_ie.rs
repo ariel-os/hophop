@@ -317,6 +317,13 @@ pub enum PowerConst {
 }
 
 impl<'a> ClusterBeacon<'a> {
+    /// Inspects a [`ClusterBeacon`] MAC message far enough to be confident in later picking the
+    /// parts out of it.
+    ///
+    /// # Errors
+    ///
+    /// Currently on lenght errors, possibly in the future when unknown values are found in coded
+    /// fields.
     pub fn parse(buffer: &'a [u8]) -> Result<Self, ParsingError> {
         // Not doing a full parse, just enough that our methods can index without fear of panicking
         let mut expected_len = 4;
@@ -417,6 +424,7 @@ impl<'a> ClusterBeacon<'a> {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "length is checked internally")]
     pub fn next_cluster_channel(&self) -> Option<u16> {
         if self.has_next_channel() {
             Some(
@@ -434,6 +442,7 @@ impl<'a> ClusterBeacon<'a> {
     }
 
     #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "length is checked internally")]
     pub fn time_to_next(&self) -> Option<u32> {
         if self.has_next_channel() {
             Some(u32::from_be_bytes(
