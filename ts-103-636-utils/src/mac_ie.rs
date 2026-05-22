@@ -73,6 +73,7 @@ pub enum AnyIeType {
 
 impl AnyIeType {
     fn is_padding(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro, reason = "more readable this way")]
         match self {
             AnyIeType::Type6bit(numbers::mac_ie::ie6bit::PADDING) => true,
             AnyIeType::Type5bit(
