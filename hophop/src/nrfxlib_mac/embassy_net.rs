@@ -19,8 +19,9 @@ use defmt::warn;
 /// This is implemented in terms of [`embassy_net_driver_channel`], and thus takes a
 /// [Runner][embassy_net_driver_channel::Runner].
 ///
-/// FIXME: `gateway_long` is the long RD address of the FT; in a sense, the MAC address of the
-/// default gateway. We shouldn't need that on the long run.
+/// `gateway_long` is the long RD address of the FT; in a sense, the MAC address of the
+/// default gateway. This is probably how NI6W works, and packets will be sent correctly even to
+/// other nodes when addressed that way.
 pub async fn run_ni6w<'d, const MTU: usize>(
     runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
     dect: &mut super::DectMac,
@@ -54,9 +55,6 @@ pub async fn run_ni6w<'d, const MTU: usize>(
                 let _ = dect
                     .dlc_data_tx(
                         1,
-                        // BIG FIXME -- probably the solution will be to pretend to be MAC or 802154
-                        // and cram these MAC addresses into their fields (but we'd have to parse them
-                        // out and put them into the buffer, right)?
                         gateway_long,
                         tx_buf,
                     )
