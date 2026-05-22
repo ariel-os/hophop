@@ -7,7 +7,7 @@
 
 use ariel_os::log::{Hex, error, info, warn};
 
-use ts_103_636_utils::identifiers::NetworkId32;
+use ts_103_636_utils::identifiers::{LongRdId, NetworkId32};
 
 use nrf_modem::ErrorSource;
 use nrfxlib_sys;
@@ -19,6 +19,16 @@ async fn main() {
 
     dect.systemmode_set_mac().await;
 
+    let our_long_id = LongRdId::new(u32::from_be_bytes(
+        *ariel_os::identity::device_id_bytes()
+            .expect("we know this platform to have one")
+            .as_ref()
+            .first_chunk()
+            .expect("we know this platform has sufficiently long IDs"),
+    ))
+    .expect("serial numbers used with examples are not so unlucky as to start with 4 byte zeros");
+    info!("Our Long RD ID is {:?}", our_long_id);
+
     dect.control_configure(&mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
         // FIXME: Decide (this is a "let's keep it civilized" guess)
         max_tx_power: nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
@@ -26,8 +36,7 @@ async fn main() {
         max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
         // FIXME: Decide (this is what the vendor examples default to)
         expected_mcs1_rx_rssi_level: -68,
-        // FIXME: make configurable
-        long_rd_id: 0xf00feaae,
+        long_rd_id: our_long_id.into(),
         // FIXME: configure
         phy_band_group_index:
             nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
