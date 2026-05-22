@@ -11,6 +11,8 @@ use ariel_os::time::Timer;
 
 use ariel_os_boards::pins;
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 #[ariel_os::task(autostart, peripherals)]
 async fn blinky(peripherals: pins::ButtonPeripherals) {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
@@ -34,9 +36,8 @@ async fn blinky(peripherals: pins::ButtonPeripherals) {
             last_tx = last_tx.wrapping_add(TICKS_PER_FRAME * 2);
             dect.tx(
                 last_tx,
-                1665,
-                // FIXME: Not using a proper network ID yet
-                0x12345678,
+                const { AbsoluteChannel::new(1665).unwrap() },
+                const { NetworkId32::new(0x12345678).unwrap() },
                 // Beacon as seen by the dect_shell
                 &[17, 120, 150, 24, 112],
                 &[

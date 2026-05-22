@@ -8,6 +8,8 @@ use heapless::{
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 use super::{DECT_EVENTS, DectEvent, DectPhy, MixedError};
 
 // Packet pool.
@@ -255,18 +257,18 @@ impl DectPhy {
     ///
     /// As by the underlying design, beacons on the frequency are received immaterial of the
     /// `network_id`, but actual packets are scrambled by network ID, and can only be received from
-    /// one network.
+    /// one network. If None is given as network ID, only beacons can be received successfully.
     pub async fn rx(
         &mut self,
-        carrier: u16,
-        network_id: u32,
+        carrier: AbsoluteChannel,
+        network_id: Option<NetworkId32>,
     ) -> Result<Option<RecvResult>, MixedError> {
         unsafe {
             // FIXME: everything
             nrfxlib_sys::nrf_modem_dect_phy_rx(&nrfxlib_sys::nrf_modem_dect_phy_rx_params {
                 start_time: 0,
                 handle: 54321,
-                network_id,
+                network_id: network_id.map(u32::from).unwrap_or(0),
                 mode: nrfxlib_sys::nrf_modem_dect_phy_rx_mode_NRF_MODEM_DECT_PHY_RX_MODE_SINGLE_SHOT,
                 rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_OFF,
                 link_id: nrfxlib_sys::nrf_modem_dect_phy_link_id {
@@ -274,7 +276,7 @@ impl DectPhy {
                     short_rd_id: 0,
                 },
                 rssi_level: 0,
-                carrier,
+                carrier: carrier.into(),
                 // ~ 1 second
                 duration: 70000000,
                 filter: nrfxlib_sys::nrf_modem_dect_phy_rx_filter {

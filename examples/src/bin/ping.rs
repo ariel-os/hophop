@@ -12,6 +12,8 @@ use ariel_os_boards::pins;
 use ts_103_636_numbers as numbers;
 use ts_103_636_utils as utils;
 
+use utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 #[ariel_os::task(autostart, peripherals)]
 async fn main(peripherals: pins::ButtonPeripherals) {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
@@ -33,7 +35,7 @@ async fn main(peripherals: pins::ButtonPeripherals) {
         // moment we can just leave it at that.
         if button0.is_high() {
             let received = dect
-                .rx(1665, 0)
+                .rx(const { AbsoluteChannel::new(1665).unwrap() }, None)
                 .await
                 .expect("Receive operation failed as a whole");
 
@@ -138,9 +140,15 @@ async fn main(peripherals: pins::ButtonPeripherals) {
                 .unwrap();
             }
 
-            dect.tx(transmit_time, 1665, 0x12345678, &pcc, &pdc_buf)
-                .await
-                .unwrap();
+            dect.tx(
+                transmit_time,
+                const { AbsoluteChannel::new(1665).unwrap() },
+                const { NetworkId32::new(0x12345678).unwrap() },
+                &pcc,
+                &pdc_buf,
+            )
+            .await
+            .unwrap();
 
             info!("Sent {} bytes PDC data", pdc_buf.len());
         }

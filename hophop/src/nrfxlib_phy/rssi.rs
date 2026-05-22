@@ -9,6 +9,8 @@ use itertools::Itertools as _;
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 use static_cell::StaticCell;
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 use super::{DECT_EVENTS, DectEvent, DectPhy, Handle, MixedError};
 
 // Storage for RSSI results.
@@ -65,7 +67,7 @@ pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_eve
         "RSSI handle {} start {} carrier {}; {} measurements",
         handle,
         rssi.meas_start_time,
-        rssi.carrier,
+        AbsoluteChannel::new(rssi.carrier).unwrap(),
         meas.len(),
     );
 
@@ -89,7 +91,7 @@ impl DectPhy {
     /// for later RSSI measurements to be taken; otherwise, later RSSI invocations will err.
     pub async fn rssi(
         &mut self,
-        carrier: u16,
+        carrier: AbsoluteChannel,
     ) -> Result<impl core::ops::Deref<Target = RssiEvent>, MixedError> {
         // Relevant DECT constant timing parameters are 1 frame = 10ms, each 10ms frame is composed
         // of 24 slots,
@@ -109,7 +111,7 @@ impl DectPhy {
         let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
             start_time: 0,
             handle: configured_handle.0,
-            carrier,
+            carrier: carrier.into(),
             duration: 48, // in subslots; 1 full report
             reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms
         };
@@ -154,8 +156,8 @@ impl DectPhy {
     /// See [`Self::rx()`] for the relevance of `network_id`.
     pub async fn rssi_bulk(
         &mut self,
-        carriers: &[u16],
-        network_id: u32,
+        carriers: &[AbsoluteChannel],
+        network_id: NetworkId32,
         mut on_event: impl AsyncFnMut(Option<Box<RssiPool>>),
         mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
@@ -181,7 +183,7 @@ impl DectPhy {
             let params = nrfxlib_sys::nrf_modem_dect_phy_rx_params {
                 start_time: current_start_time,
                 handle: handle.0,
-                carrier: *carrier,
+                carrier: (*carrier).into(),
                 // duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 duration: u32::try_from(multiples).unwrap() * 691_200, // in time units
                 rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
@@ -196,7 +198,7 @@ impl DectPhy {
                     short_network_id: 0,
                     short_rd_id: 0,
                 },
-                network_id,
+                network_id: network_id.into(),
                 rssi_level: 0,
             };
             unsafe { nrfxlib_sys::nrf_modem_dect_phy_rx(&raw const params) }.into_result()?;
