@@ -281,6 +281,19 @@ impl From<LongRdId> for NonZero<u32> {
     }
 }
 
+impl core::fmt::Debug for LongRdId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "0x{:08x}", u32::from(self.0))
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for LongRdId {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "0x{=u32:08x}", u32::from(self.0));
+    }
+}
+
 /// A Short Radio Device ID (Short RD ID).
 ///
 /// Following Section 4.2.3.3 of ETSI TS 103 636-4 V2.1.1.
@@ -318,5 +331,18 @@ impl From<ShortRdId> for u16 {
 impl From<ShortRdId> for NonZero<u16> {
     fn from(value: ShortRdId) -> Self {
         value.0
+    }
+}
+
+impl core::fmt::Debug for ShortRdId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "0x{:04x}", u16::from(self.0))
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for ShortRdId {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "0x{=u16:04x}", u16::from(self.0));
     }
 }
