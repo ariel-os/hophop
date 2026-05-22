@@ -8,6 +8,8 @@
 pub mod mac_ie;
 pub mod mac_pdu;
 
+pub mod identifiers;
+
 /// Something in the input data structure violated this crate's expectation of what specification
 /// compliant input should look like.
 ///
