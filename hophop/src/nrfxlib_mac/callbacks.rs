@@ -14,6 +14,8 @@
 use defmt::{info, warn};
 use nrf_modem::nrfxlib_sys;
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
+
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
@@ -260,15 +262,30 @@ unsafe extern "C" fn cluster_beacon_ntf(
 ) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
+    let (
+        Some(channel),
+        Some(transmitter_short_rd_id),
+        Some(transmitter_long_rd_id),
+        Some(network_id),
+    ) = (
+        AbsoluteChannel::new(params.channel),
+        ShortRdId::new(params.transmitter_short_rd_id),
+        LongRdId::new(params.transmitter_long_rd_id),
+        NetworkId32::new(params.network_id),
+    )
+    else {
+        warn!("Ignoring beacon NTF with reserved values.");
+        return;
+    };
     // It's a bit unfortunate that we have to copy around here rather than just re-owning a
     // pool message, but we can still try to do better when we see what's in the actual IPC
     // API.
     if BEACON_EVENTS
         .try_send(ClusterBeacon {
-            channel: params.channel,
-            transmitter_short_rd_id: params.transmitter_short_rd_id,
-            transmitter_long_rd_id: params.transmitter_long_rd_id,
-            network_id: params.network_id,
+            channel,
+            transmitter_short_rd_id,
+            transmitter_long_rd_id,
+            network_id,
         })
         .is_ok()
     {
@@ -280,11 +297,11 @@ unsafe extern "C" fn cluster_beacon_ntf(
         // (We spill some when we fill up the queue, but that's fine).
 
         info!(
-            "Got cluster beacon! Channel {}, TX short 0x{:x}, TX long 0x{:x}, network 0x{:x}, {} IEs",
-            params.channel,
-            params.transmitter_short_rd_id,
-            params.transmitter_long_rd_id,
-            params.network_id,
+            "Got cluster beacon! Channel {}, TX short {}, TX long {}, network {}, {} IEs",
+            channel,
+            transmitter_short_rd_id,
+            transmitter_long_rd_id,
+            network_id,
             params.number_of_ies
         );
         debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });

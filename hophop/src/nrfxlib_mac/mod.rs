@@ -11,6 +11,8 @@ mod shared_queues;
 
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
+
 use error::MacError;
 use shared_queues::*;
 
@@ -164,8 +166,8 @@ impl DectMac {
     // FIXME allow configuring flows
     pub async fn mac_association(
         &mut self,
-        long_rd_id: u32,
-        network_id: u32,
+        long_rd_id: LongRdId,
+        network_id: NetworkId32,
     ) -> Result<(), MacError> {
         let mut tx_flow_configs = [
             nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
@@ -192,8 +194,8 @@ impl DectMac {
                 &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
                     // FIXME where do we use the channel information? Did the MAC remember? (Probably:
                     // After all, it's not just channel but the whole info stuff from the beacon).
-                    long_rd_id,
-                    network_id,
+                    long_rd_id: long_rd_id.into(),
+                    network_id: network_id.into(),
                     info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
                         // FIXME: this is a guess
                         num_beacon_rx_failures: 1,
@@ -219,7 +221,7 @@ impl DectMac {
     pub async fn dlc_data_tx(
         &mut self,
         flow_id: u8,
-        destination: u32,
+        destination: LongRdId,
         data: &[u8],
     ) -> Result<(), MacError> {
         unsafe {
@@ -229,7 +231,7 @@ impl DectMac {
                     transaction_id: 0,
                     flow_id,
                     // send to our neighbor
-                    long_rd_id: destination,
+                    long_rd_id: destination.into(),
                     // FIXME: verify that the C API really doesn't want to write there
                     data: data as *const _ as *mut _,
                     data_len: data.len(),
@@ -252,10 +254,10 @@ impl DectMac {
 // whole type not Send, and it comes from the ISR. We wouldn't touch it, but are in no position to
 // impl Send on it.
 pub struct ClusterBeacon {
-    pub channel: u16,
-    pub transmitter_short_rd_id: u16,
-    pub transmitter_long_rd_id: u32,
-    pub network_id: u32,
+    pub channel: AbsoluteChannel,
+    pub transmitter_short_rd_id: ShortRdId,
+    pub transmitter_long_rd_id: LongRdId,
+    pub network_id: NetworkId32,
 }
 
 #[derive(Copy, Clone)]

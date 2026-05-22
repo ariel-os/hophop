@@ -24,7 +24,7 @@ use defmt::warn;
 pub async fn run_ni6w<'d, const MTU: usize>(
     runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
     dect: &mut super::DectMac,
-    gateway_long: u32,
+    gateway_long: super::LongRdId,
 ) {
     use embassy_net_driver::LinkState;
 

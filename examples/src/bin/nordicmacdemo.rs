@@ -7,6 +7,8 @@
 
 use ariel_os::log::{Hex, error, info, warn};
 
+use ts_103_636_utils::identifiers::NetworkId32;
+
 use nrf_modem::ErrorSource;
 use nrfxlib_sys;
 
@@ -53,7 +55,7 @@ async fn main() {
         loop {
             let params = r.next().await;
 
-            if params.network_id == 0x87654321 {
+            if params.network_id == const { NetworkId32::new(0x87654321).unwrap() } {
                 // That's the demo network we are looking for, mostly following the DECT shell defaults.
                 //
                 // (What is missing is that we'd use that to dig up keys and then reconfigure the
