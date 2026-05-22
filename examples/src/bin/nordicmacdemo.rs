@@ -89,7 +89,12 @@ async fn main() {
         }
     }
 
-    hophop::nrfxlib_mac::embassy_net::run(&mut ariel_os::net::user_net_runner().await, &mut dect, params.transmitter_long_rd_id).await;
+    hophop::nrfxlib_mac::embassy_net::run_ni6w(
+        &mut ariel_os::net::user_net_runner().await,
+        &mut dect,
+        params.transmitter_long_rd_id,
+    )
+    .await;
 
     ariel_os::time::Timer::after_millis(4_000).await;
 

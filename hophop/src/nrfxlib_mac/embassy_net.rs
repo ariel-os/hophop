@@ -1,22 +1,27 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Glue between the MAC and the [`embassy-net-driver`]
+//! Glue between the MAC and the [`embassy_net_driver`]
 //!
-//! This is compatible with the DECT shell, but not necessarily proper IPv6 over nr+ (ETSI TS 103
-//! 874-3). Implementing this for the time being, but
-//! <https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3> is
-//! pending to clarify whether we're just missing .
+//! # Compatibility warning
+//!
+//! This does **not** implement proper IPv6 over nr+ (ETSI TS 103 874-3), but merely "dump data
+//! directly into DLC in any flow" -- Nordic's IPv6 Workaround (NI6W) (see also [their DevZone
+//! entry](https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3)).
+//!
+//! The intention for this module is to grow into an actual imlementation (possibly retaining the
+//! NI6W version for compatibility).
 
 use defmt::warn;
 
-/// An embassy network driver that transmits and receives packets via the Nordic nrfxlib MAC.
+/// An embassy network driver that transmits and receives packets via the Nordic nrfxlib MAC
+/// following the NI6W mode (see module level documentation).
 ///
 /// This is implemented in terms of [`embassy_net_driver_channel`], and thus takes a
 /// [Runner][embassy_net_driver_channel::Runner].
 ///
 /// FIXME: `gateway_long` is the long RD address of the FT; in a sense, the MAC address of the
 /// default gateway. We shouldn't need that on the long run.
-pub async fn run<'d, const MTU: usize>(
+pub async fn run_ni6w<'d, const MTU: usize>(
     runner: &mut embassy_net_driver_channel::Runner<'d, MTU>,
     dect: &mut super::DectMac,
     gateway_long: u32,
