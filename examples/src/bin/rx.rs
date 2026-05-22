@@ -11,6 +11,7 @@ use ariel_os::log::{Hex, info, warn};
 
 use ts_103_636_numbers as numbers;
 use ts_103_636_utils as utils;
+use utils::identifiers::{AbsoluteChannel, NetworkId32};
 
 fn log_header(header: &[u8]) {
     // Following ETSI TS 103 636-4 V2.1.1 Section 6.2
@@ -69,7 +70,10 @@ async fn main() {
 
     for _ in 0..300 {
         if let Some(received) = dect
-            .rx(1665, 0x87654321)
+            .rx(
+                const { AbsoluteChannel::new(1665).unwrap() },
+                const { NetworkId32::new(0x87654321) },
+            )
             .await
             .expect("Receive operation failed as a whole")
         {

@@ -6,6 +6,8 @@
 use ariel_os::debug::{ExitCode, exit};
 use ariel_os::log::{error, info, warn};
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 #[ariel_os::task(autostart)]
 async fn main() {
     let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
@@ -16,14 +18,26 @@ async fn main() {
         info!("DECT time is {:?}", dect.time_get().await);
 
         info!("Scanning band 1");
-        let scans = &[
-            1657, 1659, 1661, 1663, 1665, 1667, 1669, 1671, 1673, 1675, 1677,
-        ];
+        let scans = &const {
+            [
+                AbsoluteChannel::new(1657).unwrap(),
+                AbsoluteChannel::new(1659).unwrap(),
+                AbsoluteChannel::new(1661).unwrap(),
+                AbsoluteChannel::new(1663).unwrap(),
+                AbsoluteChannel::new(1665).unwrap(),
+                AbsoluteChannel::new(1667).unwrap(),
+                AbsoluteChannel::new(1669).unwrap(),
+                AbsoluteChannel::new(1671).unwrap(),
+                AbsoluteChannel::new(1673).unwrap(),
+                AbsoluteChannel::new(1675).unwrap(),
+                AbsoluteChannel::new(1677).unwrap(),
+            ]
+        };
         let mut scan_iterator = scans.iter();
         if let Err(e) = dect
             .rssi_bulk(
                 scans,
-                0x87654321,
+                const { NetworkId32::new(0x87654321).unwrap() },
                 async |result| {
                     let channel = scan_iterator.next().unwrap();
                     let Some(result) = result else {

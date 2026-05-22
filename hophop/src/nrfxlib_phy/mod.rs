@@ -13,6 +13,8 @@ mod latency;
 mod rssi;
 mod rx;
 
+use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
+
 pub const TICKS_PER_SECOND: u64 = 69_120_000;
 pub const TICKS_PER_MILLISECOND: u64 = 69_120;
 
@@ -278,8 +280,8 @@ impl DectPhy {
     pub async fn tx(
         &mut self,
         start_time: u64,
-        channel: u16,
-        network_id: u32,
+        channel: AbsoluteChannel,
+        network_id: NetworkId32,
         pcc: &[u8],
         pdc: &[u8],
     ) -> Result<(), MixedError> {
@@ -289,18 +291,6 @@ impl DectPhy {
             _ => panic!("Not a valid header length"),
         };
 
-        // The PHY function is documented to require this, and will indeed not transmit.
-        //
-        // But expressing this in the type would be odd (the full value is computed of parts where
-        // it is not clear whose resposibility it is to not be zero) for practical deployments. (Is
-        // it really the random lower 8 bits that need to special-case if the upper 24 are all-zero?)
-        //
-        // Handling this as an error seems to be most practical, as it won't take down the whole
-        // system but will not go silently either.
-        if network_id == 0 {
-            return Err(MixedError::UsageError);
-        }
-
         unsafe {
             // FIXME: everything
             nrfxlib_sys::nrf_modem_dect_phy_tx(&nrfxlib_sys::nrf_modem_dect_phy_tx_params {
@@ -309,10 +299,10 @@ impl DectPhy {
                 // FIXME: Verify that libmodem or the network core does the >> 8 / & 0xff.
                 //
                 // (Probably: otherwise, the "must not be zero" can not be upheld).
-                network_id,
+                network_id: network_id.into(),
                 phy_type,
                 lbt_rssi_threshold_max: 0, // see below
-                carrier: channel,
+                carrier: channel.into(),
                 lbt_period: 0, // BIG FIXME
                 // The object may be smaller than expected for phy_header, but then, phy_type tells
                 // to only access the smaller struct fields anyway.
