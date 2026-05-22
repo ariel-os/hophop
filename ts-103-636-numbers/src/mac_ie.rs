@@ -111,14 +111,9 @@ impl core::fmt::Debug for IEType6bit {
 impl defmt::Format for IEType6bit {
     fn format(&self, f: defmt::Formatter<'_>) {
         if let Some(description) = self.description() {
-            defmt::write!(
-                f,
-                "IEType6bit {{ .0: {:#04x}, description: {} }}",
-                self.0,
-                description
-            );
+            defmt::write!(f, "{=str} (6bit, 0x{=u8:x})", description, self.0);
         } else {
-            defmt::write!(f, "IEType6bit {{ .0: {:#04x} }}", self.0);
+            defmt::write!(f, "unknown (6bit, 0x{=u8:x})", self.0);
         }
     }
 }
@@ -289,17 +284,17 @@ impl defmt::Format for IEType5bit {
         if let Some(description) = self.description() {
             defmt::write!(
                 f,
-                "IEType5bit {{ .len: {}, .value {:#04x}, description: {} }}",
+                "{=str} (5bit length {=u8}, 0x{=u8:x})",
+                description,
                 self.len_u8(),
-                self.value(),
-                description
+                self.0
             );
         } else {
             defmt::write!(
                 f,
-                "IEType5bit {{ .len {}, .value: {:#04x} }}",
+                "unknown (5bit length {=u8}, 0x{=u8:x})",
                 self.len_u8(),
-                self.value(),
+                self.0
             );
         }
     }

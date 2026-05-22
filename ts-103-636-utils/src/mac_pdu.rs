@@ -84,7 +84,7 @@ impl defmt::Format for Beacon<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Beacon {{ network id: {=u32}, transmitter address: {=u32} }}",
+            "Beacon {{ network id: 0x{=u32:06x}, transmitter address: 0x{=u32:08x} }}",
             self.network_id(),
             self.transmitter_address(),
         );
@@ -131,7 +131,7 @@ impl defmt::Format for Unicast<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Unicast {{ reset: {=bool}, sequence number: {=u16}, receiver address: {=u32}, transmitter address: {=u32} }}",
+            "Unicast {{ reset: {=bool}, sequence number: {=u16}, receiver address: 0x{=u32:08x}, transmitter address: 0x{=u32:08x} }}",
             self.reset(),
             self.sequence_number(),
             self.receiver_address(),
@@ -170,7 +170,7 @@ impl defmt::Format for RdBroadcast<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "RdBroadcast {{ reset: {=bool}, sequence number: {=u16}, transmitter address: {=u32} }}",
+            "RdBroadcast {{ reset: {=bool}, sequence number: {=u16}, transmitter address: 0x{=u32:08x} }}",
             self.reset(),
             self.sequence_number(),
             self.transmitter_address(),
@@ -187,15 +187,18 @@ pub enum MacCommonHeader<'buf> {
     RdBroadcast(RdBroadcast<'buf>),
 }
 
+#[deprecated(note = "renamed to Message")]
+pub type Header<'buf> = Message<'buf>;
+
 #[derive(Debug)]
-pub struct Header<'buf> {
+pub struct Message<'buf> {
     pub head: MacHeaderType,
     pub common: MacCommonHeader<'buf>,
     /// IE items; best used with the [`Self::tail_items()`] iterator
     pub tail: &'buf [u8],
 }
 
-impl<'buf> Header<'buf> {
+impl<'buf> Message<'buf> {
     /// Parses a buffer as a MAC PDU, with a header indicating the common header type, a common
     /// header, and a tail of IEs.
     ///
@@ -263,11 +266,15 @@ impl<'buf> Header<'buf> {
 }
 
 #[cfg(feature = "defmt")]
-impl defmt::Format for Header<'_> {
+impl defmt::Format for Message<'_> {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(
             fmt,
-            "Header {{ .head.mac security: {=u8}, .common: ",
+            // Version not shown because it is asserted at parse time that this is the one that
+            // exists.
+            //
+            // Header type not shown because that is shown right after in .common's type name.
+            "Security: {=u8}, ",
             self.head.mac_security(),
         );
         match &self.common {
@@ -276,22 +283,15 @@ impl defmt::Format for Header<'_> {
             MacCommonHeader::Unicast(inner) => inner.format(fmt),
             MacCommonHeader::RdBroadcast(inner) => inner.format(fmt),
         }
-        defmt::write!(fmt, ", IEs: [");
-        let mut first = true;
+        defmt::write!(fmt, ", IEs:");
         for ie in self.tail_items() {
-            if first {
-                first = false;
-            } else {
-                defmt::write!(fmt, ", ");
-            }
             if let Ok(ie) = ie {
-                ie.format(fmt);
+                defmt::write!(fmt, "\n    - {}", ie);
             } else {
-                defmt::write!(fmt, "unparsable; full tail is {=[u8]:02x}", self.tail);
+                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", self.tail);
                 break;
             }
         }
-        defmt::write!(fmt, "] }}");
     }
 }
 

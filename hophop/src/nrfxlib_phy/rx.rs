@@ -251,13 +251,22 @@ pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_e
 }
 
 impl DectPhy {
-    pub async fn rx(&mut self) -> Result<Option<RecvResult>, MixedError> {
+    /// Receive packets at a given carrier for 1 second.
+    ///
+    /// As by the underlying design, beacons on the frequency are received immaterial of the
+    /// `network_id`, but actual packets are scrambled by network ID, and can only be received from
+    /// one network.
+    pub async fn rx(
+        &mut self,
+        carrier: u16,
+        network_id: u32,
+    ) -> Result<Option<RecvResult>, MixedError> {
         unsafe {
             // FIXME: everything
             nrfxlib_sys::nrf_modem_dect_phy_rx(&nrfxlib_sys::nrf_modem_dect_phy_rx_params {
                 start_time: 0,
                 handle: 54321,
-                network_id: 0x12345678, // like dect_shell defaults
+                network_id,
                 mode: nrfxlib_sys::nrf_modem_dect_phy_rx_mode_NRF_MODEM_DECT_PHY_RX_MODE_SINGLE_SHOT,
                 rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_OFF,
                 link_id: nrfxlib_sys::nrf_modem_dect_phy_link_id {
@@ -265,7 +274,7 @@ impl DectPhy {
                     short_rd_id: 0,
                 },
                 rssi_level: 0,
-                carrier: 1665, // like dect_shell ping default
+                carrier,
                 // ~ 1 second
                 duration: 70000000,
                 filter: nrfxlib_sys::nrf_modem_dect_phy_rx_filter {

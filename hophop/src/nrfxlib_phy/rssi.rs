@@ -150,9 +150,12 @@ impl DectPhy {
     /// queue), but needs to drop them reasonably quickly so that the pool does not run out;
     /// otherwise it may receive None events that indicate the overflow (but are still emitted so
     /// that the receiver knows which events were empty).
+    ///
+    /// See [`Self::rx()`] for the relevance of `network_id`.
     pub async fn rssi_bulk(
         &mut self,
         carriers: &[u16],
+        network_id: u32,
         mut on_event: impl AsyncFnMut(Option<Box<RssiPool>>),
         mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
@@ -193,7 +196,7 @@ impl DectPhy {
                     short_network_id: 0,
                     short_rd_id: 0,
                 },
-                network_id: 0x12345678, // like dect_shell defaults
+                network_id,
                 rssi_level: 0,
             };
             unsafe { nrfxlib_sys::nrf_modem_dect_phy_rx(&raw const params) }.into_result()?;

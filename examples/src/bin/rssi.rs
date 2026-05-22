@@ -23,6 +23,7 @@ async fn main() {
         if let Err(e) = dect
             .rssi_bulk(
                 scans,
+                0x87654321,
                 async |result| {
                     let channel = scan_iterator.next().unwrap();
                     let Some(result) = result else {

@@ -41,13 +41,23 @@ impl core::fmt::Debug for InformationElement<'_> {
 #[cfg(feature = "defmt")]
 impl defmt::Format for InformationElement<'_> {
     fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(
-            fmt,
-            "InformationElement {{ head: {}, head ie: {}, payload: {} }}",
-            self.head,
-            self.ie_number(),
-            self.payload,
-        );
+        if self.ie_number().is_padding() && self.payload.iter().all(|x| *x == 0) {
+            defmt::write!(
+                fmt,
+                "{}, {} byte 0x00",
+                self.ie_number(),
+                self.payload.len()
+            );
+            return;
+        }
+        match self.ie_number() {
+            AnyIeType::Type6bit(numbers::mac_ie::ie6bit::CLUSTER_BEACON)
+                if let Ok(cluster_beacon) = ClusterBeacon::parse(self.payload) =>
+            {
+                defmt::write!(fmt, "{}: {}", self.ie_number(), cluster_beacon);
+            }
+            _ => defmt::write!(fmt, "{}, payload: {=[u8]}", self.ie_number(), self.payload),
+        }
     }
 }
 
@@ -59,6 +69,19 @@ impl defmt::Format for InformationElement<'_> {
 pub enum AnyIeType {
     Type6bit(numbers::mac_ie::IEType6bit),
     Type5bit(numbers::mac_ie::IEType5bit),
+}
+
+impl AnyIeType {
+    fn is_padding(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro, reason = "more readable this way")]
+        match self {
+            AnyIeType::Type6bit(numbers::mac_ie::ie6bit::PADDING) => true,
+            AnyIeType::Type5bit(
+                numbers::mac_ie::ie5bit_len0::PADDING | numbers::mac_ie::ie5bit_len1::PADDING,
+            ) => true,
+            _ => false,
+        }
+    }
 }
 
 // Convenience while we don't use a unified enum (for `.ie_number() == constant`)
@@ -271,6 +294,197 @@ impl<'a> InformationElement<'a> {
         w.write(self.payload)?;
 
         Ok(())
+    }
+}
+
+/// A valid Cluster Beacon message (see Section 6.4.2.3 of ETSI TS 103 636-4 V2.1.1)
+///
+/// # Invariants
+///
+/// Instances are only created for data of the right length (thus once parsed, no accessors will
+/// panic); internally, an instance may be created tentatively and used carefully.
+///
+/// Parsing ignores the reserved bits as prescribed in Section 6.4.2.1; fiels are not yet checked
+/// for validity at parse time (but that parsing might become stricter over time).
+pub struct ClusterBeacon<'a>(&'a [u8]);
+
+/// Indicator whether an RD is power constrained
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum PowerConst {
+    Unconstrained,
+    Constrained,
+}
+
+impl<'a> ClusterBeacon<'a> {
+    /// Inspects a [`ClusterBeacon`] MAC message far enough to be confident in later picking the
+    /// parts out of it.
+    ///
+    /// # Errors
+    ///
+    /// Currently on lenght errors, possibly in the future when unknown values are found in coded
+    /// fields.
+    pub fn parse(buffer: &'a [u8]) -> Result<Self, ParsingError> {
+        // Not doing a full parse, just enough that our methods can index without fear of panicking
+        let mut expected_len = 4;
+        if buffer.len() < expected_len {
+            return Err(ParsingError);
+        }
+        // We're careful here to only call methods that access parts we checked the length for
+        let result = Self(buffer);
+        if result.has_tx_power() {
+            expected_len += 1;
+        }
+        if result.has_frame_offset() {
+            expected_len += 1;
+        }
+        if result.has_next_channel() {
+            expected_len += 2;
+        }
+        if result.has_time_to_next() {
+            expected_len += 4;
+        }
+        if buffer.len() < expected_len {
+            return Err(ParsingError);
+        }
+        Ok(result)
+    }
+
+    #[must_use]
+    pub fn sfn(&self) -> u8 {
+        self.0[0]
+    }
+
+    fn has_tx_power(&self) -> bool {
+        self.0[1] & 0x10 != 0
+    }
+
+    #[must_use]
+    pub fn power_const(&self) -> PowerConst {
+        if self.0[1] & 0x80 == 0x00 {
+            PowerConst::Unconstrained
+        } else {
+            PowerConst::Constrained
+        }
+    }
+
+    fn has_frame_offset(&self) -> bool {
+        self.0[1] & 0x04 != 0
+    }
+
+    fn has_next_channel(&self) -> bool {
+        self.0[1] & 0x02 != 0
+    }
+
+    fn has_time_to_next(&self) -> bool {
+        self.0[1] & 0x01 != 0
+    }
+
+    #[must_use]
+    pub fn network_beacon_period(&self) -> u8 {
+        self.0[2] >> 4
+    }
+
+    #[must_use]
+    pub fn cluster_beacon_period(&self) -> u8 {
+        self.0[2] & 0x0f
+    }
+
+    #[must_use]
+    pub fn count_to_trigger(&self) -> u8 {
+        self.0[3] >> 4
+    }
+
+    #[must_use]
+    pub fn rel_quality(&self) -> u8 {
+        (self.0[3] >> 2) & 0x03
+    }
+
+    #[must_use]
+    pub fn min_quality(&self) -> u8 {
+        self.0[3] & 0x03
+    }
+
+    #[must_use]
+    pub fn cluster_max_tx_power(&self) -> Option<u8> {
+        if self.has_tx_power() {
+            Some(self.0[4] & 0x0f)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn frame_offset(&self) -> Option<u8> {
+        if self.has_frame_offset() {
+            Some(self.0[4 + usize::from(self.has_tx_power())])
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "length is checked internally")]
+    pub fn next_cluster_channel(&self) -> Option<u16> {
+        if self.has_next_channel() {
+            Some(
+                u16::from_be_bytes(
+                    *self.0[4
+                        + usize::from(self.has_tx_power())
+                        + usize::from(self.has_frame_offset())..]
+                        .first_chunk()
+                        .expect("fits by construction"),
+                ) & 0x1fff,
+            )
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "length is checked internally")]
+    pub fn time_to_next(&self) -> Option<u32> {
+        if self.has_next_channel() {
+            Some(u32::from_be_bytes(
+                *self.0[4
+                    + usize::from(self.has_tx_power())
+                    + usize::from(self.has_frame_offset())
+                    + 2 * usize::from(self.has_next_channel())..]
+                    .first_chunk()
+                    .expect("fits by construction"),
+            ))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for ClusterBeacon<'_> {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(
+            fmt,
+            "SFN 0x{=u8:02x}, {}, net period {=u8}, cluster period {=u8}, count to trigger {=u8}, quality rel {=u8} min {=u8}",
+            self.sfn(),
+            self.power_const(),
+            self.network_beacon_period(),
+            self.cluster_beacon_period(),
+            self.count_to_trigger(),
+            self.rel_quality(),
+            self.min_quality()
+        );
+        if let Some(power) = self.cluster_max_tx_power() {
+            defmt::write!(fmt, ", max TX power {=u8}", power);
+        }
+        if let Some(fo) = self.frame_offset() {
+            defmt::write!(fmt, ", frame offset {=u8}", fo);
+        }
+        if let Some(channel) = self.next_cluster_channel() {
+            defmt::write!(fmt, ", next cluster channel {=u16}", channel);
+        }
+        if let Some(time) = self.time_to_next() {
+            defmt::write!(fmt, ", time to next {=u32}µs", time);
+        }
     }
 }
 
