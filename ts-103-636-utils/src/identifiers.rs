@@ -8,6 +8,61 @@
 
 use core::num::NonZero;
 
+/// An absolute channel number.
+///
+/// Following Section 5.4.2 of ETSI TS 103 636-2 V2.1.1
+///
+/// This type uses 13 bit (expressed in a u16).
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct AbsoluteChannel(NonZero<u16>);
+
+impl AbsoluteChannel {
+    #[must_use]
+    pub const fn new(number: u16) -> Option<Self> {
+        // Could be
+        //   NonZero::new(number).map(Self)
+        // but we have to do this until <https://github.com/rust-lang/rust/issues/143956> is
+        // stable:
+        match NonZero::new(number) {
+            Some(n) => Some(Self(n)),
+            None => None,
+        }
+    }
+}
+
+impl From<AbsoluteChannel> for u16 {
+    fn from(value: AbsoluteChannel) -> Self {
+        value.0.into()
+    }
+}
+
+impl From<AbsoluteChannel> for NonZero<u16> {
+    fn from(value: AbsoluteChannel) -> Self {
+        value.0
+    }
+}
+
+impl core::fmt::Debug for AbsoluteChannel {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // Does using a write rather than just deferring really get us rid of a :x on a surrounding
+        // struct? (It should: We use hex for identifiers but decimal for channels).
+        write!(f, "{}", self.0.get())
+    }
+}
+
+impl core::fmt::Display for AbsoluteChannel {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.0.get())
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for AbsoluteChannel {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "{=u16}", self.0.get());
+    }
+}
+
 /// A full (32-bit) Network ID.
 ///
 /// Following Section 4.2.3.1 of ETSI TS 103 636-4 V2.1.1.
