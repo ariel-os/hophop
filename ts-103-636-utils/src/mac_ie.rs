@@ -54,7 +54,7 @@ impl defmt::Format for InformationElement<'_> {
             AnyIeType::Type6bit(numbers::mac_ie::ie6bit::CLUSTER_BEACON)
                 if let Ok(cluster_beacon) = ClusterBeacon::parse(self.payload) =>
             {
-                defmt::write!(fmt, "{}: {}", self.ie_number(), cluster_beacon)
+                defmt::write!(fmt, "{}: {}", self.ie_number(), cluster_beacon);
             }
             _ => defmt::write!(fmt, "{}, payload: {=[u8]}", self.ie_number(), self.payload),
         }
@@ -343,6 +343,7 @@ impl<'a> ClusterBeacon<'a> {
         Ok(result)
     }
 
+    #[must_use]
     pub fn sfn(&self) -> u8 {
         self.0[0]
     }
@@ -351,6 +352,7 @@ impl<'a> ClusterBeacon<'a> {
         self.0[1] & 0x10 != 0
     }
 
+    #[must_use]
     pub fn power_const(&self) -> PowerConst {
         if self.0[1] & 0x80 == 0x00 {
             PowerConst::Unconstrained
@@ -371,26 +373,32 @@ impl<'a> ClusterBeacon<'a> {
         self.0[1] & 0x01 != 0
     }
 
+    #[must_use]
     pub fn network_beacon_period(&self) -> u8 {
         self.0[2] >> 4
     }
 
+    #[must_use]
     pub fn cluster_beacon_period(&self) -> u8 {
         self.0[2] & 0x0f
     }
 
+    #[must_use]
     pub fn count_to_trigger(&self) -> u8 {
         self.0[3] >> 4
     }
 
+    #[must_use]
     pub fn rel_quality(&self) -> u8 {
         (self.0[3] >> 2) & 0x03
     }
 
+    #[must_use]
     pub fn min_quality(&self) -> u8 {
         self.0[3] & 0x03
     }
 
+    #[must_use]
     pub fn cluster_max_tx_power(&self) -> Option<u8> {
         if self.has_tx_power() {
             Some(self.0[4] & 0x0f)
@@ -399,19 +407,23 @@ impl<'a> ClusterBeacon<'a> {
         }
     }
 
+    #[must_use]
     pub fn frame_offset(&self) -> Option<u8> {
         if self.has_frame_offset() {
-            Some(self.0[4 + self.has_tx_power() as usize])
+            Some(self.0[4 + usize::from(self.has_tx_power())])
         } else {
             None
         }
     }
 
+    #[must_use]
     pub fn next_cluster_channel(&self) -> Option<u16> {
         if self.has_next_channel() {
             Some(
                 u16::from_be_bytes(
-                    *self.0[4 + self.has_tx_power() as usize + self.has_frame_offset() as usize..]
+                    *self.0[4
+                        + usize::from(self.has_tx_power())
+                        + usize::from(self.has_frame_offset())..]
                         .first_chunk()
                         .expect("fits by construction"),
                 ) & 0x1fff,
@@ -421,13 +433,14 @@ impl<'a> ClusterBeacon<'a> {
         }
     }
 
+    #[must_use]
     pub fn time_to_next(&self) -> Option<u32> {
         if self.has_next_channel() {
             Some(u32::from_be_bytes(
                 *self.0[4
-                    + self.has_tx_power() as usize
-                    + self.has_frame_offset() as usize
-                    + 2 * (self.has_next_channel() as usize)..]
+                    + usize::from(self.has_tx_power())
+                    + usize::from(self.has_frame_offset())
+                    + 2 * usize::from(self.has_next_channel())..]
                     .first_chunk()
                     .expect("fits by construction"),
             ))
