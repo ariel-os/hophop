@@ -56,7 +56,7 @@ and should be usable the same way to restore the original state.
 hophop has no built-in tool to check for the firmware version,
 as [such a tool](https://github.com/ariel-os/ariel-os/tree/main/examples/device-metadata) is built in to Ariel OS.
 
-From an Ariel OS checkout (see [examples docs](../examples/README.md#for-all-examples)), you can run:
+From an Ariel OS checkout (see [getting started](./getting-started.md)), you can run:
 
 ```console
 $ laze -C examples/device-metadata build -b nrf9151-dk -s nrf-radiocore-firmware-dect run
