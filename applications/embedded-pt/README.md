@@ -75,6 +75,9 @@ Running the application
     FIXME: The IP address will initially be wrong and nothing will work.
     Run `net nbr` on the FT (see below) and run again with that now correct IP address.
 
+    (Options using `network-config-override` were explored, but that does not help
+    because that configuration would not be generated at runtime).
+
 * Observe on the device being eventually associated with the shell FT:
 
     ```console
