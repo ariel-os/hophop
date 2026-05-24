@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Initial demo for Rust using the high-level (MAC etc) nrfxlib features
+//! Runs a DECT PT and an embedded network stack.
 
 #![no_std]
 #![no_main]
