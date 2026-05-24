@@ -17,5 +17,7 @@ apps:
       - ipv6 # has to be before network
       - network
       - user-net-driver-channel
+      - coap-server
+      - ?coap-server-config-storage
     conflicts:
       - ipv4

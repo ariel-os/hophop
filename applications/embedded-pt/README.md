@@ -121,3 +121,8 @@ Running the application
 
     The ping command then waits 1 second, starts the next ping,
     but then it takes again 1s until the next beacon is availab.e
+
+* The PT also runs a CoAP server with EDHOC/OSCORE.
+  This is currently untested until there is a suitable client or bridge,
+  because I found no way to make the DECT shell send CoAP requests.
+  (`net udp send` won't take hex encoded data.)

@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# For the time being, we do want to make sure we go through all the steps, but
+# leave enhancing the onboarding experience to Ariel.
+- from: unauthenticated
+  scope: allow-all

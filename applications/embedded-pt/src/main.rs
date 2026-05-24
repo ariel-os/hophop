@@ -9,7 +9,6 @@ use ariel_os::log::{Hex, error, info, warn};
 
 use ts_103_636_utils::identifiers::{LongRdId, NetworkId32};
 
-use nrf_modem::ErrorSource;
 use nrfxlib_sys;
 
 #[ariel_os::task(autostart)]
@@ -173,4 +172,14 @@ async fn main() {
         .await
         .unwrap();
     }
+}
+
+#[ariel_os::task(autostart)]
+async fn coap_run() -> ! {
+    use coap_handler_implementations::{HandlerBuilder, new_dispatcher, SimpleRendered};
+
+    let handler = new_dispatcher()
+        .at(&["hello"], SimpleRendered("Hello from hophop"));
+
+    ariel_os::coap::coap_run(handler).await;
 }
