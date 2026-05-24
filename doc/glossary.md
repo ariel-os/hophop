@@ -39,6 +39,7 @@ Abbreviations and terms relevant to hophop:
   whereas other networks realize actual mutli-parent topologies.
 - **MIMO**: Multiple Input Multiple Output ([generic](https://en.wikipedia.org/wiki/MIMO), [nr+])
 - **MTCH**: Multicast (Broadcast) Traffic Channel ([nr+])
+- **NI6W**: Nordic's IPv6 Workaround ([hophop](../hophop/src/nrfxlib_mac/embassy_net.rs) [for lack of an official name](https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3))
 - **node**: Participant in a generic radio network (especially mesh), especially in the context of network topology ([generic](https://en.wikipedia.org/wiki/Node)<!-- pointing to disambiguation as that also has the 'entity in a mesh network' entry -->)
 - **NR**: New Radio ([nr+])
 - **OFDM**: Orthogonal Frequency Division Multiplexing ([generic](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiplexing), [nr+])

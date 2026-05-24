@@ -16,7 +16,7 @@ Running the application
 
   See [the reference projects' documentation](../../doc/reference-projects.md) for details.
 
-* Configure that peer as PT on the default network with security off:
+* Configure that peer as PT on the default network with default security (dummy keys):
 
     ```console
     desh:~$ dect sett --dev_type FT
@@ -126,6 +126,4 @@ Running the application
     but then it takes again 1s until the next beacon is availab.e
 
 * The PT also runs a CoAP server with EDHOC/OSCORE.
-  This is currently untested until there is a suitable client or bridge,
-  because I found no way to make the DECT shell send CoAP requests.
-  (`net udp send` won't take hex encoded data.)
+  This can be tested using the `bridge-pt` example.
