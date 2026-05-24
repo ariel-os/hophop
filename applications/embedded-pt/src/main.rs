@@ -112,66 +112,6 @@ async fn main() {
         params.transmitter_long_rd_id,
     )
     .await;
-
-    ariel_os::time::Timer::after_millis(4_000).await;
-
-    // OK thisis funny: Data from all channels arrives at the dect_shell's IP stack, as evidenced
-    // by both counts here going into the bytes received of `net stats`.
-    //
-    // So all channels are dumped into the IP stack indiscriminately? Can't be right, but OTOH, we
-    // can work with that for something minimal, and set it right later.
-
-    dect.dlc_data_tx(6, params.transmitter_long_rd_id, b"hello hello")
-        .await
-        .unwrap();
-    info!("Sent on flow 6");
-
-    dect.dlc_data_tx(
-        1,
-        params.transmitter_long_rd_id,
-        b"00112233445566778899aabbccddeeff",
-    )
-    .await
-    .unwrap();
-    info!("Sent on flow 1");
-
-    // FIXME: *don't* implement an IP stack, either pass data on to embassy-net or UART via slipmux.
-    // (and not going into any FIXME worthy items down here, this is clearly a quick and stupid
-    // hack)
-    loop {
-        info!("Idling with our own very primitive ping responder");
-        let packet = dect.dlc_data_rx().await;
-        info!(
-            "Got packet from 0x{:x}: {}",
-            packet.sender(),
-            Hex(packet.data())
-        );
-        // Since we added the abstraction, we can't edit in place any more -- but that was a weird
-        // hack anyway. Editing in place would be fine again once we get owned items in a network
-        // packet pool.
-        let mut packet = heapless::Vec::<u8, 100>::try_from(packet.data()).unwrap();
-        if packet[6] != 0x3a {
-            info!("Received packet is not ICMPv6, ignoring");
-            continue;
-        }
-        packet[8..40].rotate_right(16); // or left :-)
-        if packet[40] != 128 {
-            info!("Received packet is not Echo Request, ignoring");
-            continue;
-        }
-        packet[40] = 129; // Echo Reply
-        // Not bothering to fix the ICMP checksum: the dect_shell is happy enough to report the
-        // error well enough
-        info!("Sending response");
-        dect.dlc_data_tx(
-            1,
-            // Actually could be from someone else as well
-            params.transmitter_long_rd_id,
-            packet.as_slice(),
-        )
-        .await
-        .unwrap();
-    }
 }
 
 #[ariel_os::task(autostart)]
