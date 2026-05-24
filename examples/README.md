@@ -5,26 +5,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 Running hophop examples
 =======================
 
-For all examples
-----------------
-
-* Get an [nRF9151-DK](../doc/hardware.md), connect it and turn it on.
-
-* Ensure you are set up to run Ariel OS examples.
-
-  For the time being, it's easiest to follow the [Getting Started section in the Ariel OS book](https://ariel-os.github.io/ariel-os/dev/docs/book/getting-started.html).
-
-* [Ensure that you have the DECT firmware running](../doc/dect-firmware.md).
-
-* Beware that this is a research example,
-  and that depending on your location, regulation on operating these devices does apply,
-  especially as some examples emit transmissions controlled by the user alone.
-
-* If ever you have multiple DKs connected,
-  probe-rs will give you interactive options.
-
-  You can skip that and statically set the probe to use
-  by adding `-- --probe 1366:1059:xxxxxxxxxxxx` after the laze call (or withtout the `--` if you already).
+For all examples, basic setup is described in [the "getting started" text](./getting-started.md).
 
 Running the RSSI example
 ------------------------
