@@ -9,9 +9,13 @@ imports:
     dldir: ariel-os
 
 apps:
-  - name: hophop-examples
+  - name: hophop-application-embedded-pt
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
-      # Actually only for the tx example
-      - has_buttons
+      # Actually only for the nrfmacdemo
+      - ipv6 # has to be before network
+      - network
+      - user-net-driver-channel
+    conflicts:
+      - ipv4
