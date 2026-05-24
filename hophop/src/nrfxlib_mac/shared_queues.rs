@@ -40,9 +40,6 @@ pub(crate) static BEACON_EVENTS: Channel<
 // The proper way to do this is probably not to have a queue at all, but have a callback by DLC
 // flow (dyn trait might really make sense here) that fills in a packet.
 use embassy_sync::mutex::Mutex;
-pub(crate) static PACKETS: Mutex<CriticalSectionRawMutex, heapless::Deque<DlcDataRx, 10>> = Mutex::new(heapless::Deque::new());
-pub(crate) static PACKET_READY: Channel<
-    CriticalSectionRawMutex,
-    (),
-    1,
-> = Channel::new();
+pub(crate) static PACKETS: Mutex<CriticalSectionRawMutex, heapless::Deque<DlcDataRx, 10>> =
+    Mutex::new(heapless::Deque::new());
+pub(crate) static PACKET_READY: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();

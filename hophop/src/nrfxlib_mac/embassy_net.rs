@@ -52,13 +52,7 @@ pub async fn run_ni6w<'d, const MTU: usize>(
             }
             Either::Second(tx_buf) => {
                 // It's a network driver, we can't do anything about lost packets.
-                let _ = dect
-                    .dlc_data_tx(
-                        1,
-                        gateway_long,
-                        tx_buf,
-                    )
-                    .await;
+                let _ = dect.dlc_data_tx(1, gateway_long, tx_buf).await;
                 // FIXME: Actually we don't have to await the dlc_data_tx to mark it as done
                 runner.tx_done();
             }
