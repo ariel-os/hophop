@@ -14,7 +14,7 @@ Running the application
 -----------------------
 
 * Make all the basics are set up,
-  see [the examples documentation](../../examples/README.md#for-all-examples)
+  see [getting-started documentation](../../doc/getting-started.md)
 
 * Set up an FT (fixed terminal) using the (non-phy) Nordict DECT Shell.
 
