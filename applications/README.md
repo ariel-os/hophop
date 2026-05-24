@@ -7,8 +7,11 @@ This line is rather wobbly at the time of writing.
 
 ---
 
-Currently, this contains one application: [`embedded-pt`](./embedded-pt/).
+Currently, this contains two applications:
+
+* [`embedded-pt`](./embedded-pt/): IPv6 processed in the device, which takes the PT role.
+* [`bridge-pt`](./bridge-pt/): IPv6 forwarded to SLIP, with the device taking the PT role.
+
 Other envisioned applications are
-`bridge-pt` (connecting IP traffic to a slipmux terminal rather than into the Ariel OS / embassy-net local network stack),
-and `bridge-ft` (serving as a sink).
+and `bridge-ft` (serving as a sink) and `embedded-ft` (which makes most sense for isolated networks or when Ariel OS gains border router functionality).
 On the long run, those might become unified.
