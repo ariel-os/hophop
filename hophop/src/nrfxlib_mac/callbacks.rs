@@ -357,14 +357,20 @@ unsafe extern "C" fn dlc_data_rx_ntf(
         params.flow_id, params.long_rd_id, data
     );
     if let Ok(vec) = data.try_into() {
-        if PACKETS
-            .try_send(DlcDataRx {
+        let Ok(mut packet_lock) = PACKETS.try_lock() else {
+            warn!("Could not enqueue: packet is just being popped");
+            return;
+        };
+        if packet_lock
+            .push_back(DlcDataRx {
                 long_rd_id: params.long_rd_id,
                 flow_id: params.flow_id,
                 data: vec,
             })
-            .is_err()
+            .is_ok()
         {
+            let _ = PACKET_READY.try_send(());
+        } else {
             warn!("Could not enqueue: queue full");
         }
     } else {

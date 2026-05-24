@@ -245,7 +245,15 @@ impl DectMac {
     }
 
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
-        PACKETS.receive().await
+        if let Some(d) = PACKETS.lock().await.pop_front() {
+            return d;
+        }
+        loop {
+            PACKET_READY.receive().await;
+            if let Some(d) = PACKETS.lock().await.pop_front() {
+                return d;
+            }
+        }
     }
 }
 
@@ -273,7 +281,7 @@ impl<'brand> ScanReceiver<'brand> {
 pub struct DlcDataRx {
     pub(crate) long_rd_id: u32,
     pub(crate) flow_id: u8,
-    pub(crate) data: heapless::vec::Vec<u8, 100>,
+    pub(crate) data: heapless::vec::Vec<u8, 1501>,
 }
 
 impl DlcDataRx {
