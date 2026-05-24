@@ -1,3 +1,7 @@
+<!--
+SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
 Like `../examples`, this contains applications built on hophop;
 those here are more standalone in that they come with their own Cargo and laze configuration.
 
