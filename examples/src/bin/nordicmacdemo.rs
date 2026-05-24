@@ -43,13 +43,20 @@ async fn main() {
         // FIXME: configure
         power_save: true,
         security: nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
-            // FIXME: That we set this means we'll have to change the configuration params
-            // late (when we have *actual* keys). Can we just change the params later w/o
-            // leaving functional mode?
-            mode:
-                nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_NONE,
-            integrity_key: [0; _],
-            cipher_key: [0; _],
+            // Apparently we have to decode the beacon's ciphered parts immediately rather than
+            // doing that later when having read the network ID. Not great; see
+            // <https://devzone.nordicsemi.com/f/nordic-q-a/128223/dect-mac-security-key-by-network>
+            // for pending clarification.
+            mode: nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_1,
+            // Keys from the dect shell defaults ('JustAdefault!!!!')
+            integrity_key: [
+                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
+                0x21, 0x21,
+            ],
+            cipher_key: [
+                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
+                0x21, 0x21,
+            ],
         },
         // FIXME: Decide (this is what the vendor uses in their examples)
         stats_averaging_length: 2,
