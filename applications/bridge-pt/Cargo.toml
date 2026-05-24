@@ -1,25 +1,28 @@
 # SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 # SPDX-License-Identifier: MIT OR Apache-2.0
 [package]
-name = "hophop-examples"
+name = "hophop-application-bridge-pt"
 version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-hophop.path = "../hophop"
+hophop.path = "../../hophop"
 
-# external-interrupts only for TX's gpio input builder
-ariel-os = { path = "build/imports/ariel-os/src/ariel-os", features = ["time", "external-interrupts"] }
+ariel-os = { path = "build/imports/ariel-os/src/ariel-os", features = ["time", "uart"] }
 ariel-os-boards = { path = "build/imports/ariel-os/src/ariel-os-boards" }
 heapless = { version = "0.9.2", features = ["embedded-io-v0.7"] }
 
-ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
-ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
+ts-103-636-numbers = { path = "../../ts-103-636-numbers/", features = ["defmt"] }
+ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["defmt"] }
 
 # while we're doing things hophop should do
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "*", features = ["dect-mac"] }
+#slipmux = { version = "0.4.0", default-features = false }
+slipmux = { git = "https://github.com/chrysn-pull-requests/slipmux", branch = "decode-return-ip", default-features = false }
+embassy-futures = "0.1.2"
+embedded-io-async = "0.6.0"
 
 [patch.crates-io]
 # from https://github.com/nrf-rs/nrfxlib-sys/pull/20

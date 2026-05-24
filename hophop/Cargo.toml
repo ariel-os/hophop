@@ -25,6 +25,10 @@ static_cell = "2.1.1"
 itertools = { version = "0.14.0", default-features = false }
 embassy-futures = "0.1.2"
 
+# This might make sense as an optional feature, as it's isolated in `nrfxlib_mac::embassy_net`.
+embassy-net-driver-channel = "0.4.0"
+embassy-net-driver = "0.2.0"
+
 # Once nrf-modem provides the switches to pass this on, we won't need the
 # dependency here any more. (Then we can also properly introduce features for
 # this rather than just always pulling in everything).

@@ -40,3 +40,10 @@ for EX in rx tx rssi ping
 do
     laze build -b nrf9151-dk -D LOG=trace -D CARGO_RUNNER=true run --bin ${EX}
 done
+cd ..
+
+cd applications
+for APP in embedded-pt bridge-pt
+do
+    laze build -C $APP/ -b nrf9151-dk -D LOG=trace
+done

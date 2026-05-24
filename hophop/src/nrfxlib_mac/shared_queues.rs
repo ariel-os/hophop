@@ -35,11 +35,11 @@ pub(crate) static BEACON_EVENTS: Channel<
     2,
 > = Channel::new();
 
-// FIXME: We definitely want to use something smarter; ideally ownership of net pool entries when
-// we better understand who allocates what.
-pub(crate) static PACKETS: Channel<
-    CriticalSectionRawMutex,
-    // If we make it bigger, we might easily exceed the ISR stack
-    DlcDataRx,
-    1,
-> = Channel::new();
+// FIXME: Ideally we'd go right into some network pool, but this is not trivial to generalize.
+// FIXME: Their use is not optimized, merely functional.
+// The proper way to do this is probably not to have a queue at all, but have a callback by DLC
+// flow (dyn trait might really make sense here) that fills in a packet.
+use embassy_sync::mutex::Mutex;
+pub(crate) static PACKETS: Mutex<CriticalSectionRawMutex, heapless::Deque<DlcDataRx, 10>> =
+    Mutex::new(heapless::Deque::new());
+pub(crate) static PACKET_READY: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();

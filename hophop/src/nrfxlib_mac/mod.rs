@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! High-level wrappers around the Nordic's DECT MAC.
 
+pub mod embassy_net;
 pub mod error;
 
 mod callbacks;
@@ -9,6 +10,8 @@ mod debug_helpers;
 mod shared_queues;
 
 use nrf_modem::{ErrorSource, nrfxlib_sys};
+
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
 
 use error::MacError;
 use shared_queues::*;
@@ -97,16 +100,22 @@ impl DectMac {
             .expect("Failed to set configuration params");
     }
 
-    pub async fn control_functional_mode_set_activate(&mut self) {
-        unsafe {
-            nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(
-                nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE
-            )
-        }.into_result().expect("Failed to set functional mode");
+    async fn control_functional_mode_set(&mut self, mode: u8) {
+        unsafe { nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(mode) }
+            .into_result()
+            .expect("Failed to set functional mode");
         SINGLETON_EVENTS
             .receive()
             .await
             .expect("Failed to set functional mode");
+    }
+
+    pub async fn control_functional_mode_set_deactivate(&mut self) {
+        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_DEACTIVATE).await
+    }
+
+    pub async fn control_functional_mode_set_activate(&mut self) {
+        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE).await
     }
 
     /// Starts a network scan.
@@ -157,8 +166,8 @@ impl DectMac {
     // FIXME allow configuring flows
     pub async fn mac_association(
         &mut self,
-        long_rd_id: u32,
-        network_id: u32,
+        long_rd_id: LongRdId,
+        network_id: NetworkId32,
     ) -> Result<(), MacError> {
         let mut tx_flow_configs = [
             nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
@@ -185,8 +194,8 @@ impl DectMac {
                 &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
                     // FIXME where do we use the channel information? Did the MAC remember? (Probably:
                     // After all, it's not just channel but the whole info stuff from the beacon).
-                    long_rd_id,
-                    network_id,
+                    long_rd_id: long_rd_id.into(),
+                    network_id: network_id.into(),
                     info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
                         // FIXME: this is a guess
                         num_beacon_rx_failures: 1,
@@ -212,7 +221,7 @@ impl DectMac {
     pub async fn dlc_data_tx(
         &mut self,
         flow_id: u8,
-        destination: u32,
+        destination: LongRdId,
         data: &[u8],
     ) -> Result<(), MacError> {
         unsafe {
@@ -222,7 +231,7 @@ impl DectMac {
                     transaction_id: 0,
                     flow_id,
                     // send to our neighbor
-                    long_rd_id: destination,
+                    long_rd_id: destination.into(),
                     // FIXME: verify that the C API really doesn't want to write there
                     data: data as *const _ as *mut _,
                     data_len: data.len(),
@@ -236,7 +245,15 @@ impl DectMac {
     }
 
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
-        PACKETS.receive().await
+        if let Some(d) = PACKETS.lock().await.pop_front() {
+            return d;
+        }
+        loop {
+            PACKET_READY.receive().await;
+            if let Some(d) = PACKETS.lock().await.pop_front() {
+                return d;
+            }
+        }
     }
 }
 
@@ -245,10 +262,10 @@ impl DectMac {
 // whole type not Send, and it comes from the ISR. We wouldn't touch it, but are in no position to
 // impl Send on it.
 pub struct ClusterBeacon {
-    pub channel: u16,
-    pub transmitter_short_rd_id: u16,
-    pub transmitter_long_rd_id: u32,
-    pub network_id: u32,
+    pub channel: AbsoluteChannel,
+    pub transmitter_short_rd_id: ShortRdId,
+    pub transmitter_long_rd_id: LongRdId,
+    pub network_id: NetworkId32,
 }
 
 #[derive(Copy, Clone)]
@@ -264,7 +281,7 @@ impl<'brand> ScanReceiver<'brand> {
 pub struct DlcDataRx {
     pub(crate) long_rd_id: u32,
     pub(crate) flow_id: u8,
-    pub(crate) data: heapless::vec::Vec<u8, 100>,
+    pub(crate) data: heapless::vec::Vec<u8, 1501>,
 }
 
 impl DlcDataRx {

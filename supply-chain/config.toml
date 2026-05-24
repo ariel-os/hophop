@@ -84,8 +84,20 @@ criteria = "safe-to-deploy"
 version = "0.1.2"
 criteria = "safe-to-deploy"
 
+[[exemptions.embassy-net-driver]]
+version = "0.2.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.embassy-net-driver-channel]]
+version = "0.4.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.embassy-sync]]
 version = "0.7.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.embassy-sync]]
+version = "0.8.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.embedded-hal]]
