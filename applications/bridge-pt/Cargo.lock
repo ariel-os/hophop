@@ -2147,7 +2147,8 @@ dependencies = [
 [[package]]
 name = "nrfxlib-sys"
 version = "3.1.0+3.3.0"
-source = "git+https://github.com/chrysn-pull-requests/nrfxlib-sys?branch=nrfxlib330#6d36a4a4f9542d62cf5d9a2f20ed10103c6b35e9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d024684e50e75bf8fb8d9e735b8cf5f213d615f1818825db79d6ffe6d3a12af3"
 dependencies = [
  "bindgen",
  "llvm-tools",
@@ -2770,7 +2771,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slipmux"
 version = "0.4.0"
-source = "git+https://github.com/chrysn-pull-requests/slipmux?branch=decode-return-ip#b9535e6c3a632c1bf753d459ac80d519af3b4480"
+source = "git+https://github.com/teufelchen1/slipmux#9381356445f8abe92346fcd7e9ac24b1a5ddc5ac"
 dependencies = [
  "serial-line-ip",
 ]

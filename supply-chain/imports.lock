@@ -18,6 +18,20 @@ who = "Nils Ponsard <nils.ponsard@inria.fr>"
 criteria = "safe-to-deploy"
 delta = "0.10.1 -> 0.10.2"
 
+[[audits.ariel.audits.nrfxlib-sys]]
+who = "chrysn <chrysn@fsfe.org>"
+criteria = "safe-to-deploy"
+delta = "2.9.2 -> 3.0.3+3.0.2"
+notes = "Review extends to the source of nrfxlib-sys only. The library ships also proprietary C components, which were not (and, due to being closed source, can not) be reviewed."
+
+[[audits.ariel.audits.nrfxlib-sys]]
+who = "chrysn <chrysn@fsfe.org>"
+criteria = "safe-to-deploy"
+delta = "3.0.3+3.0.2 -> 3.1.0+3.3.0"
+notes = "Review extends to the source of nrfxlib-sys only. The library ships also proprietary C components, which were not (and, due to being closed source, can not) be reviewed."
+
+[audits.ariel-os.audits]
+
 [[audits.bytecode-alliance.audits.bitflags]]
 who = "Jamey Sharp <jsharp@fastly.com>"
 criteria = "safe-to-deploy"

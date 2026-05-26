@@ -18,12 +18,8 @@ ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["defmt"] }
 # while we're doing things hophop should do
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
-nrfxlib-sys = { version = "*", features = ["dect-mac"] }
-#slipmux = { version = "0.4.0", default-features = false }
-slipmux = { git = "https://github.com/chrysn-pull-requests/slipmux", branch = "decode-return-ip", default-features = false }
+nrfxlib-sys = { version = "3.1.0", features = ["dect-mac"] }
+# Next version after 0.4.0 has PR https://github.com/Teufelchen1/slipmux/pull/17 in
+slipmux = { git = "https://github.com/teufelchen1/slipmux", default-features = false }
 embassy-futures = "0.1.2"
 embedded-io-async = "0.6.0"
-
-[patch.crates-io]
-# from https://github.com/nrf-rs/nrfxlib-sys/pull/20
-nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }

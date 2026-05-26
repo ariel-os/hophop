@@ -19,9 +19,5 @@ repository = "https://github.com/ariel-os/hophop/"
 keywords = ["dect", "nr+"]
 categories = ["no-std::no-alloc"]
 
-[patch.crates-io]
-# from https://github.com/nrf-rs/nrfxlib-sys/pull/20
-nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }
-
 [workspace.metadata.release]
 sign-tag = true

@@ -19,8 +19,4 @@ ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
 # while we're doing things hophop should do
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
-nrfxlib-sys = { version = "*", features = ["dect-mac"] }
-
-[patch.crates-io]
-# from https://github.com/nrf-rs/nrfxlib-sys/pull/20
-nrfxlib-sys = { git = "https://github.com/chrysn-pull-requests/nrfxlib-sys", branch="nrfxlib330" }
+nrfxlib-sys = { version = "3.1.0", features = ["dect-mac"] }
