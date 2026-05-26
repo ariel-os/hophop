@@ -2771,7 +2771,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slipmux"
 version = "0.4.0"
-source = "git+https://github.com/chrysn-pull-requests/slipmux?branch=decode-return-ip#b9535e6c3a632c1bf753d459ac80d519af3b4480"
+source = "git+https://github.com/teufelchen1/slipmux#9381356445f8abe92346fcd7e9ac24b1a5ddc5ac"
 dependencies = [
  "serial-line-ip",
 ]
