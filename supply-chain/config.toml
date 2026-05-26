@@ -7,6 +7,9 @@ version = "0.10"
 [imports.ariel]
 url = "https://raw.githubusercontent.com/ariel-os/ariel-os/main/supply-chain/audits.toml"
 
+[imports.ariel-os]
+url = "https://raw.githubusercontent.com/ariel-os/ariel-os/main/supply-chain/audits.toml"
+
 [imports.bytecode-alliance]
 url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
 
@@ -17,9 +20,6 @@ url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 
 [policy.hophop]
-audit-as-crates-io = true
-
-[policy.nrfxlib-sys]
 audit-as-crates-io = true
 
 [policy.ts-103-636-numbers]
@@ -189,7 +189,7 @@ version = "0.12.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.nrfxlib-sys]]
-version = "3.1.0+3.3.0@git:6d36a4a4f9542d62cf5d9a2f20ed10103c6b35e9"
+version = "2.9.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.num_enum]]
