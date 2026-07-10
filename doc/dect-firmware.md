@@ -21,6 +21,28 @@ If that link should become unavailable,
 as per [their docs](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/nrf_modem/doc/dectphy.html),
 "you must contact the Nordic Semiconductor sales department".
 
+## Flashing the firmware
+
+### Using modem\_updater
+
+*This method is recommended because it works not just with Nordic's JLink based dev kits, but with anything supported by probe-rs, and is Free Software.*
+
+This guide assumes installation from source; ready-to-use executables are advertised in the project's [repository](https://github.com/korken89/modem_updater) but were not tested.
+Note that we're using a fork instead of [upstream](https://github.com/circuitdojo/modem_updater)
+until [all probe-rs programmers work with it](https://github.com/circuitdojo/modem_updater/issues/4).
+
+```console
+$ cargo install --git https://github.com/korken89/modem_updater.git --branch parallel-multi-probe
+[...]
+$ updater program mfw-nr+_nrf91x1_2.0.0.zip
+[2fe3:0204:0123456789ABCDEF] Programming device [========>-------------------] 265.14 KiB/801.14 KiB
+[2fe3:0204:0123456789ABCDEF]   Verification success
+```
+
+### Using Nordic's tools
+
+*This method is recommended for use as a fall-back, because it might cover corner cases which the other tool does not understand, or causes trouble on some platform due to missing system libraries.*
+
 Flashing this may be obvious for regular users of Nordic's tools,
 but not to those using typical Rust workflows:
 
