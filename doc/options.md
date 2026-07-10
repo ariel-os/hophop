@@ -10,3 +10,4 @@ Current options:
 * Run on Ariel OS
     - Currently being established in https://github.com/ariel-os/ariel-os/pull/1562
 * embassy-net-nrf91 seems to have reverse engineerd the IPC <https://github.com/embassy-rs/embassy/blob/main/embassy-net-nrf91/src/context.rs>, and running it on the application core without any C code and running the DECT backend goes on for long enough that it becomes apparent that app and network core do talk (and eventually only fails parsing AT stuff, to no surprise as they do different AT command sets).
+  - [modem\_updater](https://github.com/circuitdojo/modem_updater) covers some aspects of IPC (firmware updates) that are not preent there.
