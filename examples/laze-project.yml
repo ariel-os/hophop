@@ -4,8 +4,8 @@
 imports:
   - git:
       url: https://github.com/chrysn-pull-requests/ariel-os
-      # branch "for-hophop-20260519", which merges https://github.com/ariel-os/ariel-os/pull/2101 and https://github.com/ariel-os/ariel-os/pull/2102 and https://github.com/ariel-os/ariel-os/pull/1804
-      commit: 1993e1ea46078455da988646757cbe3c0f9eb4cc
+      # branch "for-hophop-20260519", which merges https://github.com/ariel-os/ariel-os/pull/2101 and https://github.com/ariel-os/ariel-os/pull/2102 and https://github.com/ariel-os/ariel-os/pull/1804 and https://github.com/ariel-os/ariel-os/pull/2176 -- and an extra of setting the STATE's embassy_net_driver_channel::State TX and RX count to 10
+      commit: 7af37b9d056edc3ce31249407538e76f32c0d333
     dldir: ariel-os
 
 apps:
