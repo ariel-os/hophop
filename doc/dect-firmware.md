@@ -23,16 +23,14 @@ as per [their docs](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/n
 
 ## Flashing the firmware
 
-### Using modem\_updater
+### Using [modem\_updater](https://github.com/circuitdojo/modem_updater)
 
 *This method is recommended because it works not just with Nordic's JLink based dev kits, but with anything supported by probe-rs, and is Free Software.*
 
-This guide assumes installation from source; ready-to-use executables are advertised in the project's [repository](https://github.com/korken89/modem_updater) but were not tested.
-Note that we're using a fork instead of [upstream](https://github.com/circuitdojo/modem_updater)
-until [all probe-rs programmers work with it](https://github.com/circuitdojo/modem_updater/issues/4).
+This guide assumes installation from source; ready-to-use executables are advertised in the project's [repository](https://github.com/circuitdojo/modem_updater) but were not tested.
 
 ```console
-$ cargo install --git https://github.com/korken89/modem_updater.git --branch parallel-multi-probe
+$ cargo install --git https://github.com/circuitdojo/modem_updater.git
 [...]
 $ updater program mfw-nr+_nrf91x1_2.0.0.zip
 [2fe3:0204:0123456789ABCDEF] Programming device [========>-------------------] 265.14 KiB/801.14 KiB
