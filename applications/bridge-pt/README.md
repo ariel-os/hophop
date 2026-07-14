@@ -26,7 +26,7 @@ Running the application
 
   ```console
   $ cargo install Jelly
-  $ Jely /dev/ttyACM2 -t tun0
+  $ Jelly /dev/ttyACM2 -t tun0
   ```
 
   which will guide you towards setting up your tun0 device if it is not available yet.
