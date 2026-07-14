@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 Running hophop examples
 =======================
 
-For all examples, basic setup is described in [the "getting started" text](./getting-started.md).
+For all examples, basic setup is described in [the "getting started" text](../doc/getting-started.md).
 
 Running the RSSI example
 ------------------------
