@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 Running hophop examples
 =======================
 
-For all examples, basic setup is described in [the "getting started" text](./getting-started.md).
+For all examples, basic setup is described in [the "getting started" text](../doc/getting-started.md).
 
 Running the RSSI example
 ------------------------
@@ -23,13 +23,13 @@ Running the RSSI example
 
 *   To visualize the output, store it by running
 
-    ```
+    ```console
     $ laze build -b nrf9151-dk run --bin rssi -- --target-output-file=rssi.log
     ```
 
     and run the visualizer:
 
-    ```
+    ```console
     $ ./show-rssi.py rssi.log
     ```
 
@@ -38,7 +38,7 @@ Running the RSSI example
 Running the RX example
 ----------------------
 
-```
+```console
 $ laze build -b nrf9151-dk run --bin rx
 ```
 
@@ -49,7 +49,7 @@ in the Nordic `dect_shell` example to send data from another boad.
 Running the TX example
 ----------------------
 
-```
+```console
 $ laze build -b nrf9151-dk run --bin tx
 ```
 
