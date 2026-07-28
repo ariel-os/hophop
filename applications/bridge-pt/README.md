@@ -26,7 +26,7 @@ Running the application
 
   ```console
   $ cargo install Jelly
-  $ Jely /dev/ttyACM2 -t tun0
+  $ Jelly /dev/ttyACM2 -t tun0
   ```
 
   which will guide you towards setting up your tun0 device if it is not available yet.
@@ -35,7 +35,7 @@ Running the application
   NI6W is rather picky when it comes to those.
 
   ```console
-  $ sudo ip -6 a del dev tun0 fe80::7d99:e9b0:922f:5140/64
+  $ sudo ip -6 a add dev tun0 fe80::7d99:e9b0:922f:5140/64
   ```
 
   Resist the temptation to remove the auto-generated address:
