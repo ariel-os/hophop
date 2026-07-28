@@ -262,6 +262,7 @@ impl DectMac {
 // really want to (I'd rather memcpy than create a new struct), but because that pointer makes the
 // whole type not Send, and it comes from the ISR. We wouldn't touch it, but are in no position to
 // impl Send on it.
+#[derive(defmt::Format)]
 pub struct ClusterBeacon {
     pub channel: AbsoluteChannel,
     pub transmitter_short_rd_id: ShortRdId,

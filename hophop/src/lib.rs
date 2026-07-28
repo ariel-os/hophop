@@ -10,3 +10,5 @@
 pub mod nrfxlib_phy;
 
 pub mod nrfxlib_mac;
+
+pub mod association;
