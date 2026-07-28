@@ -20,7 +20,7 @@ Running the application
 
   See [the reference projects' documentation](../../doc/reference-projects.md) for details.
 
-* Configure that peer as PT on the default network with default security (dummy keys):
+* Configure that DECT Shell peer as FT on the default network with default security (dummy keys):
 
     ```console
     desh:~$ dect sett --dev_type FT
