@@ -312,9 +312,13 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
 ) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
+    let Some(long_rd_id) = LongRdId::new(params.long_rd_id) else {
+        warn!("Ignoring beacon NTF with reserved values.");
+        return;
+    };
     info!(
-        "Got cluster beacon RX failure on long_rd_id {} (which channel??)",
-        params.long_rd_id
+        "Notification: cluster beacon RX failure, expected from {}",
+        long_rd_id
     );
 }
 unsafe extern "C" fn ipv6_config_update_ntf(

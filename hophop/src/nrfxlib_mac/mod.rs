@@ -197,7 +197,8 @@ impl DectMac {
                     long_rd_id: long_rd_id.into(),
                     network_id: network_id.into(),
                     info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
-                        // FIXME: this is a guess
+                        // Those get logged, but no other action gets taken. FIXME: *is* this
+                        // actionable?
                         num_beacon_rx_failures: 1,
                     },
                     num_flows: tx_flow_configs
