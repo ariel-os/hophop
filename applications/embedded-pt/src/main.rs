@@ -116,10 +116,9 @@ async fn main() {
 
 #[ariel_os::task(autostart)]
 async fn coap_run() -> ! {
-    use coap_handler_implementations::{HandlerBuilder, new_dispatcher, SimpleRendered};
+    use coap_handler_implementations::{HandlerBuilder, SimpleRendered, new_dispatcher};
 
-    let handler = new_dispatcher()
-        .at(&["hello"], SimpleRendered("Hello from hophop"));
+    let handler = new_dispatcher().at(&["hello"], SimpleRendered("Hello from hophop"));
 
     ariel_os::coap::coap_run(handler).await;
 }
