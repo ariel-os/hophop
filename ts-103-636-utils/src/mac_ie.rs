@@ -304,7 +304,7 @@ impl<'a> InformationElement<'a> {
 /// Instances are only created for data of the right length (thus once parsed, no accessors will
 /// panic); internally, an instance may be created tentatively and used carefully.
 ///
-/// Parsing ignores the reserved bits as prescribed in Section 6.4.2.1; fiels are not yet checked
+/// Parsing ignores the reserved bits as prescribed in Section 6.4.1; fiels are not yet checked
 /// for validity at parse time (but that parsing might become stricter over time).
 pub struct ClusterBeacon<'a>(&'a [u8]);
 
