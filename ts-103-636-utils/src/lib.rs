@@ -18,6 +18,12 @@ pub mod identifiers;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ParsingError;
 
+impl From<core::array::TryFromSliceError> for ParsingError {
+    fn from(value: core::array::TryFromSliceError) -> Self {
+        ParsingError
+    }
+}
+
 /// An input slice mismatches the length usable the requested data item.
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
