@@ -284,11 +284,12 @@ impl defmt::Format for Message<'_> {
             MacCommonHeader::RdBroadcast(inner) => inner.format(fmt),
         }
         defmt::write!(fmt, ", IEs:");
-        for ie in self.tail_items() {
-            if let Ok(ie) = ie {
-                defmt::write!(fmt, "\n    - {}", ie);
+        let mut tail = self.tail;
+        while !tail.is_empty() {
+            if let Ok(parsed) = crate::mac_ie::InformationElement::parse(&mut tail) {
+                defmt::write!(fmt, "\n    - {}", parsed);
             } else {
-                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", self.tail);
+                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", tail);
                 break;
             }
         }
