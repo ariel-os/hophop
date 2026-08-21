@@ -7,6 +7,8 @@ hophop: Documentation index
 
 * The [top-level README](../README.md) gives a short introduction.
 
+  * ["What hophop should be"](vision.md) lays out where we want to see hophop eventually.
+
 * Practically using hophop is best documented in [Getting Started](getting-started.md); this also encompasses topics like:
 
   - [Supported hardware](hardware.md)
