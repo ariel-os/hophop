@@ -1,0 +1,9 @@
+{
+  "ignorePatterns":
+    [ {"pattern": "^https://crates.io/crates/ts-103-636-numbers$"}
+    , {"pattern": "^https://crates.io/crates/ts-103-636-utils$"}
+    , {"pattern": "^https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/nrf_modem/doc/dectphy.html$"
+    , {"pattern": "^https://www.nordicsemi.com/Products/Development-tools/nRF-Util/Download$"
+    , {"pattern": "^https://www.nordicsemi.com/Products/nRF9151/Download#636701B052474E5A8EB903C56678D26E$"
+    ]
+}
