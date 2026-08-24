@@ -43,3 +43,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: tcort/github-action-markdown-link-check@v1
+      with:
+        # Ignoring several URIs because the hosts don't react sensibly when
+        # detecting a bot request, and maybe the bot should also just do HEAD.
+        config-file: .github/mlc_config.json

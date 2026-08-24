@@ -1,0 +1,7 @@
+version = 1
+
+[[annotations]]
+# becuause JSON has no comments
+path = ["mlc_config.json"]
+SPDX-FileCopyrightText = "Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems"
+SPDX-License-Identifier = "MIT OR Apache-2.0"
