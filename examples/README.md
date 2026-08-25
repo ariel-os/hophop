@@ -30,10 +30,11 @@ Running the RSSI example
     and run the visualizer:
 
     ```console
-    $ ./show-rssi.py rssi.log
+    $ pipx run ./show-rssi.py rssi.log
     ```
 
-    (If anything is missing on the Python side, `pipx run ./show…` will fetch any missing components).
+    (If `pipx` is missing and your Python setup is comprehensive, just run `./show-rssi.py …`;
+    otherwise, your distribution usually has it installable, eg. using `sudo apt install pipx`).
 
 Running the RX example
 ----------------------

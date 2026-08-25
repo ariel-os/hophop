@@ -16,6 +16,12 @@ Basic steps common to all examples and applications
 
   For the time being, it's easiest to follow the [Getting Started section in the Ariel OS book](https://ariel-os.github.io/ariel-os/dev/docs/book/getting-started.html).
 
+  Note that in particular, you need to have access to the boards you are using as a user;
+  this is only mentioned in the Ariel documentation indirectly by referring to the [probe-rs documentation](https://probe.rs/docs/getting-started/probe-setup/#platform-specifics).
+  That includes verifying that your user is part of the `plugdev` group,
+  and placing [the probe-rs rules file](https://probe.rs/files/69-probe-rs.rules) inside `/etc/udev/rules.d`.
+  The typical error that indicates that this step is missing is "USB device: permission denied".
+
 * [Ensure that you have the DECT firmware running](../doc/dect-firmware.md).
 
 * Beware that this is a research example,
