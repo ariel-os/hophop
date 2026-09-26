@@ -9,7 +9,7 @@ imports:
     dldir: ariel-os
 
 apps:
-  - name: hophop-application-embedded-pt
+  - name: hophop-application-bridge-pt
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
