@@ -18,7 +18,7 @@ ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["defmt"] }
 # while we're doing things hophop should do
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
-nrfxlib-sys = { version = "3.1.0", features = ["dect-mac"] }
+nrfxlib-sys = { version = "4.0.0", features = ["dect-mac"] }
 # Next version after 0.4.0 has PR https://github.com/Teufelchen1/slipmux/pull/17 in
 slipmux = { git = "https://github.com/teufelchen1/slipmux", default-features = false }
 embassy-futures = "0.1.2"
