@@ -80,3 +80,13 @@ Running the application
   Ariel OS contains examples of using actual credentials,
   but that would only increase the demo complexity,
   without significant changes to message size/content or computational complexity.
+
+* You may notice that latencies are very bad -- but then again, the system is configured for long sleeps (even though they are not utilized well yet) and low power in general, and not low latencies.
+
+  In the FT's console, run eg.:
+
+  ```console
+  desh:~$ dect cluster_reconfig --cluster_beacon_period 50
+  desh:~$ dect cluster_reconfig --cluster_max_tx_pwr 23
+  desh:~$ dect cluster_reconfig --cluster_max_beacon_tx_pwr 23
+  ```
