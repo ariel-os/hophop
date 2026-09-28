@@ -10,6 +10,8 @@ imports:
 
 apps:
   - name: hophop-application-bridge-pt
+    depends:
+      - has_host_facing_uart
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
