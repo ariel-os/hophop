@@ -77,6 +77,7 @@ pub struct PtConfiguration<'a> {
 #[derive(defmt::Format, Debug)]
 pub struct Association {
     pub parent: LongRdId,
+    pub channel: AbsoluteChannel,
 }
 
 /// Run a one-off association based on a list of candidate networks.
@@ -235,6 +236,7 @@ pub async fn associate<'c>(
             Ok(()) => {
                 return Some(Association {
                     parent: params.transmitter_long_rd_id,
+                    channel: params.channel,
                 });
             }
             Err(e) => info!("Association failed: {}; continuing.", e),
