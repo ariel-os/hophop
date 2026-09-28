@@ -19,7 +19,7 @@ pub mod identifiers;
 pub struct ParsingError;
 
 impl From<core::array::TryFromSliceError> for ParsingError {
-    fn from(value: core::array::TryFromSliceError) -> Self {
+    fn from(_value: core::array::TryFromSliceError) -> Self {
         ParsingError
     }
 }
