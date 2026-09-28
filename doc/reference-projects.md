@@ -34,14 +34,14 @@ Based on <https://docs.nordicsemi.com/bundle/ncs-3.2.0-preview2/page/nrf/install
 * `pipx install west`
 * `pipx runpip west install jsonschema`
 * `nrfutil install sdk-manager` (installs into `~/.nrfutil`)
-* `nrfutil sdk-manager install v3.3.0` (installs into `~/ncs/`)
-* `nrfutil sdk-manager toolchain launch --ncs-version v3.3.0 --shell` (spawns new shell with many environment variables set)
-* `source ~/ncs/v3.3.0/zephyr/zephyr-env.sh` (or with added `-- -DEXTRA_CONF_FILE=overlay-eu.conf` for the hello)
-* `cd ~/ncs/v3.3.0/nrf/samples/dect/dect_phy/dect_shell/`
+* `nrfutil sdk-manager install v3.5.0-preview2` (installs into `~/ncs/`)
+* `nrfutil sdk-manager toolchain launch --ncs-version v3.5.0-preview2 --shell` (spawns new shell with many environment variables set)
+* `source ~/ncs/v3.5.0-preview2/zephyr/zephyr-env.sh` (or with added `-- -DEXTRA_CONF_FILE=overlay-eu.conf` for the hello)
+* `cd ~/ncs/v3.5.0-preview2/nrf/samples/dect/dect_phy/dect_shell/`
   (or `samples/dect/dect_shell` for the MAC-based firmware)
 * `west update`
 * `west build -p -b nrf9151dk/nrf9151/ns`
-* `west flash`, or `probe-rs download --protocol swd --chip nRF9160_xxAA build/merged.hex --binary-format ihex`
+* `west flash`, or `probe-rs download --protocol swd --chip nRF9151_xxAA build/dect_shell/zephyr/tfm_merged.hex --binary-format ihex`
 * `socat - /dev/ttyACM0,cfmakeraw,b115200`
 
 ## Failure modes
