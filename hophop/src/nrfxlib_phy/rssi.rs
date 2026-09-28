@@ -159,7 +159,7 @@ impl DectPhy {
         carriers: &[AbsoluteChannel],
         network_id: NetworkId32,
         mut on_event: impl AsyncFnMut(Option<Box<RssiPool>>),
-        mut on_receive: impl for<'a> AsyncFnMut(super::rx::RecvResult),
+        mut on_receive: impl AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
         let now = self.time_get().await?;
 
