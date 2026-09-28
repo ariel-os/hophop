@@ -534,6 +534,10 @@ impl<'a> MacSecurityInfo<'a> {
     }
 
     #[must_use]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "own length is an invariant, but sliced into"
+    )]
     pub fn hpc(&self) -> u32 {
         u32::from_be_bytes(self.0[1..5].try_into().unwrap())
     }
