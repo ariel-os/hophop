@@ -283,12 +283,25 @@ impl defmt::Format for Message<'_> {
             MacCommonHeader::Unicast(inner) => inner.format(fmt),
             MacCommonHeader::RdBroadcast(inner) => inner.format(fmt),
         }
+        if self.head.mac_security() == 1 {
+            defmt::write!(fmt, "\n    All IEs  are encrypted: {=[u8]:02x}", self.tail);
+            return;
+        }
+
         defmt::write!(fmt, ", IEs:");
-        for ie in self.tail_items() {
-            if let Ok(ie) = ie {
-                defmt::write!(fmt, "\n    - {}", ie);
+        let mut tail = self.tail;
+        // FIXME: This could iterate over self.tail_items() again once we implement decryption.
+        // (We might regress on 'rest is unparsable' then, because once we handle encryption, it is
+        // highly unlikely we see that ever live again).
+        while !tail.is_empty() {
+            if let Ok(parsed) = crate::mac_ie::InformationElement::parse(&mut tail) {
+                defmt::write!(fmt, "\n    - {}", parsed);
+                if parsed.ie_number() == numbers::mac_ie::ie6bit::MAC_SECURITY_INFO {
+                    defmt::write!(fmt, "\n    Rest is encrypted: {=[u8]:02x}", tail);
+                    break;
+                }
             } else {
-                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", self.tail);
+                defmt::write!(fmt, "\n    Rest is unparsable: {=[u8]:02x}", tail);
                 break;
             }
         }
@@ -306,7 +319,7 @@ mod test {
             100, 64, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
 
-        let beacon = Header::parse(&beacon[..]).unwrap();
+        let beacon = Message::parse(&beacon[..]).unwrap();
         let MacCommonHeader::Beacon(common) = beacon.common else {
             panic!("Test vector encodes a beacon but was not recognized as such");
         };

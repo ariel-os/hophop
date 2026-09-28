@@ -56,6 +56,11 @@ impl defmt::Format for InformationElement<'_> {
             {
                 defmt::write!(fmt, "{}: {}", self.ie_number(), cluster_beacon);
             }
+            AnyIeType::Type6bit(numbers::mac_ie::ie6bit::MAC_SECURITY_INFO)
+                if let Ok(parsed) = MacSecurityInfo::parse(self.payload) =>
+            {
+                defmt::write!(fmt, "{}: {}", self.ie_number(), parsed);
+            }
             _ => defmt::write!(fmt, "{}, payload: {=[u8]}", self.ie_number(), self.payload),
         }
     }
@@ -304,7 +309,7 @@ impl<'a> InformationElement<'a> {
 /// Instances are only created for data of the right length (thus once parsed, no accessors will
 /// panic); internally, an instance may be created tentatively and used carefully.
 ///
-/// Parsing ignores the reserved bits as prescribed in Section 6.4.2.1; fiels are not yet checked
+/// Parsing ignores the reserved bits as prescribed in Section 6.4.1; fiels are not yet checked
 /// for validity at parse time (but that parsing might become stricter over time).
 pub struct ClusterBeacon<'a>(&'a [u8]);
 
@@ -485,6 +490,70 @@ impl defmt::Format for ClusterBeacon<'_> {
         if let Some(time) = self.time_to_next() {
             defmt::write!(fmt, ", time to next {=u32}µs", time);
         }
+    }
+}
+
+/// A valid MAC Security Info message (see Section 6.4.3.1 of ETSI TS 103 636-4 V2.1.1)
+///
+/// # Invariants
+///
+/// Instances are only created for data of the right length (thus once parsed, no accessors will
+/// panic); internally, an instance may be created tentatively and used carefully.
+pub struct MacSecurityInfo<'a>(&'a [u8]);
+
+impl<'a> MacSecurityInfo<'a> {
+    /// Inspects a [`MacSecurityInfo`] message far enough to be confident in later picking the
+    /// parts out of it.
+    ///
+    /// # Errors
+    ///
+    /// … if the length does not fit, or any fields have reserved values.
+    pub fn parse(buffer: &'a [u8]) -> Result<Self, ParsingError> {
+        let buffer: &[u8; 5] = buffer.try_into()?;
+        let self_ = Self(buffer);
+        if self_.version() != 0 || self_.security_iv_type() > 2 {
+            // reserved values
+            return Err(ParsingError);
+        }
+        Ok(self_)
+    }
+
+    #[must_use]
+    pub fn version(&self) -> u8 {
+        self.0[0] >> 6
+    }
+
+    #[must_use]
+    pub fn key_index(&self) -> u8 {
+        (self.0[0] >> 4) & 0x03
+    }
+
+    #[must_use]
+    pub fn security_iv_type(&self) -> u8 {
+        self.0[0] & 0x0f
+    }
+
+    #[must_use]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "own length is an invariant, but sliced into"
+    )]
+    pub fn hpc(&self) -> u32 {
+        u32::from_be_bytes(self.0[1..5].try_into().unwrap())
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for MacSecurityInfo<'_> {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(
+            fmt,
+            "Version {=u8}, key index {=u8}, type {=u8}, HPC {=u32}",
+            self.version(),
+            self.key_index(),
+            self.security_iv_type(),
+            self.hpc(),
+        );
     }
 }
 

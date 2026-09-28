@@ -152,12 +152,9 @@ impl NetworkId24 {
 
     #[must_use]
     pub const fn new(network_id: u32) -> Option<Self> {
-        if network_id & Self::MASK == 0 {
+        if network_id & !Self::MASK != 0 {
             return None;
         }
-
-        // At this point it is sure that this will succeed; trying to be clever about it is not
-        // worth it.
 
         // Could be
         //   NonZero::new(network_id).map(Self)
@@ -178,7 +175,7 @@ impl NetworkId24 {
     /// The ID stored in a u32 in the lower bit positions, matching its numeric value.
     #[must_use]
     pub fn into_low_u32(self) -> u32 {
-        u32::from(self.0) << 8
+        u32::from(self.0)
     }
 }
 
