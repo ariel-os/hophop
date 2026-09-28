@@ -30,7 +30,7 @@ as per [their docs](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/n
 This guide assumes installation from source; ready-to-use executables are advertised in the project's [repository](https://github.com/circuitdojo/modem_updater) but were not tested.
 
 ```console
-$ cargo install --git https://github.com/circuitdojo/modem_updater.git
+$ cargo install --git https://github.com/chrysn-pull-requests/modem_updater.git --branch speed-range
 [...]
 $ updater program mfw-nr+_nrf91x1_2.0.0.zip
 [2fe3:0204:0123456789ABCDEF] Programming device [========>-------------------] 265.14 KiB/801.14 KiB
