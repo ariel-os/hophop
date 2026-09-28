@@ -24,7 +24,6 @@ Running the application
 
     ```console
     desh:~$ dect sett --dev_type FT
-    desh:~$ dect activate
     desh:~$ dect cluster_start 1665
     ```
 
