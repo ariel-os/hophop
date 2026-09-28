@@ -35,7 +35,7 @@ jobs:
           laze build -C examples/build/imports/ariel-os/ install-toolchain
 
       - run: |
-          ./test.sh
+          ./test/all.sh
 
   check-links:
     # TBD: Make this GitHub-independent and put into test.sh
