@@ -12,21 +12,10 @@ use embedded_io_async::{Read, Write};
 
 use nrfxlib_sys;
 
-mod pins {
-    use ariel_os::hal::{peripherals, uart};
-
-    pub type Uart<'a> = uart::SERIAL3<'a>;
-    // For nrf9151-dk VCOM0
-    ariel_os::hal::define_peripherals!(UartPins {
-        uart_rx: P0_26,
-        uart_tx: P0_27,
-    });
-}
-
-use pins::*;
+type UartPeripherals = ariel_os_boards::pins::HOST_FACING_UART;
 
 #[ariel_os::task(autostart, peripherals)]
-async fn main(peripherals: UartPins) {
+async fn main(peripherals: UartPeripherals) {
     let mut config = ariel_os::hal::uart::Config::default();
     config.baudrate = ariel_os::uart::Baudrate::_115200;
     info!("Selected UART configuration: {:?}", config);
@@ -34,14 +23,9 @@ async fn main(peripherals: UartPins) {
     let mut uart_rx_buf = [0u8; 32];
     let mut uart_tx_buf = [0u8; 32];
 
-    let mut uart = pins::Uart::new(
-        peripherals.uart_rx,
-        peripherals.uart_tx,
-        &mut uart_rx_buf,
-        &mut uart_tx_buf,
-        config,
-    )
-    .expect("Invalid UART configuration");
+    let mut uart = peripherals
+        .with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
+        .expect("Invalid UART configuration");
 
     /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
