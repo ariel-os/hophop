@@ -1,32 +1,7 @@
-#!/bin/sh
 # SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-# Kept in a shell script to be easily portable to no-GitHub CI systems.
-#
-# This expects the Ariel OS "getting started" setup to be present, and suitable
-# caching options to be set.
-
 set -ex
-
-pipx run reuse lint
-cargo vet check
-
-RUSTFLAGS="-D warnings" cargo check --workspace
-RUSTFLAGS="-D warnings" cargo check --workspace --all-features
-cargo clippy --workspace -- --deny clippy::all --deny clippy::pedantic
-RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
-cargo fmt --check
-# hophop can't be built on host architectures
-cargo test --workspace --exclude hophop
-cargo test --workspace --all-features --exclude hophop
-
-for DIR in ts-103-636-numbers ts-103-636-utils
-do
-    cd "${DIR}"
-    cargo doc2readme --check
-    cd ..
-done
 
 # Initially those do build tests only; turning clippy and checks on is a good
 # next step, but only once these stabilize a little.
