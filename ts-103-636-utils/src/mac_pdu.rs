@@ -319,7 +319,7 @@ mod test {
             100, 64, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
 
-        let beacon = Header::parse(&beacon[..]).unwrap();
+        let beacon = Message::parse(&beacon[..]).unwrap();
         let MacCommonHeader::Beacon(common) = beacon.common else {
             panic!("Test vector encodes a beacon but was not recognized as such");
         };
