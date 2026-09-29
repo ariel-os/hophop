@@ -14,6 +14,8 @@ use core::num::NonZero;
 ///
 /// This type uses 13 bit (expressed in a u16).
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct AbsoluteChannel(NonZero<u16>);
 
 impl AbsoluteChannel {
@@ -73,6 +75,8 @@ impl defmt::Format for AbsoluteChannel {
 /// unsoundness would only arrive from violating the more stronly enforced `NonZero` (which covers
 /// the special case of both being zero, and allows niche optimizaiton for options).
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct NetworkId32(NonZero<u32>);
 
 impl NetworkId32 {
@@ -142,6 +146,8 @@ impl defmt::Format for NetworkId32 {
 ///
 /// An invariant of this type is that it is not zero.
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct NetworkId24(
     /// This is stored in right-shifted form (i.e. of the shape 0x00NNNNN)
     NonZero<u32>,
@@ -196,6 +202,8 @@ impl defmt::Format for NetworkId24 {
 ///
 /// An invariant of this type is that it is not zero.
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct NetworkId8(NonZero<u8>);
 
 impl NetworkId8 {
@@ -243,6 +251,8 @@ impl defmt::Format for NetworkId8 {
 ///
 /// An invariant of this type is that it does not use the reserved address zero.
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct LongRdId(NonZero<u32>);
 
 impl LongRdId {
@@ -297,6 +307,8 @@ impl defmt::Format for LongRdId {
 ///
 /// An invariant of this type is that it does not use the reserved address zero.
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
+#[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct ShortRdId(NonZero<u16>);
 
 impl ShortRdId {
