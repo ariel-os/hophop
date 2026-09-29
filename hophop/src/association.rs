@@ -9,7 +9,7 @@
 // doesn't help.
 use defmt::info;
 
-use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24, NetworkId32};
 
 use super::nrfxlib_mac;
 
@@ -74,8 +74,9 @@ pub struct PtConfiguration<'a> {
     pub networks: &'a [CandidateNetwork<'a>],
 }
 
-#[derive(defmt::Format, Debug)]
+#[derive(defmt::Format, Debug, Copy, Clone)]
 pub struct Association {
+    pub network: NetworkId32,
     pub parent: LongRdId,
     pub channel: AbsoluteChannel,
 }
@@ -239,6 +240,7 @@ pub async fn associate<'c>(
             Ok(release) => {
                 return Some((
                     Association {
+                        network: params.network_id,
                         parent: params.transmitter_long_rd_id,
                         channel: params.channel,
                     },
