@@ -45,22 +45,10 @@ async fn main() {
         rd_id: our_long_id,
     };
 
-    let association = loop {
-        if let Some(association) = hophop::association::associate(&mut dect, &config).await {
-            info!("Associated with network {:?}", association);
-            break association;
-        } else {
-            warn!("No network beacons found, sleeping before retrying");
-
-            Timer::after_secs(5).await;
-        };
-    };
-
     hophop::nrfxlib_mac::embassy_net::run_ni6w(
-        &mut ariel_os::net::user_net_runner().await,
-        &mut dect,
-        // FIXME: that only works as long as we don't have mesh parents
-        association.parent,
+        &config,
+        ariel_os::net::user_net_runner().await,
+        dect,
     )
     .await;
 }
