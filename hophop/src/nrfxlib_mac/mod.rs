@@ -174,7 +174,7 @@ impl DectMac {
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<impl core::future::Future<Output = ReleaseEvent> + use<>, MacError> {
+    ) -> Result<impl core::future::Future<Output = AssociationEndEvent> + use<>, MacError> {
         let mut tx_flow_configs = [
             nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -203,9 +203,20 @@ impl DectMac {
                     long_rd_id: long_rd_id.into(),
                     network_id: network_id.into(),
                     info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
-                        // Those get logged, but no other action gets taken. FIXME: *is* this
-                        // actionable?
-                        num_beacon_rx_failures: 1,
+                        // This value is practically undocumented, but the dect_shell UI has notes
+                        // on it:
+                        //
+                        // "Set maximum number of consecutive missed cluster beacons. Note: set to
+                        // modem when creating association and has impact when FT device is
+                        // considered as out of range or FT is turned off, resulting the automatic
+                        // disassociation of the FT device. Value 0 means that no limit and no
+                        // automatic disassociation is done."
+                        //
+                        // Observation is that no release event happens beyond the
+                        // cluster_beacon_rx_failure_ntf, so it stands to reason that that event is
+                        // to be treated just like a release event. (They do, however, get sent
+                        // repreatedly).
+                        num_beacon_rx_failures: 3,
                     },
                     num_flows: tx_flow_configs
                         .len()
@@ -309,7 +320,13 @@ impl DlcDataRx {
 }
 
 #[derive(defmt::Format)]
-pub struct ReleaseEvent {
+pub(crate) enum ReleaseOrBeaconFailure {
+    Release(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+    BeaconRxFailure,
+}
+
+#[derive(defmt::Format)]
+pub struct AssociationEndEvent {
     pub(crate) long_rd_id: LongRdId,
-    pub(crate) release_cause: ts_103_636_numbers::mac_details::release_message::ReleaseCause,
+    pub(crate) release_cause: ReleaseOrBeaconFailure,
 }

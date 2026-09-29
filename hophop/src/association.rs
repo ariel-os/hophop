@@ -119,7 +119,7 @@ pub async fn associate<'c>(
     config: &PtConfiguration<'c>,
 ) -> Option<(
     Association,
-    impl core::future::Future<Output = nrfxlib_mac::ReleaseEvent> + use<>,
+    impl core::future::Future<Output = nrfxlib_mac::AssociationEndEvent> + use<>,
 )> {
     for network_template in config.networks {
         info!("Scanning for network {}", network_template);

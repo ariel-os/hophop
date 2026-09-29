@@ -63,6 +63,10 @@ impl Stack {
                     // of all the dect functions, this one fortunately is already cancel safe
                     self.dect.dlc_data_rx(),
                     dlc_tx.receive(),
+                    // FIXME: This should be properly drained, which might mean in face of race
+                    // conditions that we'd really rather have a complete "disassociate fully" step
+                    // before we associate again, as otherwise we can't tell if "still not getting
+                    // beacons" is from the last association of the current one.
                     &mut release,
                 )
                 .await
