@@ -52,6 +52,7 @@ pub async fn run_ni6w<'cfg, 'd, const MTU: usize>(
             current_assoc.set(Some(assoc.parent));
             state_runner.set_link_state(LinkState::Up);
         } else {
+            current_assoc.set(None);
             state_runner.set_link_state(LinkState::Down);
         }
     };
