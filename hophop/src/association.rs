@@ -117,7 +117,10 @@ pub struct Association {
 pub async fn associate<'c>(
     dect: &mut nrfxlib_mac::DectMac,
     config: &PtConfiguration<'c>,
-) -> Option<Association> {
+) -> Option<(
+    Association,
+    impl core::future::Future<Output = nrfxlib_mac::ReleaseEvent> + use<>,
+)> {
     for network_template in config.networks {
         info!("Scanning for network {}", network_template);
 
@@ -233,11 +236,14 @@ pub async fn associate<'c>(
             .mac_association(params.transmitter_long_rd_id, params.network_id)
             .await
         {
-            Ok(()) => {
-                return Some(Association {
-                    parent: params.transmitter_long_rd_id,
-                    channel: params.channel,
-                });
+            Ok(release) => {
+                return Some((
+                    Association {
+                        parent: params.transmitter_long_rd_id,
+                        channel: params.channel,
+                    },
+                    release,
+                ));
             }
             Err(e) => info!("Association failed: {}; continuing.", e),
         }

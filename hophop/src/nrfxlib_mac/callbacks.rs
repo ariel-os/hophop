@@ -19,7 +19,7 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, Shor
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
-use super::{ClusterBeacon, DlcDataRx};
+use super::{ClusterBeacon, DlcDataRx, ReleaseEvent};
 
 pub(super) static OP_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_op_callbacks =
     nrfxlib_sys::nrf_modem_dect_mac_op_callbacks {
@@ -230,11 +230,24 @@ unsafe extern "C" fn association_release_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
-    warn!(
-        "Association is gone: cause {}, peer 0x{:x}",
-        params.release_cause, params.long_rd_id
-    );
+    let &nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params {
+        release_cause,
+        long_rd_id,
+    } = unsafe { &*params };
+
+    let long_rd_id = LongRdId::new(long_rd_id).unwrap();
+    let release_cause =
+        ts_103_636_numbers::mac_details::release_message::ReleaseCause::new(release_cause);
+
+    if RELEASE_EVENTS
+        .try_send(ReleaseEvent {
+            long_rd_id,
+            release_cause,
+        })
+        .is_err()
+    {
+        warn!("Release event queue overflowed",);
+    }
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_ch_load_change_ntf_cb_params,

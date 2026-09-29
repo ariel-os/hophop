@@ -4,7 +4,7 @@
 //! the application.
 
 use super::error::MacError;
-use super::{ClusterBeacon, DlcDataRx};
+use super::{ClusterBeacon, DlcDataRx, ReleaseEvent};
 
 // This should evolve a bit
 //
@@ -34,6 +34,12 @@ pub(crate) static BEACON_EVENTS: Channel<
     // FIXME: What's a good number?
     2,
 > = Channel::new();
+
+/// Errors from associations.
+///
+/// This has
+pub(crate) static RELEASE_EVENTS: Channel<CriticalSectionRawMutex, ReleaseEvent, 1> =
+    Channel::new();
 
 // FIXME: Ideally we'd go right into some network pool, but this is not trivial to generalize.
 // FIXME: Their use is not optimized, merely functional.

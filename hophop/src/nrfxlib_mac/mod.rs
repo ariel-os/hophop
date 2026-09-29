@@ -162,13 +162,19 @@ impl DectMac {
     /// Starts association as a PT.
     ///
     /// The function completes successfully when an association is made; the association may be
-    /// lost at any time (FIXME: find a way for the app to obtain the events).
+    /// lost at any time; at that time, the returned future also completes.
+    ///
+    /// # Caveats
+    ///
+    /// The RelaseReceiver is not lifetimed, as it does not rule out other operations on `self`;
+    /// nonetheless, it must not be polled (ideally: be dropped) as soon as a new association is
+    /// started. (FiXME: Should `self` be split somehow?)
     // FIXME allow configuring flows
     pub async fn mac_association(
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<(), MacError> {
+    ) -> Result<impl core::future::Future<Output = ReleaseEvent> + use<>, MacError> {
         let mut tx_flow_configs = [
             nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -212,7 +218,9 @@ impl DectMac {
         .into_result()
         .expect("Failed to start association attempt");
 
-        SINGLETON_EVENTS.receive().await
+        SINGLETON_EVENTS.receive().await?;
+
+        Ok(RELEASE_EVENTS.receive())
     }
 
     /// Transmits data in one of the flows.
@@ -298,4 +306,10 @@ impl DlcDataRx {
     pub fn data(&self) -> &[u8] {
         self.data.as_slice()
     }
+}
+
+#[derive(defmt::Format)]
+pub struct ReleaseEvent {
+    pub(crate) long_rd_id: LongRdId,
+    pub(crate) release_cause: ts_103_636_numbers::mac_details::release_message::ReleaseCause,
 }

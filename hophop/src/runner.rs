@@ -5,8 +5,8 @@
 //! Code in here should eventually be independent of the underlying implementation of nr+, but is
 //! currently tied to the [`crate::nrfxlib_mac`].
 
-use defmt::warn;
-use embassy_futures::select::{Either, select};
+use defmt::*;
+use embassy_futures::select::{Either3, select3};
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Receiver;
@@ -47,7 +47,7 @@ impl Stack {
         loop {
             let association = super::association::associate(&mut self.dect, config).await;
 
-            let Some(association) = association else {
+            let Some((association, mut release)) = association else {
                 warn!("No network beacons found, sleeping before retrying");
                 // FIXME pass in infrastructure from Ariel (and also process config_poke)
                 // Timer::after_secs(5).await;
@@ -59,17 +59,22 @@ impl Stack {
 
             loop {
                 // FIXME: Or just wait for disassociation
-                match select(
+                match select3(
                     // of all the dect functions, this one fortunately is already cancel safe
                     self.dect.dlc_data_rx(),
                     dlc_tx.receive(),
+                    &mut release,
                 )
                 .await
                 {
-                    Either::First(received) => on_dlc_rx(received),
-                    Either::Second((flow_id, dest, data)) => {
+                    Either3::First(received) => on_dlc_rx(received),
+                    Either3::Second((flow_id, dest, data)) => {
                         // FIXME: Should we back-signal?
                         let _ = self.dect.dlc_data_tx(flow_id, dest, &data).await;
+                    }
+                    Either3::Third(release) => {
+                        info!("Association released ({}), going back to scanning", release);
+                        break;
                     }
                 }
             }
