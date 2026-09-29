@@ -6,7 +6,6 @@
 #![no_main]
 
 use ariel_os::log::{info, warn};
-use ariel_os::time::Timer;
 
 use ts_103_636_utils::identifiers::{LongRdId, NetworkId24, AbsoluteChannel};
 
@@ -46,6 +45,7 @@ async fn main() {
     };
 
     hophop::nrfxlib_mac::embassy_net::run_ni6w(
+        ariel_os::time::Delay,
         &config,
         ariel_os::net::user_net_runner().await,
         dect,

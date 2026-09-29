@@ -31,6 +31,7 @@ impl Stack {
 
     pub async fn run<'cfg, 'txch, 'cfgch>(
         mut self,
+        mut time: impl embedded_hal_async::delay::DelayNs,
         config: &super::association::PtConfiguration<'cfg>,
         // FIXME we'll probably need a better interface in several places.
         // We can not `impl futures::Stream` because StreamExt needs `Unpin`.
@@ -49,8 +50,8 @@ impl Stack {
 
             let Some((association, mut release)) = association else {
                 warn!("No network beacons found, sleeping before retrying");
-                // FIXME pass in infrastructure from Ariel (and also process config_poke)
-                // Timer::after_secs(5).await;
+                // FIXME: make configurable
+                time.delay_ms(5000).await;
                 let _ = config_poke;
                 continue;
             };

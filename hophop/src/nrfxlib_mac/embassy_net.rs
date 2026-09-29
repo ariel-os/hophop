@@ -23,6 +23,7 @@ use defmt::*;
 /// default gateway. This is probably how NI6W works, and packets will be sent correctly even to
 /// other nodes when addressed that way.
 pub async fn run_ni6w<'cfg, 'd, const MTU: usize>(
+    time: impl embedded_hal_async::delay::DelayNs,
     config: &crate::association::PtConfiguration<'cfg>,
     net_runner: embassy_net_driver_channel::Runner<'d, MTU>,
     dect: super::DectMac,
@@ -50,14 +51,17 @@ pub async fn run_ni6w<'cfg, 'd, const MTU: usize>(
         info!("Learned about association: {}", assoc);
         if let Some(assoc) = assoc {
             current_assoc.set(Some(assoc.parent));
+            control_hub.association.set(Some(assoc));
             state_runner.set_link_state(LinkState::Up);
         } else {
             current_assoc.set(None);
+            control_hub.association.set(None);
             state_runner.set_link_state(LinkState::Down);
         }
     };
 
     let running_dect = crate::runner::Stack::new(dect).run(
+        time,
         config,
         dlc_tx.receiver(),
         config_poke.receiver(),
