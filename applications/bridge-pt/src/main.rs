@@ -27,7 +27,7 @@ async fn main(peripherals: UartPeripherals) {
         .with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
         .expect("Invalid UART configuration");
 
-    /* FIXME: duplicate from ../embedded-pt/ */
+    /* FIXME: duplicate and outdated from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
     let mut dect = hophop::nrfxlib_mac::DectMac::create(());
 
@@ -114,7 +114,7 @@ async fn main(peripherals: UartPeripherals) {
         .mac_association(params.transmitter_long_rd_id, params.network_id)
         .await
     {
-        Ok(()) => info!("Associated; continuing demo"),
+        Ok(_) => info!("Associated; continuing demo"),
         Err(_) => {
             warn!("Association didn't work, stopping program.");
             return;

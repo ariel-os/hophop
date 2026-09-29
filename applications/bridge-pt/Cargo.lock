@@ -1786,6 +1786,7 @@ dependencies = [
  "embassy-net-driver",
  "embassy-net-driver-channel",
  "embassy-sync 0.7.2",
+ "embedded-hal-async",
  "heapless 0.9.3",
  "itertools 0.14.0",
  "nrf-modem",
