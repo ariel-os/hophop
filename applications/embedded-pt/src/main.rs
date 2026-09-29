@@ -44,20 +44,25 @@ async fn main() {
         rd_id: our_long_id,
     };
 
-    hophop::nrfxlib_mac::embassy_net::run_ni6w(
-        ariel_os::time::Delay,
-        &config,
-        ariel_os::net::user_net_runner().await,
-        dect,
-    )
-    .await;
-}
+    let control_hub = hophop::nrfxlib_mac::embassy_net::ControlHub::new();
 
-#[ariel_os::task(autostart)]
-async fn coap_run() -> ! {
-    use coap_handler_implementations::{HandlerBuilder, SimpleRendered, new_dispatcher};
+    embassy_futures::join::join(
+        hophop::nrfxlib_mac::embassy_net::run_ni6w(
+            ariel_os::time::Delay,
+            &config,
+            ariel_os::net::user_net_runner().await,
+            dect,
+            &control_hub,
+        ),
+        // FIXME: Should this get its dedicated task? That'd give it its own waker, but then we
+        // can't just use the reference.
+        async {
+            use coap_handler_implementations::{HandlerBuilder, SimpleRendered, new_dispatcher};
 
-    let handler = new_dispatcher().at(&["hello"], SimpleRendered("Hello from hophop"));
+            let handler = new_dispatcher().at(&["hello"], SimpleRendered("Hello from hophop"));
+            // FIXME: Expose control_hub through CoAP
 
-    ariel_os::coap::coap_run(handler).await;
+            ariel_os::coap::coap_run(handler).await;
+        }
+    ).await;
 }

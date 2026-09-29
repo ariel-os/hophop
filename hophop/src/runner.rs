@@ -20,9 +20,19 @@ pub struct Stack {
     dect: crate::nrfxlib_mac::DectMac,
 }
 
+/// Message sent into a running stack
+// This interface might need to change if there are more variants coming in where you can't always
+// discard any unexpected ones.
+pub enum Poke {
+    /// If currently unconnected, pause any sleeping and go right into scanning again.
+    ConnectNow,
+    /// Disassociate from the current association (if any), and start reconnecting.
+    DisconnectAndRescan,
+}
+
 type DlcTxReceiver<'a> =
     Receiver<'a, CriticalSectionRawMutex, (u8, LongRdId, heapless::Vec<u8, 1024>), 1>;
-type ConfigPokeReceiver<'a> = Receiver<'a, CriticalSectionRawMutex, (), 1>;
+type ConfigPokeReceiver<'a> = Receiver<'a, CriticalSectionRawMutex, Poke, 1>;
 
 impl Stack {
     pub fn new(dect: crate::nrfxlib_mac::DectMac) -> Self {

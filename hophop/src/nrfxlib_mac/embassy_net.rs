@@ -13,6 +13,61 @@
 
 use defmt::*;
 
+/// Interface through which a running [`run_ni6w`] can be influenced.
+///
+/// It is generally multi-controller and single-controllee.
+///
+/// It currently does this by noting down state received from the controlled process (such as
+/// whether or not it is associated), so that it can be polled by any controller, and by forwarding
+/// actions into a queue (as that is an easy single-consumer direction).
+///
+/// # Further development
+///
+/// It is yet unclear whether this should really be around here or in the [`crate::runner`] module.
+pub struct ControlHub {
+    // Kind of duplicated with the inner current_assoc, but that is special-purpose and narrow,
+    // while this is user visible.
+    association: core::cell::Cell<Option<crate::association::Association>>,
+    poke: embassy_sync::channel::Channel<
+        embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+        crate::runner::Poke,
+        // Senders can just wait, or use fallible pushing
+        1,
+    >,
+}
+
+/// Error returned in the exotic case of a [`ControlHub`] fallible function currently not working.
+///
+/// When returned, retry later, or use a corresponding async function.
+pub struct RetryLater(());
+
+impl ControlHub {
+    #[expect(clippy::new_without_default, reason = "only used with const")]
+    pub const fn new() -> Self {
+        Self {
+            association: core::cell::Cell::new(None),
+            poke: embassy_sync::channel::Channel::new(),
+        }
+    }
+
+    pub fn association_status(&self) -> Option<crate::association::Association> {
+        self.association.get()
+    }
+
+    // not async right now because we can't trigger that from coap anyway
+    pub fn try_connect_now(&self) -> Result<(), RetryLater> {
+        self.poke
+            .try_send(crate::runner::Poke::ConnectNow)
+            .map_err(|_| RetryLater(()))
+    }
+
+    pub fn try_disconnect_and_rescan(&self) -> Result<(), RetryLater> {
+        self.poke
+            .try_send(crate::runner::Poke::DisconnectAndRescan)
+            .map_err(|_| RetryLater(()))
+    }
+}
+
 /// An embassy network driver that transmits and receives packets via the Nordic nrfxlib MAC
 /// following the NI6W mode (see module level documentation).
 ///
@@ -27,6 +82,7 @@ pub async fn run_ni6w<'cfg, 'd, const MTU: usize>(
     config: &crate::association::PtConfiguration<'cfg>,
     net_runner: embassy_net_driver_channel::Runner<'d, MTU>,
     dect: super::DectMac,
+    control_hub: &ControlHub,
 ) -> ! {
     use embassy_net_driver::LinkState;
 

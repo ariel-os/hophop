@@ -20,3 +20,4 @@ nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "4.0.0", features = ["dect-mac"] }
 coap-handler-implementations = "0.6.2"
+embassy-futures = "0.1.2"
