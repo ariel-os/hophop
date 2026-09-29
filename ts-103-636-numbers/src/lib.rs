@@ -17,6 +17,7 @@
 
 pub mod endpoint_multiplexing;
 
+pub mod mac_details;
 pub mod mac_ie;
 pub mod mac_pdu;
 
