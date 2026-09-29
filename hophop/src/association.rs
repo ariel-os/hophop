@@ -74,10 +74,14 @@ pub struct PtConfiguration<'a> {
     pub networks: &'a [CandidateNetwork<'a>],
 }
 
-#[derive(defmt::Format, Debug, Copy, Clone)]
+#[derive(defmt::Format, Debug, Copy, Clone, minicbor::Encode)]
+#[cbor(map)]
 pub struct Association {
+    #[n(0)]
     pub network: NetworkId32,
+    #[n(1)]
     pub parent: LongRdId,
+    #[n(2)]
     pub channel: AbsoluteChannel,
 }
 

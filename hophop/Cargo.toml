@@ -20,7 +20,8 @@ defmt = "1"
 
 nrf-modem = { version = "*", features = ["dect", "nrf9151", "defmt"] }
 ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
-ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
+# minicbor feature could be dependent on our minicbor once we make that conditional
+ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt", "minicbor"] }
 static_cell = "2.1.1"
 itertools = { version = "0.14.0", default-features = false }
 embassy-futures = "0.1.2"
@@ -35,6 +36,13 @@ embassy-net-driver = "0.2.0"
 # dependency here any more. (Then we can also properly introduce features for
 # this rather than just always pulling in everything).
 nrfxlib-sys = { version = "*", features = ["dect-mac"] }
+
+# FIXME: Could eventually be conditional, but right now adding features just
+# makes this hard to check.
+minicbor = { version = "2.3.0", features = ["derive"] }
+coap-handler = "0.2.1"
+coap-handler-implementations = "0.6.2"
+coap-message-utils = "0.3.9"
 
 [target.'cfg(not(target = "thumbv8m.main-none-eabihf"))'.dependencies]
 # We're using box_pool, and while that works on thumbv8m without portable

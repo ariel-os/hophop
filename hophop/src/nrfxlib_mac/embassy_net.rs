@@ -66,6 +66,29 @@ impl ControlHub {
             .try_send(crate::runner::Poke::DisconnectAndRescan)
             .map_err(|_| RetryLater(()))
     }
+
+    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
+    pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
+        use coap_handler_implementations::*;
+        use coap_message_utils::Error;
+
+        struct ServeStatus<'a>(&'a ControlHub);
+
+        impl GetRenderable for ServeStatus<'_> {
+            type Get = Option<crate::association::Association>;
+
+            fn get(&mut self) -> Result<Self::Get, Error> {
+                Ok(self.0.association_status())
+            }
+        }
+
+        wkc::ConstantSingleRecordReport::new(
+            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
+            &[coap_handler::Attribute::ResourceType(
+                "tag:ariel-os.org,2026:experimental-hophop",
+            )],
+        )
+    }
 }
 
 /// An embassy network driver that transmits and receives packets via the Nordic nrfxlib MAC

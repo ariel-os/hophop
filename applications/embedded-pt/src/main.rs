@@ -59,7 +59,9 @@ async fn main() {
         async {
             use coap_handler_implementations::{HandlerBuilder, SimpleRendered, new_dispatcher};
 
-            let handler = new_dispatcher().at(&["hello"], SimpleRendered("Hello from hophop"));
+            let handler = new_dispatcher()
+                .at(&["hello"], SimpleRendered("Hello from hophop"))
+                .below(&["d"], control_hub.coap_server());
             // FIXME: Expose control_hub through CoAP
 
             ariel_os::coap::coap_run(handler).await;
