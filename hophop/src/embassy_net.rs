@@ -104,7 +104,7 @@ pub async fn run_ni6w<'cfg, 'd, const MTU: usize>(
     time: impl embedded_hal_async::delay::DelayNs,
     config: &crate::association::PtConfiguration<'cfg>,
     net_runner: embassy_net_driver_channel::Runner<'d, MTU>,
-    dect: super::DectMac,
+    dect: super::nrfxlib_mac::DectMac,
     control_hub: &ControlHub,
 ) -> ! {
     use embassy_net_driver::LinkState;

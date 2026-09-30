@@ -44,10 +44,10 @@ async fn main() {
         rd_id: our_long_id,
     };
 
-    let control_hub = hophop::nrfxlib_mac::embassy_net::ControlHub::new();
+    let control_hub = hophop::embassy_net::ControlHub::new();
 
     embassy_futures::join::join(
-        hophop::nrfxlib_mac::embassy_net::run_ni6w(
+        hophop::embassy_net::run_ni6w(
             ariel_os::time::Delay,
             &config,
             ariel_os::net::user_net_runner().await,

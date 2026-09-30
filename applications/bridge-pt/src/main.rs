@@ -128,7 +128,7 @@ async fn main(peripherals: UartPeripherals) {
     let mut slipmux = SingleFrameDecoder::default();
     let mut decoder = slipmux::Decoder::new();
 
-    // This is heavily inspired by hophop::nrfxlib_mac::embassy_net
+    // This is heavily inspired by hophop::embassy_net
     loop {
         use embassy_futures::select::{Either, select};
         use slipmux::DecodeStatus;
