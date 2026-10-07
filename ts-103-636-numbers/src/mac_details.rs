@@ -49,6 +49,10 @@ pub mod release_message {
     impl defmt::Format for ReleaseCause {
         fn format(&self, fmt: defmt::Formatter) {
             use defmt::write;
+            #[allow(
+                clippy::match_same_arms,
+                reason = "false positive only triggers under unknown conditions"
+            )]
             match *self {
                 ReleaseCause::CONNECTION_TERMINATION => write!(fmt, "connection termination"),
                 ReleaseCause::MOBILITY => write!(fmt, "mobility"),
