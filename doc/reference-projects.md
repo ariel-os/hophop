@@ -44,6 +44,11 @@ Based on <https://docs.nordicsemi.com/bundle/ncs-3.2.0-preview2/page/nrf/install
 * `west flash`, or `probe-rs download --protocol swd --chip nRF9151_xxAA build/dect_shell/zephyr/tfm_merged.hex --binary-format ihex`
 * `socat - /dev/ttyACM0,cfmakeraw,b115200`
 
+*Tip:* Names such as `/dev/ttyACM0` are assigned to plugged-in devices on first-come-first-served,
+and running processes can contribute to free names not being reused immediately.
+Depending on your workflow, it can be beneficial to use names such as `/dev/serial/by-id/usb-SEGGER_J-Link_001234567890-if00` instead,
+or (if you switch between devices but assign fixed roles e.g. per USB hub slot) using `/dev/serial/by-path/pci-0000:00:14.0-usb-0:5.7.2.3:1.0`.
+
 ## Failure modes
 
 ### Wrong network core
