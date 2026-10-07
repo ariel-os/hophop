@@ -185,7 +185,8 @@ async fn main(peripherals: UartPeripherals) {
                             warn!("Frame overflew slipmux buffer, won't relay it.");
                             continue;
                         };
-                        dect.dlc_data_tx(1, gateway_long, data).await;
+                        // FIXME count errors
+                        let _ = dect.dlc_data_tx(1, gateway_long, data).await;
                     }
                     Ok(DecodeStatus::FrameCompleteConfiguration) => {
                         warn!("Peer sent CoAP data {}, which is unsupported.", Hex(slipmux.data().unwrap()));
