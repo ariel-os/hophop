@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::{info, warn};
+use ariel_os::log::info;
 
 use ts_103_636_utils::identifiers::{LongRdId, NetworkId24, AbsoluteChannel};
 
