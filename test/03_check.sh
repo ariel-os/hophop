@@ -6,4 +6,4 @@ set -ex
 RUSTFLAGS="-D warnings" cargo check --workspace
 RUSTFLAGS="-D warnings" cargo check --workspace --all-features
 cargo clippy --workspace -- --deny clippy::all --deny clippy::pedantic
-RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps

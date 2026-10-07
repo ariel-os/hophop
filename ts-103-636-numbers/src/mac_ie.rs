@@ -3,7 +3,7 @@
 //! IE (Information Element) type
 #![allow(
     clippy::unreadable_literal,
-    reason = "values are use more with copy-pasting and searching than with actual reaidng of the value"
+    reason = "values are use more with copy-pasting and searching than with actual reading of the value"
 )]
 
 /// An IE type as uses with MAC Extension field encodings 00/01/10

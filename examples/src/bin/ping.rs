@@ -44,9 +44,9 @@ async fn main(peripherals: pins::ButtonPeripherals) {
                 let pcc = received.pcc();
                 let pdc = received.pdc();
                 if let Ok(pdc) = pdc {
-                    let header = utils::mac_pdu::Header::parse(pdc);
+                    let header = utils::mac_pdu::Message::parse(pdc);
                     info!("Received at {}: {:?}. PDC: {:?}", start, pcc, header);
-                    if let Ok(header) = utils::mac_pdu::Header::parse(pdc)
+                    if let Ok(header) = utils::mac_pdu::Message::parse(pdc)
                         && let utils::mac_pdu::MacCommonHeader::Beacon(ref beacon) = header.common
                     {
                         for ie in header.tail_items() {

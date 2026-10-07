@@ -19,7 +19,7 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, Shor
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
-use super::{ClusterBeacon, DlcDataRx};
+use super::{AssociationEndEvent, ClusterBeacon, DlcDataRx};
 
 pub(super) static OP_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_op_callbacks =
     nrfxlib_sys::nrf_modem_dect_mac_op_callbacks {
@@ -109,33 +109,32 @@ unsafe extern "C" fn association(
         params.status.into_mac_status(),
         params.long_rd_id
     );
-    if params.status != 0 {
-        return;
+    if params.status == 0 {
+        info!(
+            "  RX signal info: MCS {}, TX power {}, RSSI2 {}, SNR {}",
+            params.rx_signal_info.mcs,
+            params.rx_signal_info.transmit_power,
+            params.rx_signal_info.rssi_2,
+            params.rx_signal_info.snr
+        );
+        info!("  IPv6 config: type {} address 0x{:x}", match params.ipv6_config.type_ {
+            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_FULL => "full",
+            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_NONE => "none",
+            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_PREFIX => "prefix",
+            _ => "?"
+        }, params.ipv6_config.address);
+        // FIXME: only valid if bit is set
+        info!(
+            "  Association response: ack {}, reject…, flows {}, harq…, group_id…, resource_tag…",
+            params.association_response.ack_status,
+            match params.association_response.number_of_flows {
+                7 => "all that were",
+                _ => "some…",
+            }
+        );
+        debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
+        // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
     }
-    info!(
-        "  RX signal info: MCS {}, TX power {}, RSSI2 {}, SNR {}",
-        params.rx_signal_info.mcs,
-        params.rx_signal_info.transmit_power,
-        params.rx_signal_info.rssi_2,
-        params.rx_signal_info.snr
-    );
-    info!("  IPv6 config: type {} address 0x{:x}", match params.ipv6_config.type_ {
-        nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_FULL => "full",
-        nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_NONE => "none",
-        nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_PREFIX => "prefix",
-        _ => "?"
-    }, params.ipv6_config.address);
-    // FIXME: only valid if bit is set
-    info!(
-        "  Association response: ack {}, reject…, flows {}, harq…, group_id…, resource_tag…",
-        params.association_response.ack_status,
-        match params.association_response.number_of_flows {
-            7 => "all that were",
-            _ => "some…",
-        }
-    );
-    debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
-    // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
 
     SINGLETON_EVENTS
         .try_send(params.status.into_mac_status())
@@ -231,11 +230,19 @@ unsafe extern "C" fn association_release_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
-    warn!(
-        "Association is gone: cause {}, peer 0x{:x}",
-        params.release_cause, params.long_rd_id
-    );
+    let &nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params {
+        release_cause,
+        long_rd_id,
+    } = unsafe { &*params };
+
+    let long_rd_id = LongRdId::new(long_rd_id).unwrap();
+    let release_cause =
+        ts_103_636_numbers::mac_details::release_message::ReleaseCause::new(release_cause);
+
+    let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
+        long_rd_id,
+        release_cause: super::ReleaseOrBeaconFailure::Release(release_cause),
+    });
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_ch_load_change_ntf_cb_params,
@@ -311,11 +318,15 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
-    info!(
-        "Got cluster beacon RX failure on long_rd_id {} (which channel??)",
-        params.long_rd_id
-    );
+    let &nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params { long_rd_id } =
+        unsafe { &*params };
+
+    let long_rd_id = LongRdId::new(long_rd_id).unwrap();
+
+    let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
+        long_rd_id,
+        release_cause: super::ReleaseOrBeaconFailure::BeaconRxFailure,
+    });
 }
 unsafe extern "C" fn ipv6_config_update_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_ipv6_config_update_ntf_cb_params,

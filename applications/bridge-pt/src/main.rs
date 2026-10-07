@@ -27,7 +27,7 @@ async fn main(peripherals: UartPeripherals) {
         .with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
         .expect("Invalid UART configuration");
 
-    /* FIXME: duplicate from ../embedded-pt/ */
+    /* FIXME: duplicate and outdated from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
     let mut dect = hophop::nrfxlib_mac::DectMac::create(());
 
@@ -114,7 +114,7 @@ async fn main(peripherals: UartPeripherals) {
         .mac_association(params.transmitter_long_rd_id, params.network_id)
         .await
     {
-        Ok(()) => info!("Associated; continuing demo"),
+        Ok(_) => info!("Associated; continuing demo"),
         Err(_) => {
             warn!("Association didn't work, stopping program.");
             return;
@@ -128,7 +128,7 @@ async fn main(peripherals: UartPeripherals) {
     let mut slipmux = SingleFrameDecoder::default();
     let mut decoder = slipmux::Decoder::new();
 
-    // This is heavily inspired by hophop::nrfxlib_mac::embassy_net
+    // This is heavily inspired by hophop::embassy_net
     loop {
         use embassy_futures::select::{Either, select};
         use slipmux::DecodeStatus;
@@ -185,7 +185,8 @@ async fn main(peripherals: UartPeripherals) {
                             warn!("Frame overflew slipmux buffer, won't relay it.");
                             continue;
                         };
-                        dect.dlc_data_tx(1, gateway_long, data).await;
+                        // FIXME count errors
+                        let _ = dect.dlc_data_tx(1, gateway_long, data).await;
                     }
                     Ok(DecodeStatus::FrameCompleteConfiguration) => {
                         warn!("Peer sent CoAP data {}, which is unsupported.", Hex(slipmux.data().unwrap()));

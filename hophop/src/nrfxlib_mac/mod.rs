@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! High-level wrappers around the Nordic's DECT MAC.
 
-pub mod embassy_net;
 pub mod error;
 
 mod callbacks;
@@ -162,13 +161,19 @@ impl DectMac {
     /// Starts association as a PT.
     ///
     /// The function completes successfully when an association is made; the association may be
-    /// lost at any time (FIXME: find a way for the app to obtain the events).
+    /// lost at any time; at that time, the returned future also completes.
+    ///
+    /// # Caveats
+    ///
+    /// The RelaseReceiver is not lifetimed, as it does not rule out other operations on `self`;
+    /// nonetheless, it must not be polled (ideally: be dropped) as soon as a new association is
+    /// started. (FiXME: Should `self` be split somehow?)
     // FIXME allow configuring flows
     pub async fn mac_association(
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<(), MacError> {
+    ) -> Result<impl core::future::Future<Output = AssociationEndEvent> + use<>, MacError> {
         let mut tx_flow_configs = [
             nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -197,8 +202,20 @@ impl DectMac {
                     long_rd_id: long_rd_id.into(),
                     network_id: network_id.into(),
                     info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
-                        // FIXME: this is a guess
-                        num_beacon_rx_failures: 1,
+                        // This value is practically undocumented, but the dect_shell UI has notes
+                        // on it:
+                        //
+                        // "Set maximum number of consecutive missed cluster beacons. Note: set to
+                        // modem when creating association and has impact when FT device is
+                        // considered as out of range or FT is turned off, resulting the automatic
+                        // disassociation of the FT device. Value 0 means that no limit and no
+                        // automatic disassociation is done."
+                        //
+                        // Observation is that no release event happens beyond the
+                        // cluster_beacon_rx_failure_ntf, so it stands to reason that that event is
+                        // to be treated just like a release event. (They do, however, get sent
+                        // repreatedly).
+                        num_beacon_rx_failures: 3,
                     },
                     num_flows: tx_flow_configs
                         .len()
@@ -211,7 +228,9 @@ impl DectMac {
         .into_result()
         .expect("Failed to start association attempt");
 
-        SINGLETON_EVENTS.receive().await
+        SINGLETON_EVENTS.receive().await?;
+
+        Ok(RELEASE_EVENTS.receive())
     }
 
     /// Transmits data in one of the flows.
@@ -261,6 +280,7 @@ impl DectMac {
 // really want to (I'd rather memcpy than create a new struct), but because that pointer makes the
 // whole type not Send, and it comes from the ISR. We wouldn't touch it, but are in no position to
 // impl Send on it.
+#[derive(defmt::Format)]
 pub struct ClusterBeacon {
     pub channel: AbsoluteChannel,
     pub transmitter_short_rd_id: ShortRdId,
@@ -296,4 +316,16 @@ impl DlcDataRx {
     pub fn data(&self) -> &[u8] {
         self.data.as_slice()
     }
+}
+
+#[derive(defmt::Format)]
+pub(crate) enum ReleaseOrBeaconFailure {
+    Release(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+    BeaconRxFailure,
+}
+
+#[derive(defmt::Format)]
+pub struct AssociationEndEvent {
+    pub(crate) long_rd_id: LongRdId,
+    pub(crate) release_cause: ReleaseOrBeaconFailure,
 }
