@@ -184,10 +184,6 @@ criteria = "safe-to-deploy"
 version = "0.3.34"
 criteria = "safe-to-deploy"
 
-[[exemptions.futures-core]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
 [[exemptions.futures-io]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
@@ -297,7 +293,7 @@ version = "0.12.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.nrfxlib-sys]]
-version = "2.9.2"
+version = "3.1.0+3.3.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.num_enum]]
