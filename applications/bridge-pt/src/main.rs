@@ -27,7 +27,7 @@ async fn main(peripherals: UartPeripherals) {
         .build_with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
         .expect("Invalid UART configuration");
 
-    /* FIXME: duplicate and outdated from ../embedded-pt/ */
+    /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
     let mut dect = hophop::nrfxlib_mac::DectMac::create(());
 
@@ -43,85 +43,60 @@ async fn main(peripherals: UartPeripherals) {
     .expect("serial numbers used with examples are not so unlucky as to start with 4 byte zeros");
     info!("Our Long RD ID is {:?}", our_long_id);
 
-    dect.control_configure(&mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
-        // FIXME: Decide (this is a "let's keep it civilized" guess)
-        max_tx_power: nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
-        // FIXME: take from hardware
-        max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
-        // FIXME: Decide (this is what the vendor examples default to)
-        expected_mcs1_rx_rssi_level: -68,
-        long_rd_id: our_long_id.into(),
-        // FIXME: configure
-        phy_band_group_index:
-            nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
-        // FIXME: configure
+    let config = hophop::association::PtConfiguration {
         power_save: true,
-        security: nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
-            // Apparently we have to decode the beacon's ciphered parts immediately rather than
-            // doing that later when having read the network ID. Not great; see
-            // <https://devzone.nordicsemi.com/f/nordic-q-a/128223/dect-mac-security-key-by-network>
-            // for pending clarification.
-            mode: nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_1,
-            // Keys from the dect shell defaults ('JustAdefault!!!!')
-            integrity_key: [
-                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
-                0x21, 0x21,
-            ],
-            cipher_key: [
-                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
-                0x21, 0x21,
-            ],
-        },
-        // FIXME: Decide (this is what the vendor uses in their examples)
-        stats_averaging_length: 2,
-    })
-    .await;
-
-    dect.control_functional_mode_set_activate().await;
-
-    // Making this standalone should make it easier later to give strategies such as "scan our
-    // preferred channel for a few seconds, then the whole band".
-    let find_our_network = async |r: hophop::nrfxlib_mac::ScanReceiver| {
-        loop {
-            let params = r.next().await;
-
-            if params.network_id == const { NetworkId32::new(0x87654321).unwrap() } {
-                // That's the demo network we are looking for, mostly following the DECT shell defaults.
-                //
-                // (What is missing is that we'd use that to dig up keys and then reconfigure the
-                // keying)
-                break params;
-            }
-        }
+        networks: const { &[
+            // The network pre-configured with Nordic DECT shell
+            hophop::association::CandidateNetwork {
+                beacon_interval_ms: 2_000,
+                channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
+                network_id: Some(NetworkId24::new(0x876543).expect("is not 6 digits and not 0")),
+                keys: Some(hophop::association::Mode1Keys {
+                    // 4A7573744164656661756C7421212121 is more readable as:
+                    cipher_key: b"JustAdefault!!!!",
+                    integrity_key: b"JustAdefault!!!!",
+                }),
+            },
+        ] },
+        rd_id: our_long_id,
     };
 
-    let params = dect.mac_network_scan(&mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
-        band: 0, //nrfxlib_sys::nrf_modem_dect_mac_band_NRF_MODEM_DECT_MAC_PHY_BAND1,
-        num_channels: 1, //0
-        channel_list: [1665; 20], // so it terminates fast
-        scan_time: 3_000, // ms -- 60s is the maximum. I guess this is per band?
-        network_id_filter_mode: nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_NONE,
-        network_id_filter: 0,
-    }, find_our_network).await;
+    /* end duplicate */
 
-    let Some(params) = params else {
-        error!("Scanning for 3s found no beacon of our network, exiting.");
-        return;
+    let dlc_tx = embassy_sync::channel::Channel::new();
+    let config_poke = embassy_sync::channel::Channel::new();
+
+    let mut on_rx = |dlc_data_rx: crate::nrfxlib_mac::DlcDataRx| {
+//         if let Some(rx_buf) = rx_runner.try_rx_buf() {
+//             let len = dlc_data_rx.data().len();
+//             rx_buf[..len].copy_from_slice(dlc_data_rx.data());
+//             rx_runner.rx_done(len);
+//         } else {
+//             warn!("Dropping packet -- overflow");
+//         }
     };
 
-    info!("Now that scanning is complete, attempting association with the found FT");
-    match dect
-        .mac_association(params.transmitter_long_rd_id, params.network_id)
-        .await
-    {
-        Ok(_) => info!("Associated; continuing demo"),
-        Err(_) => {
-            warn!("Association didn't work, stopping program.");
-            return;
-        }
-    }
+    let mut on_assoc_change = |assoc: Option<crate::association::Association>| {
+//         info!("Learned about association: {}", assoc);
+//         if let Some(assoc) = assoc {
+//             current_assoc.set(Some(assoc.parent));
+//             control_hub.association.set(Some(assoc));
+//             state_runner.set_link_state(LinkState::Up);
+//         } else {
+//             current_assoc.set(None);
+//             control_hub.association.set(None);
+//             state_runner.set_link_state(LinkState::Down);
+//         }
+    };
 
-    /* FIXME: end duplicate */
+    let running_dect = crate::runner::Stack::new(dect).run(
+        time,
+        config,
+        dlc_tx.receiver(),
+        config_poke.receiver(),
+        &mut on_rx,
+        &mut on_assoc_change,
+    );
 
     let gateway_long = params.transmitter_long_rd_id;
 
