@@ -62,8 +62,6 @@ async fn main() {
             let handler = new_dispatcher()
                 .at(&["hello"], SimpleRendered("Hello from hophop"))
                 .below(&["d"], control_hub.coap_server());
-            // FIXME: Expose control_hub through CoAP
-
             ariel_os::coap::coap_run(handler).await;
         }
     ).await;
