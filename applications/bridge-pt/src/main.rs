@@ -24,7 +24,7 @@ async fn main(peripherals: UartPeripherals) {
     let mut uart_tx_buf = [0u8; 32];
 
     let mut uart = peripherals
-        .with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
+        .build_with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
         .expect("Invalid UART configuration");
 
     /* FIXME: duplicate and outdated from ../embedded-pt/ */
