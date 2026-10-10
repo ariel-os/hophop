@@ -61,7 +61,7 @@ pub struct CandidateNetwork<'a> {
     pub beacon_interval_ms: u16,
 }
 
-#[derive(defmt::Format)]
+#[derive(defmt::Format, Clone)]
 pub struct PtConfiguration<'a> {
     /// Hint to various choices of power-vs-latency trade-offs
     pub power_save: bool,
