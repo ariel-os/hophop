@@ -185,7 +185,7 @@ async fn run_slipmux(
     mut uart: ariel_os::hal::uart::Uart<'_>,
     controller: &DirectToSlipmuxController,
 ) {
-    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec::<u8, 1024>>::default();
+    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec::<u8, 1501>>::default();
     let mut decoder = slipmux::Decoder::new();
 
     // This is heavily inspired by hophop::embassy_net

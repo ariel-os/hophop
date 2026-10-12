@@ -28,7 +28,7 @@ pub enum Poke {
 }
 
 /// Message encapsulating a to-be-transmitted DLC data item
-pub type DlcTxItem = (u8, LongRdId, heapless::Vec<u8, 1024>);
+pub type DlcTxItem = (u8, LongRdId, heapless::Vec<u8, 1501>);
 
 /// Interface which higher-layer stack components have to imlpement to talk to an
 /// association-managing PT MAC layer.
