@@ -209,7 +209,7 @@ async fn run_slipmux(
     controller: &DirectToSlipmuxController,
     mut handler: impl coap_handler::Handler,
 ) {
-    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec::<u8, 1501>>::default();
+    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec<u8, 1501>>::default();
     let mut decoder = slipmux::Decoder::new();
 
     // This is heavily inspired by hophop::embassy_net
@@ -277,11 +277,7 @@ async fn run_slipmux(
                         if let Some(association) = controller.association.get() {
                             controller
                                 .slip_to_dect_channel
-                                .send((
-                                    1,
-                                    association.parent,
-                                    buffer,
-                                ))
+                                .send((1, association.parent, buffer))
                                 .await;
                         } else {
                             // FIXME counting
@@ -308,13 +304,19 @@ async fn run_slipmux(
 
                         use coap_pseudostack::*;
                         let mut pseudostack = PseudoStack(&mut buffer);
-                        embedded_nal_minimal_coapserver::poll(&mut pseudostack, &mut PseudoSocket, &mut handler)
-                            // No `let Ok(()) = `, because there's the unavoidable nb::Error case.
-                            .unwrap();
+                        embedded_nal_minimal_coapserver::poll(
+                            &mut pseudostack,
+                            &mut PseudoSocket,
+                            &mut handler,
+                        )
+                        // No `let Ok(()) = `, because there's the unavoidable nb::Error case.
+                        .unwrap();
 
                         // FIXME duplicated from sending IP packets
-                        let mut encoder =
-                            slipmux::ChunkedEncoder::new(slipmux::FrameType::Configuration, &buffer);
+                        let mut encoder = slipmux::ChunkedEncoder::new(
+                            slipmux::FrameType::Configuration,
+                            &buffer,
+                        );
                         let mut outbuf = [0; 32];
                         loop {
                             let size = encoder.encode_chunk(&mut outbuf);
