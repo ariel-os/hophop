@@ -24,3 +24,11 @@ slipmux = { git = "https://github.com/chrysn-pull-requests/slipmux", default-fea
 embassy-futures = "0.1.2"
 embedded-io-async = "0.6.0"
 embassy-sync = "0.8.0"
+
+coap-handler = "0.2.1"
+coap-handler-implementations = "0.6.2"
+coap-message-utils = "0.3.9"
+
+# for pseudostack
+embedded-nal-minimal-coapserver = "0.5.0"
+embedded-nal = "0.9"

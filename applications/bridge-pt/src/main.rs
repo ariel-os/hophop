@@ -5,6 +5,8 @@
 #![no_std]
 #![no_main]
 
+mod coap_pseudostack;
+
 use ariel_os::log::{info, warn};
 
 use embedded_io_async::{Read, Write};
@@ -67,27 +69,24 @@ async fn main(peripherals: UartPeripherals) {
 
     let control_hub = DirectToSlipmuxController::new(config);
 
+    use coap_handler_implementations::*;
+    let handler = new_dispatcher()
+        .at(&["hello"], SimpleRendered("Hello from hophop"))
+        // FIXME generalize so it works here as well
+        .below(&["d"], control_hub.coap_server())
+        // FIXME: This, as well as security, would be handled better by the Ariel OS CoAP server,
+        // but right now we're sidestepping that; see laze-project.yml comment
+        .with_wkc();
+
     // FIXME: will control_hub need a serving function that's also part of the parallel join?
     // Likely. But if not, implement MacController on it rather than &'a it.
-    let slipmux_subtask = run_slipmux(uart, &control_hub);
+    let slipmux_subtask = run_slipmux(uart, &control_hub, handler);
 
-    /* FIXME mostly duplicate again */
-
-    embassy_futures::join::join3(
+    embassy_futures::join::join(
         hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
         slipmux_subtask,
-        // FIXME: Should this get its dedicated task? That'd give it its own waker, but then we
-        // can't just use the reference.
-        async {
-            /*
-            use coap_handler_implementations::{HandlerBuilder, SimpleRendered, new_dispatcher};
-
-            let handler = new_dispatcher()
-                .at(&["hello"], SimpleRendered("Hello from hophop"))
-                .below(&["d"], control_hub.coap_server());
-            ariel_os::coap::coap_run(handler).await;
-            */
-        },
+        // If we ran the handler (also) on the IP stack, we'd have an extra sub-task of
+        // `ariel_os::coap::coap_run(handler).await` here.
     )
     .await
     .0
@@ -117,6 +116,30 @@ impl DirectToSlipmuxController {
             dect_to_slip_channel: DectToSlipChannel::new(),
             slip_to_dect_channel: SlipToDectChannel::new(),
         }
+    }
+
+    // FIXME copied and adjusted from hophop::embassy_net
+    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
+    pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
+        use coap_handler_implementations::*;
+        use coap_message_utils::Error;
+
+        struct ServeStatus<'a>(&'a DirectToSlipmuxController);
+
+        impl GetRenderable for ServeStatus<'_> {
+            type Get = Option<hophop::association::Association>;
+
+            fn get(&mut self) -> Result<Self::Get, Error> {
+                Ok(self.0.association.get())
+            }
+        }
+
+        wkc::ConstantSingleRecordReport::new(
+            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
+            &[coap_handler::Attribute::ResourceType(
+                "tag:ariel-os.org,2026:experimental-hophop",
+            )],
+        )
     }
 }
 
@@ -184,6 +207,7 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
 async fn run_slipmux(
     mut uart: ariel_os::hal::uart::Uart<'_>,
     controller: &DirectToSlipmuxController,
+    mut handler: impl coap_handler::Handler,
 ) {
     let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec::<u8, 1501>>::default();
     let mut decoder = slipmux::Decoder::new();
@@ -265,7 +289,40 @@ async fn run_slipmux(
                         }
                     }
                     Ok(DecodeStatus::FrameCompleteConfiguration) => {
-                        warn!("Peer sent CoAP data, which is unsupported.");
+                        // It'll take a lot for the compiler to see that I'm taking the buffer out
+                        // of there, manipulating it here, and that I don't touch the original
+                        // until anything happens next on slipmux … but it could. (Not trying to
+                        // optimize here until we're all running on Ariel main and xarxa).
+
+                        let (mut buffer, error) = slipmux.take_configuration_and_error();
+                        if error.is_some() {
+                            warn!("Peer sent over-long CoAP data, ignoring it.");
+                            continue;
+                        }
+
+                        let Some(actual_length) = buffer.len().checked_sub(2) else {
+                            warn!("Ignoring overly short CoAP request.");
+                            continue;
+                        };
+                        buffer.truncate(actual_length);
+
+                        use coap_pseudostack::*;
+                        let mut pseudostack = PseudoStack(&mut buffer);
+                        embedded_nal_minimal_coapserver::poll(&mut pseudostack, &mut PseudoSocket, &mut handler)
+                            // No `let Ok(()) = `, because there's the unavoidable nb::Error case.
+                            .unwrap();
+
+                        // FIXME duplicated from sending IP packets
+                        let mut encoder =
+                            slipmux::ChunkedEncoder::new(slipmux::FrameType::Configuration, &buffer);
+                        let mut outbuf = [0; 32];
+                        loop {
+                            let size = encoder.encode_chunk(&mut outbuf);
+                            if size == 0 {
+                                break;
+                            }
+                            uart.write_all(&outbuf[..size]).await.unwrap();
+                        }
                     }
                 }
             }
