@@ -23,3 +23,4 @@ nrfxlib-sys = { version = "4.0.0", features = ["dect-mac"] }
 slipmux = { git = "https://github.com/teufelchen1/slipmux", default-features = false }
 embassy-futures = "0.1.2"
 embedded-io-async = "0.6.0"
+embassy-sync = "0.8.0"
