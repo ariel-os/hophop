@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::{Hex, info, warn};
+use ariel_os::log::{info, warn};
 
 use embedded_io_async::{Read, Write};
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
@@ -185,7 +185,7 @@ async fn run_slipmux(
     mut uart: ariel_os::hal::uart::Uart<'_>,
     controller: &DirectToSlipmuxController,
 ) {
-    let mut slipmux = SingleFrameDecoder::default();
+    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec::<u8, 1024>>::default();
     let mut decoder = slipmux::Decoder::new();
 
     // This is heavily inspired by hophop::embassy_net
@@ -234,16 +234,17 @@ async fn run_slipmux(
                     }
                     Ok(DecodeStatus::FrameCompleteDiagnostic) => {
                         // Use up to the cursor, and silently ignore overflows.
-                        let (Ok(buffer) | Err(buffer)) = slipmux.data();
-                        let text = core::str::from_utf8(buffer);
+                        let (buffer, error) = slipmux.take_diagnostic_and_error();
+                        let text = core::str::from_utf8(&buffer);
                         warn!(
                             "Peer sent diagnostic data. This will no be forwarded; content was {:?}{}",
                             text.map_err(|_| &buffer),
-                            if slipmux.data().is_err() { "..." } else { "" },
+                            if error.is_some() { "..." } else { "" },
                         );
                     }
                     Ok(DecodeStatus::FrameCompleteIp) => {
-                        let Ok(data) = slipmux.data() else {
+                        let (buffer, error) = slipmux.take_ip_and_error();
+                        if error.is_some() {
                             warn!("Frame overflew slipmux buffer, won't relay it.");
                             continue;
                         };
@@ -255,9 +256,7 @@ async fn run_slipmux(
                                 .send((
                                     1,
                                     association.parent,
-                                    data.try_into()
-                                        // FIXME error handling
-                                        .unwrap(),
+                                    buffer,
                                 ))
                                 .await;
                         } else {
@@ -266,55 +265,10 @@ async fn run_slipmux(
                         }
                     }
                     Ok(DecodeStatus::FrameCompleteConfiguration) => {
-                        warn!(
-                            "Peer sent CoAP data {}, which is unsupported.",
-                            Hex(slipmux.data().unwrap())
-                        );
+                        warn!("Peer sent CoAP data, which is unsupported.");
                     }
                 }
             }
         }
     }
-}
-
-// FIXME: copied unmodified from https://github.com/ariel-os/ariel-os/pull/1613
-
-struct SingleFrameDecoder {
-    // See https://github.com/t2trg/slipmux/issues/1 for expectations on how big this should be
-    buffer: heapless::Vec<u8, 1280>,
-    overflow: bool,
-}
-impl SingleFrameDecoder {
-    /// Returns the decoded data if complete.
-    ///
-    /// # Errors
-    ///
-    /// If the buffer overflew, it returns the initial decoded bytes.
-    fn data(&self) -> Result<&[u8], &[u8]> {
-        if self.overflow {
-            Err(&self.buffer)
-        } else {
-            Ok(&self.buffer)
-        }
-    }
-}
-impl Default for SingleFrameDecoder {
-    fn default() -> Self {
-        SingleFrameDecoder {
-            buffer: Default::default(),
-            overflow: false,
-        }
-    }
-}
-impl slipmux::FrameHandler for SingleFrameDecoder {
-    fn begin_frame(&mut self, _: slipmux::FrameType) {
-        self.buffer.clear();
-        self.overflow = false;
-    }
-    fn write_byte(&mut self, byte: u8) {
-        if self.buffer.push(byte).is_err() {
-            self.overflow = true;
-        }
-    }
-    fn end_frame(&mut self, _: Option<slipmux::Error>) {}
 }
