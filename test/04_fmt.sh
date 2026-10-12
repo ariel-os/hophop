@@ -4,3 +4,7 @@
 set -ex
 
 cargo fmt --check
+for APP in embedded-pt bridge-pt
+do
+    cargo fmt --check --manifest-path applications/$APP/Cargo.toml
+done
