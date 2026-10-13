@@ -15,3 +15,12 @@ apps:
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
+      # CoAP via slipmux would be nice, but for the moment we make do with
+      # 1. no CoAP, and maybe in a next step
+      # 2. CoAP done manually in the slipmux server (bypassing ariel-os-coap and thus coapcore), or
+      # 3. CoAP through a user-provided handler consumer (using ariel-os-coap)
+      # with 3 possibly by copying stuff over from the slipmux PR (but that PR itself can't easily be made to also relay out IP packets pending xarxa)
+      # (and then explore parallel-backend CoAP servers)
+#       - coap-server
+#       - coap-transport-slipmux
+#       - ?coap-server-config-storage

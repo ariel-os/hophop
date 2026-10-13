@@ -7,7 +7,7 @@
 
 use ariel_os::log::info;
 
-use ts_103_636_utils::identifiers::{LongRdId, NetworkId24, AbsoluteChannel};
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
 
 #[ariel_os::task(autostart)]
 async fn main() {
@@ -28,32 +28,33 @@ async fn main() {
 
     let config = hophop::association::PtConfiguration {
         power_save: true,
-        networks: &[
-            // The network pre-configured with Nordic DECT shell
-            hophop::association::CandidateNetwork {
-                beacon_interval_ms: 2_000,
-                channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
-                network_id: Some(NetworkId24::new(0x876543).expect("is not 6 digits and not 0")),
-                keys: Some(hophop::association::Mode1Keys {
-                    // 4A7573744164656661756C7421212121 is more readable as:
-                    cipher_key: b"JustAdefault!!!!",
-                    integrity_key: b"JustAdefault!!!!",
-                }),
-            },
-        ],
+        networks: const {
+            &[
+                // The network pre-configured with Nordic DECT shell
+                hophop::association::CandidateNetwork {
+                    beacon_interval_ms: 2_000,
+                    channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
+                    network_id: Some(
+                        NetworkId24::new(0x876543).expect("is not 6 digits and not 0"),
+                    ),
+                    keys: Some(hophop::association::Mode1Keys {
+                        // 4A7573744164656661756C7421212121 is more readable as:
+                        cipher_key: b"JustAdefault!!!!",
+                        integrity_key: b"JustAdefault!!!!",
+                    }),
+                },
+            ]
+        },
         rd_id: our_long_id,
     };
 
-    let control_hub = hophop::embassy_net::ControlHub::new();
+    let control_hub = hophop::embassy_net::Ni6wNetworkController::new(
+        config,
+        ariel_os::net::user_net_runner().await,
+    );
 
     embassy_futures::join::join(
-        hophop::embassy_net::run_ni6w(
-            ariel_os::time::Delay,
-            &config,
-            ariel_os::net::user_net_runner().await,
-            dect,
-            &control_hub,
-        ),
+        hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
         // FIXME: Should this get its dedicated task? That'd give it its own waker, but then we
         // can't just use the reference.
         async {
@@ -62,9 +63,8 @@ async fn main() {
             let handler = new_dispatcher()
                 .at(&["hello"], SimpleRendered("Hello from hophop"))
                 .below(&["d"], control_hub.coap_server());
-            // FIXME: Expose control_hub through CoAP
-
             ariel_os::coap::coap_run(handler).await;
-        }
-    ).await;
+        },
+    )
+    .await;
 }

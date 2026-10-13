@@ -5,12 +5,12 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::{Hex, error, info, warn};
+mod coap_pseudostack;
 
-use ts_103_636_utils::identifiers::{LongRdId, NetworkId32};
+use ariel_os::log::{info, warn};
+
 use embedded_io_async::{Read, Write};
-
-use nrfxlib_sys;
+use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
 
 type UartPeripherals = ariel_os_boards::pins::HOST_FACING_UART;
 
@@ -23,11 +23,11 @@ async fn main(peripherals: UartPeripherals) {
     let mut uart_rx_buf = [0u8; 32];
     let mut uart_tx_buf = [0u8; 32];
 
-    let mut uart = peripherals
+    let uart = peripherals
         .build_with_config(&mut uart_rx_buf, &mut uart_tx_buf, config)
         .expect("Invalid UART configuration");
 
-    /* FIXME: duplicate and outdated from ../embedded-pt/ */
+    /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
     let mut dect = hophop::nrfxlib_mac::DectMac::create(());
 
@@ -43,92 +43,177 @@ async fn main(peripherals: UartPeripherals) {
     .expect("serial numbers used with examples are not so unlucky as to start with 4 byte zeros");
     info!("Our Long RD ID is {:?}", our_long_id);
 
-    dect.control_configure(&mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
-        // FIXME: Decide (this is a "let's keep it civilized" guess)
-        max_tx_power: nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
-        // FIXME: take from hardware
-        max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
-        // FIXME: Decide (this is what the vendor examples default to)
-        expected_mcs1_rx_rssi_level: -68,
-        long_rd_id: our_long_id.into(),
-        // FIXME: configure
-        phy_band_group_index:
-            nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
-        // FIXME: configure
+    let config = hophop::association::PtConfiguration {
         power_save: true,
-        security: nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
-            // Apparently we have to decode the beacon's ciphered parts immediately rather than
-            // doing that later when having read the network ID. Not great; see
-            // <https://devzone.nordicsemi.com/f/nordic-q-a/128223/dect-mac-security-key-by-network>
-            // for pending clarification.
-            mode: nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_1,
-            // Keys from the dect shell defaults ('JustAdefault!!!!')
-            integrity_key: [
-                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
-                0x21, 0x21,
-            ],
-            cipher_key: [
-                0x4A, 0x75, 0x73, 0x74, 0x41, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74, 0x21, 0x21,
-                0x21, 0x21,
-            ],
+        networks: const {
+            &[
+                // The network pre-configured with Nordic DECT shell
+                hophop::association::CandidateNetwork {
+                    beacon_interval_ms: 2_000,
+                    channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
+                    network_id: Some(
+                        NetworkId24::new(0x876543).expect("is not 6 digits and not 0"),
+                    ),
+                    keys: Some(hophop::association::Mode1Keys {
+                        // 4A7573744164656661756C7421212121 is more readable as:
+                        cipher_key: b"JustAdefault!!!!",
+                        integrity_key: b"JustAdefault!!!!",
+                    }),
+                },
+            ]
         },
-        // FIXME: Decide (this is what the vendor uses in their examples)
-        stats_averaging_length: 2,
-    })
-    .await;
-
-    dect.control_functional_mode_set_activate().await;
-
-    // Making this standalone should make it easier later to give strategies such as "scan our
-    // preferred channel for a few seconds, then the whole band".
-    let find_our_network = async |r: hophop::nrfxlib_mac::ScanReceiver| {
-        loop {
-            let params = r.next().await;
-
-            if params.network_id == const { NetworkId32::new(0x87654321).unwrap() } {
-                // That's the demo network we are looking for, mostly following the DECT shell defaults.
-                //
-                // (What is missing is that we'd use that to dig up keys and then reconfigure the
-                // keying)
-                break params;
-            }
-        }
+        rd_id: our_long_id,
     };
 
-    let params = dect.mac_network_scan(&mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
-        band: 0, //nrfxlib_sys::nrf_modem_dect_mac_band_NRF_MODEM_DECT_MAC_PHY_BAND1,
-        num_channels: 1, //0
-        channel_list: [1665; 20], // so it terminates fast
-        scan_time: 3_000, // ms -- 60s is the maximum. I guess this is per band?
-        network_id_filter_mode: nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_NONE,
-        network_id_filter: 0,
-    }, find_our_network).await;
+    /* end duplicate */
 
-    let Some(params) = params else {
-        error!("Scanning for 3s found no beacon of our network, exiting.");
-        return;
-    };
+    let control_hub = DirectToSlipmuxController::new(config);
 
-    info!("Now that scanning is complete, attempting association with the found FT");
-    match dect
-        .mac_association(params.transmitter_long_rd_id, params.network_id)
-        .await
-    {
-        Ok(_) => info!("Associated; continuing demo"),
-        Err(_) => {
-            warn!("Association didn't work, stopping program.");
-            return;
+    use coap_handler_implementations::*;
+    let handler = new_dispatcher()
+        .at(&["hello"], SimpleRendered("Hello from hophop"))
+        // FIXME generalize so it works here as well
+        .below(&["d"], control_hub.coap_server())
+        // FIXME: This, as well as security, would be handled better by the Ariel OS CoAP server,
+        // but right now we're sidestepping that; see laze-project.yml comment
+        .with_wkc();
+
+    // FIXME: will control_hub need a serving function that's also part of the parallel join?
+    // Likely. But if not, implement MacController on it rather than &'a it.
+    let slipmux_subtask = run_slipmux(uart, &control_hub, handler);
+
+    embassy_futures::join::join(
+        hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
+        slipmux_subtask,
+        // If we ran the handler (also) on the IP stack, we'd have an extra sub-task of
+        // `ariel_os::coap::coap_run(handler).await` here.
+    )
+    .await
+    .0
+}
+
+// This has parallels with the Ni6wNetworkController
+struct DirectToSlipmuxController {
+    static_config: hophop::association::PtConfiguration<'static>,
+    association: core::cell::Cell<Option<hophop::association::Association>>,
+    // FIXME: Currently, nothing sends into that
+    poke: embassy_sync::channel::Channel<
+        embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+        hophop::runner::Poke,
+        // Senders can just wait, or use fallible pushing
+        1,
+    >,
+    dect_to_slip_channel: DectToSlipChannel,
+    slip_to_dect_channel: SlipToDectChannel,
+}
+
+impl DirectToSlipmuxController {
+    fn new(static_config: hophop::association::PtConfiguration<'static>) -> Self {
+        Self {
+            static_config,
+            association: Default::default(),
+            poke: embassy_sync::channel::Channel::new(),
+            dect_to_slip_channel: DectToSlipChannel::new(),
+            slip_to_dect_channel: SlipToDectChannel::new(),
         }
     }
 
-    /* FIXME: end duplicate */
+    // FIXME copied and adjusted from hophop::embassy_net
+    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
+    pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
+        use coap_handler_implementations::*;
+        use coap_message_utils::Error;
 
-    let gateway_long = params.transmitter_long_rd_id;
+        struct ServeStatus<'a>(&'a DirectToSlipmuxController);
 
-    let mut slipmux = SingleFrameDecoder::default();
+        impl GetRenderable for ServeStatus<'_> {
+            type Get = Option<hophop::association::Association>;
+
+            fn get(&mut self) -> Result<Self::Get, Error> {
+                Ok(self.0.association.get())
+            }
+        }
+
+        wkc::ConstantSingleRecordReport::new(
+            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
+            &[coap_handler::Attribute::ResourceType(
+                "tag:ariel-os.org,2026:experimental-hophop",
+            )],
+        )
+    }
+}
+
+type DectToSlipChannel = embassy_sync::channel::Channel<
+    embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+    hophop::nrfxlib_mac::DlcDataRx,
+    // Senders won't wait, let's not starve on UART slowness
+    // FIXME: reuse xarxa buffers
+    3,
+>;
+type SlipToDectChannel = embassy_sync::channel::Channel<
+    embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+    hophop::runner::DlcTxItem,
+    // Senders can wait
+    // FIXME: reuse xarxa buffers
+    1,
+>;
+
+impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
+    fn on_dlc_rx(&mut self, data: hophop::nrfxlib_mac::DlcDataRx) {
+        if self.dect_to_slip_channel.try_send(data).is_err() {
+            warn!("Dropping packet -- overflow");
+        }
+    }
+
+    fn on_assoc_change(&mut self, assoc: Option<hophop::association::Association>) {
+        info!("Learned about association: {:?}", assoc);
+
+        // FIXME can we signal that over SLIP, or do we rely on the CoAP server to pick it up?
+        if let Some(assoc) = assoc {
+            self.association.set(Some(assoc));
+        } else {
+            self.association.set(None);
+        }
+    }
+
+    fn next_dlc_tx(
+        &mut self,
+    ) -> impl core::future::Future<Output = hophop::runner::DlcTxItem> + use<'a> {
+        self.slip_to_dect_channel.receive()
+    }
+
+    // FIXME duplicate from hophop::embassy_net
+    fn next_config(
+        &mut self,
+    ) -> impl core::future::Future<Output = hophop::association::PtConfiguration<'static>> + use<'a>
+    {
+        // FIXME: This relies on the consumer just querying it once; on the long run, we must be
+        // sure to always return Pending after the first emission, or already forward changing
+        // configurations.
+
+        let static_config = self.static_config.clone();
+
+        async move { static_config }
+    }
+
+    fn next_action(
+        &mut self,
+    ) -> impl core::future::Future<Output = hophop::runner::Poke> + use<'a> {
+        let receiver = self.poke.receiver();
+        async move { receiver.receive().await }
+    }
+}
+
+async fn run_slipmux(
+    mut uart: ariel_os::hal::uart::Uart<'_>,
+    controller: &DirectToSlipmuxController,
+    mut handler: impl coap_handler::Handler,
+) {
+    let mut slipmux = slipmux::SingleBufferHandler::<heapless::Vec<u8, 1501>>::default();
     let mut decoder = slipmux::Decoder::new();
 
     // This is heavily inspired by hophop::embassy_net
+
     loop {
         use embassy_futures::select::{Either, select};
         use slipmux::DecodeStatus;
@@ -141,13 +226,14 @@ async fn main(peripherals: UartPeripherals) {
 
         match select(
             // of all the dect functions, this one fortunately is already cancel safe
-            dect.dlc_data_rx(),
+            controller.dect_to_slip_channel.receive(),
             uart.read(&mut uart_app_buffer),
         )
         .await
         {
             Either::First(from_network) => {
-                let mut encoder = slipmux::ChunkedEncoder::new(slipmux::FrameType::Ip, from_network.data());
+                let mut encoder =
+                    slipmux::ChunkedEncoder::new(slipmux::FrameType::Ip, from_network.data());
                 loop {
                     let mut outbuf = [0; 32];
                     let size = encoder.encode_chunk(&mut outbuf);
@@ -172,69 +258,76 @@ async fn main(peripherals: UartPeripherals) {
                     }
                     Ok(DecodeStatus::FrameCompleteDiagnostic) => {
                         // Use up to the cursor, and silently ignore overflows.
-                        let (Ok(buffer) | Err(buffer)) = slipmux.data();
-                        let text = core::str::from_utf8(buffer);
+                        let (buffer, error) = slipmux.take_diagnostic_and_error();
+                        let text = core::str::from_utf8(&buffer);
                         warn!(
                             "Peer sent diagnostic data. This will no be forwarded; content was {:?}{}",
                             text.map_err(|_| &buffer),
-                            if slipmux.data().is_err() { "..." } else { "" },
+                            if error.is_some() { "..." } else { "" },
                         );
                     }
                     Ok(DecodeStatus::FrameCompleteIp) => {
-                        let Ok(data) = slipmux.data() else {
+                        let (buffer, error) = slipmux.take_ip_and_error();
+                        if error.is_some() {
                             warn!("Frame overflew slipmux buffer, won't relay it.");
                             continue;
                         };
-                        // FIXME count errors
-                        let _ = dect.dlc_data_tx(1, gateway_long, data).await;
+                        // FIXME: do we have the backpressure to block receiving, or should we
+                        // rather drop it here? Or send ECN if so signalled?
+                        if let Some(association) = controller.association.get() {
+                            controller
+                                .slip_to_dect_channel
+                                .send((1, association.parent, buffer))
+                                .await;
+                        } else {
+                            // FIXME counting
+                            warn!("Dropping packet because currently not associated")
+                        }
                     }
                     Ok(DecodeStatus::FrameCompleteConfiguration) => {
-                        warn!("Peer sent CoAP data {}, which is unsupported.", Hex(slipmux.data().unwrap()));
+                        // It'll take a lot for the compiler to see that I'm taking the buffer out
+                        // of there, manipulating it here, and that I don't touch the original
+                        // until anything happens next on slipmux … but it could. (Not trying to
+                        // optimize here until we're all running on Ariel main and xarxa).
+
+                        let (mut buffer, error) = slipmux.take_configuration_and_error();
+                        if error.is_some() {
+                            warn!("Peer sent over-long CoAP data, ignoring it.");
+                            continue;
+                        }
+
+                        let Some(actual_length) = buffer.len().checked_sub(2) else {
+                            warn!("Ignoring overly short CoAP request.");
+                            continue;
+                        };
+                        buffer.truncate(actual_length);
+
+                        use coap_pseudostack::*;
+                        let mut pseudostack = PseudoStack(&mut buffer);
+                        embedded_nal_minimal_coapserver::poll(
+                            &mut pseudostack,
+                            &mut PseudoSocket,
+                            &mut handler,
+                        )
+                        // No `let Ok(()) = `, because there's the unavoidable nb::Error case.
+                        .unwrap();
+
+                        // FIXME duplicated from sending IP packets
+                        let mut encoder = slipmux::ChunkedEncoder::new(
+                            slipmux::FrameType::Configuration,
+                            &buffer,
+                        );
+                        let mut outbuf = [0; 32];
+                        loop {
+                            let size = encoder.encode_chunk(&mut outbuf);
+                            if size == 0 {
+                                break;
+                            }
+                            uart.write_all(&outbuf[..size]).await.unwrap();
+                        }
                     }
                 }
             }
         }
     }
-}
-
-// FIXME: copied unmodified from https://github.com/ariel-os/ariel-os/pull/1613
-
-struct SingleFrameDecoder {
-    // See https://github.com/t2trg/slipmux/issues/1 for expectations on how big this should be
-    buffer: heapless::Vec<u8, 1280>,
-    overflow: bool,
-}
-impl SingleFrameDecoder {
-    /// Returns the decoded data if complete.
-    ///
-    /// # Errors
-    ///
-    /// If the buffer overflew, it returns the initial decoded bytes.
-    fn data(&self) -> Result<&[u8], &[u8]> {
-        if self.overflow {
-            Err(&self.buffer)
-        } else {
-            Ok(&self.buffer)
-        }
-    }
-}
-impl Default for SingleFrameDecoder {
-    fn default() -> Self {
-        SingleFrameDecoder {
-            buffer: Default::default(),
-            overflow: false,
-        }
-    }
-}
-impl slipmux::FrameHandler for SingleFrameDecoder {
-    fn begin_frame(&mut self, _: slipmux::FrameType) {
-        self.buffer.clear();
-        self.overflow = false;
-    }
-    fn write_byte(&mut self, byte: u8) {
-        if self.buffer.push(byte).is_err() {
-            self.overflow = true;
-        }
-    }
-    fn end_frame(&mut self, _: Option<slipmux::Error>) {}
 }

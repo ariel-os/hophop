@@ -582,6 +582,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "coap-message-implementations"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdb7c067717d365997c72f8ed9ae484baff6d4df9f9ea53adb469bceedbd37c4"
+dependencies = [
+ "coap-message",
+ "coap-message-utils",
+ "coap-numbers",
+ "document-features",
+ "heapless 0.9.3",
+ "thiserror",
+]
+
+[[package]]
 name = "coap-message-utils"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1365,6 +1379,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-nal"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c56a28be191a992f28f178ec338a0bf02f63d7803244add736d026a471e6ed77"
+dependencies = [
+ "nb 1.1.0",
+]
+
+[[package]]
+name = "embedded-nal-minimal-coapserver"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93b7e44d01f417eb6c38a8cd14cf2fd929104f58f6db84841d850fa72d78fa78"
+dependencies = [
+ "coap-handler",
+ "coap-message",
+ "coap-message-implementations",
+ "coap-numbers",
+ "embedded-nal",
+ "heapless 0.8.0",
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
 name = "embedded-storage"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1890,6 +1929,7 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
 dependencies = [
+ "defmt",
  "embedded-io 0.7.1",
  "hash32",
  "portable-atomic",
@@ -1937,8 +1977,14 @@ version = "0.0.0"
 dependencies = [
  "ariel-os",
  "ariel-os-boards",
+ "coap-handler",
+ "coap-handler-implementations",
+ "coap-message-utils",
  "embassy-futures",
+ "embassy-sync 0.8.0",
  "embedded-io-async 0.6.1",
+ "embedded-nal",
+ "embedded-nal-minimal-coapserver",
  "heapless 0.9.3",
  "hophop",
  "nrf-modem",
@@ -2369,6 +2415,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3004,8 +3061,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 [[package]]
 name = "slipmux"
 version = "0.4.1"
-source = "git+https://github.com/teufelchen1/slipmux#bed604ac5385c936171155aa4baec0b08aaecda2"
+source = "git+https://github.com/chrysn-pull-requests/slipmux?branch=general-owned-latest-frame#37f9ed548a5b74ad4e83b1f25cc59580ae1b39be"
 dependencies = [
+ "embedded-io 0.7.1",
  "serial-line-ip",
 ]
 
