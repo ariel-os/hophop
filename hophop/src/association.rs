@@ -186,7 +186,15 @@ pub async fn associate<'c>(
             // common channel and then pick one", we'd have to do something in here, but we
             // currently don't do that because it doesn't work with encryption due to
             // <https://devzone.nordicsemi.com/f/nordic-q-a/128223/dect-mac-security-key-by-network>, and we don't expect a lot of unencrypted cases, so we just pre-configure all filters anyway, and can then just return here.
-            r.next().await
+            let picked = r.next().await;
+            if picked.channel == AbsoluteChannel::new(1661).unwrap() {
+                let thrid = r.next().await;
+                let fourth = r.next().await;
+                let more = r.next().await;
+                let more = r.next().await;
+                let more = r.next().await;
+            }
+            picked
         };
 
         let mut channel_list = [0; _];

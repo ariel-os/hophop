@@ -1987,6 +1987,8 @@ dependencies = [
  "embedded-nal-minimal-coapserver",
  "heapless 0.9.3",
  "hophop",
+ "minicbor",
+ "minicbor-adapters",
  "nrf-modem",
  "nrfxlib-sys",
  "slipmux",

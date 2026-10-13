@@ -6,7 +6,7 @@ pub mod error;
 
 mod callbacks;
 mod debug_helpers;
-mod shared_queues;
+pub mod shared_queues;
 
 use nrf_modem::{ErrorSource, nrfxlib_sys};
 
@@ -121,6 +121,12 @@ impl DectMac {
     ///
     /// Scan results are available inside the async closure. If the scan times out, the closure is
     /// dropped. If the closure completes, the scan is stopped before returning from this function.
+    ///
+    /// Note that the nrfxlib APIs' design would indicate that it should be possible to start a
+    /// scan while associated, and libmodem even lets the user do it at runtime (and dutyfully
+    /// refuses a 2nd attempt to scan while a scan is running). However, in that situation, all
+    /// beacons that were observed were from the currently associated channel -- which are notified
+    /// anyway. This was also observed in the dect_shell.
     // &mut is probably not needed. FIXME: ask if C API can be enhanced
     pub async fn mac_network_scan<R>(
         &mut self,

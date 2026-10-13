@@ -268,17 +268,43 @@ unsafe extern "C" fn cluster_beacon_ntf(
     params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
+    let &nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_ntf_cb_params {
+        channel,
+        transmitter_short_rd_id,
+        transmitter_long_rd_id,
+        network_id,
+        rx_signal_info: nrfxlib_sys::nrf_modem_dect_mac_rx_signal_info_t {
+            mcs,
+            transmit_power,
+            rssi_2,
+            snr,
+        },
+        number_of_ies,
+        beacon: nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon {
+            __bindgen_anon_1,
+            system_frame_number,
+            network_beacon_period,
+            cluster_beacon_period,
+            count_to_trigger,
+            relative_quality,
+            min_quality,
+            max_tx_power,
+            frame_offset,
+            next_cluster,
+            time_to_next,
+        },
+        ies,
+    } = unsafe { &*params };
     let (
         Some(channel),
         Some(transmitter_short_rd_id),
         Some(transmitter_long_rd_id),
         Some(network_id),
     ) = (
-        AbsoluteChannel::new(params.channel),
-        ShortRdId::new(params.transmitter_short_rd_id),
-        LongRdId::new(params.transmitter_long_rd_id),
-        NetworkId32::new(params.network_id),
+        AbsoluteChannel::new(channel),
+        ShortRdId::new(transmitter_short_rd_id),
+        LongRdId::new(transmitter_long_rd_id),
+        NetworkId32::new(network_id),
     )
     else {
         warn!("Ignoring beacon NTF with reserved values.");
@@ -295,6 +321,7 @@ unsafe extern "C" fn cluster_beacon_ntf(
             network_id,
         })
         .is_ok()
+        || true
     {
         // Abusing the fill level of BEACON_EVENTS for sensible debugging: If someone is
         // listening, we're in scanning mode, and it makes sense to debug. Otherwise, we're in
@@ -304,14 +331,19 @@ unsafe extern "C" fn cluster_beacon_ntf(
         // (We spill some when we fill up the queue, but that's fine).
 
         info!(
-            "Got cluster beacon! Channel {}, TX short {}, TX long {}, network {}, {} IEs",
+            "Got cluster beacon! Channel {}, TX short {}, TX long {}, network {}, rx signal MCS={}/tx_pow={}/rssi2={}/snr={}, SFN {}, {} IEs",
             channel,
             transmitter_short_rd_id,
             transmitter_long_rd_id,
             network_id,
-            params.number_of_ies
+            mcs,
+            transmit_power,
+            rssi_2,
+            snr,
+            system_frame_number,
+            number_of_ies
         );
-        debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
+        debug_ies(unsafe { core::slice::from_raw_parts(ies, number_of_ies as _) });
     }
 }
 unsafe extern "C" fn cluster_beacon_rx_failure_ntf(

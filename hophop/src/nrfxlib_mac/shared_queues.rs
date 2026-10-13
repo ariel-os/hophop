@@ -22,7 +22,7 @@ use embassy_sync::channel::Channel;
 /// Length is 2 to allow use for scan and scan_stop: If a scan is stopped before time, confirmation
 /// of the end of scan and of the stop command will both arrive. They will be indistinguishable,
 /// and that doesn't matter.
-pub(crate) static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, Result<(), MacError>, 2> =
+pub static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, Result<(), MacError>, 2> =
     Channel::new();
 
 /// Events during a scan (maybe also during associated operation).

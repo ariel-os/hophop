@@ -74,6 +74,7 @@ async fn main(peripherals: UartPeripherals) {
         .at(&["hello"], SimpleRendered("Hello from hophop"))
         // FIXME generalize so it works here as well
         .below(&["d"], control_hub.coap_server())
+        .below(&["x"], direct_dect_action())
         // FIXME: This, as well as security, would be handled better by the Ariel OS CoAP server,
         // but right now we're sidestepping that; see laze-project.yml comment
         .with_wkc();
@@ -330,4 +331,60 @@ async fn run_slipmux(
             }
         }
     }
+}
+
+/// A terrible hack because it reacts to GET to actually make something happen (because Jelly only
+/// does that easily), and because it reaches far deeper into nrfxlib_sys than anything high-level
+/// should -- but it's for exploration.
+pub fn direct_dect_action() -> impl coap_handler::Handler + coap_handler::Reporting {
+    use coap_handler_implementations::*;
+    use coap_message_utils::Error;
+
+    struct Action;
+
+    impl GetRenderable for Action {
+        type Get = i32;
+
+        fn get(&mut self) -> Result<Self::Get, Error> {
+            let params = &mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
+                band: 0, // would then be nrfxlib_sys::nrf_modem_dect_mac_band_NRF_MODEM_DECT_MAC_PHY_BAND1,
+                num_channels: 1,
+                channel_list: [1659; _],
+                scan_time: 1000,
+                network_id_filter_mode: nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_NONE,
+                network_id_filter: 0,
+            };
+            // No ErrorSource::into_result b/c that wouldn't minicbor-encode well
+            Ok(unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan(params) })
+        }
+    }
+
+    struct PollSingle;
+
+    #[derive(minicbor::Encode)]
+    #[cbor(transparent)]
+    struct Wrapped(#[cbor(with = "minicbor_adapters")] heapless::String<32>);
+
+    impl GetRenderable for PollSingle {
+        type Get = Wrapped;
+
+        fn get(&mut self) -> Result<Self::Get, Error> {
+            use core::fmt::Write;
+            let mut s = heapless::String::new();
+            write!(
+                s,
+                "{:?}",
+                hophop::nrfxlib_mac::shared_queues::SINGLETON_EVENTS.try_receive()
+            );
+            Ok(Wrapped(s))
+        }
+    }
+
+    new_dispatcher()
+        .at_with_attributes(&["do"], &[], TypeHandler::new_minicbor_2(with_get(Action)))
+        .at_with_attributes(
+            &["poll"],
+            &[],
+            TypeHandler::new_minicbor_2(with_get(PollSingle)),
+        )
 }
