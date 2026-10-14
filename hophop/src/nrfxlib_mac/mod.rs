@@ -69,12 +69,27 @@ impl DectMac {
         Self(())
     }
 
+    /// Waits for an event on the SINGLETON channel, and reports its success.
+    ///
+    /// As by the singleton channel's design, this discards information of *which* process
+    /// terminated, the idea being that the caller knows what's pending anyway.
+    ///
+    /// # Future availability
+    ///
+    /// This is made `pub` while there is ongoing work in which some users sidestep some `DectMac`
+    /// abstractions; its pub-ness might be removed when not needed any more.
+    #[inline]
+    pub async fn receive_singleton_event(&mut self) -> Result<(), MacError> {
+        // Not micro-optimizing into non-async -> impl Future -- for readability, and because this
+        // is about to be fixed in https://github.com/rust-lang/goals/issues/623
+        SINGLETON_EVENTS.receive().await
+    }
+
     pub async fn systemmode_set_mac(&mut self) {
         unsafe { dect_control::systemmode_set(dect_control::systemmode_values::MAC) }
             .into_result()
             .expect("Failed to set system mode");
-        SINGLETON_EVENTS
-            .receive()
+        self.receive_singleton_event()
             .await
             .expect("Failed to set system mode");
     }
@@ -84,8 +99,7 @@ impl DectMac {
         unsafe { dect_control::configure(params) }
             .into_result()
             .expect("Failed to set configuration params");
-        SINGLETON_EVENTS
-            .receive()
+        self.receive_singleton_event()
             .await
             .expect("Failed to set configuration params");
     }
@@ -94,8 +108,7 @@ impl DectMac {
         unsafe { dect_control::functional_mode_set(mode) }
             .into_result()
             .expect("Failed to set functional mode");
-        SINGLETON_EVENTS
-            .receive()
+        self.receive_singleton_event()
             .await
             .expect("Failed to set functional mode");
     }
@@ -127,7 +140,7 @@ impl DectMac {
         use embassy_futures::select::{Either::*, select};
 
         match select(
-            SINGLETON_EVENTS.receive(),
+            self.receive_singleton_event(),
             callback(ScanReceiver(Default::default())),
         )
         .await
@@ -142,8 +155,8 @@ impl DectMac {
                     .expect("Failed to stop the scan");
 
                 // One of those is the First that never happened / was cancelled.
-                let _ = SINGLETON_EVENTS.receive().await;
-                let _ = SINGLETON_EVENTS.receive().await;
+                let _ = self.receive_singleton_event().await;
+                let _ = self.receive_singleton_event().await;
 
                 // FIXME: cancel and await two end events
                 Some(r)
@@ -217,7 +230,7 @@ impl DectMac {
         .into_result()
         .expect("Failed to start association attempt");
 
-        SINGLETON_EVENTS.receive().await?;
+        self.receive_singleton_event().await?;
 
         Ok(RELEASE_EVENTS.receive())
     }
@@ -247,7 +260,7 @@ impl DectMac {
         .into_result()
         // FIXME: Can this fail just because the slice is bad?
         .expect("Failed to start TX attempt");
-        SINGLETON_EVENTS.receive().await
+        self.receive_singleton_event().await
     }
 
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
