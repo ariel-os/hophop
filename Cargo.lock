@@ -630,6 +630,7 @@ dependencies = [
  "minicbor",
  "nrf-modem",
  "nrfxlib-sys",
+ "nrfxlib-sys-pretty",
  "static_cell",
  "ts-103-636-numbers",
  "ts-103-636-utils",
