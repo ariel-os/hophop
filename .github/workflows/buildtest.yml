@@ -19,6 +19,9 @@ jobs:
         with:
           components: rustfmt, clippy, llvm-tools
 
+      - name: Add nightly Rust for nrfxlib-sys-pretty
+        run: rustup toolchain add nightly
+
       - name: Install laze and other tools
         uses: taiki-e/install-action@v2
         with:
