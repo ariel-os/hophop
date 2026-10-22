@@ -4,5 +4,5 @@
 set -ex
 
 # hophop can't be built on host architectures
-cargo test --workspace --exclude hophop
-cargo test --workspace --all-features --exclude hophop
+cargo test --workspace --exclude hophop --exclude nrfxlib-sys-pretty
+cargo test --workspace --all-features --exclude hophop --exclude nrfxlib-sys-pretty

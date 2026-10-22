@@ -8,7 +8,8 @@ mod callbacks;
 mod debug_helpers;
 mod shared_queues;
 
-use nrf_modem::{ErrorSource, nrfxlib_sys};
+use nrf_modem::ErrorSource;
+use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
 
@@ -59,26 +60,19 @@ impl DectMac {
     /// which steps this combines.
     pub fn create(_modem_is_set_up: ()) -> Self {
         // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
-        unsafe {
-            nrfxlib_sys::nrf_modem_dect_mac_callback_set(
-                &callbacks::OP_CALLBACKS,
-                &callbacks::MAC_NTF_CALLBACKS,
-            )
-        }
-        .into_result()
-        .expect("Unsuccessful operation would mean we passed NULL or had a None in the callbacks.");
+        unsafe { dect_mac::callback_set(&callbacks::OP_CALLBACKS, &callbacks::MAC_NTF_CALLBACKS) }
+            .into_result()
+            .expect(
+                "Unsuccessful operation would mean we passed NULL or had a None in the callbacks.",
+            );
 
         Self(())
     }
 
     pub async fn systemmode_set_mac(&mut self) {
-        unsafe {
-            nrfxlib_sys::nrf_modem_dect_control_systemmode_set(
-                nrfxlib_sys::nrf_modem_dect_control_systemmode_NRF_MODEM_DECT_MODE_MAC,
-            )
-        }
-        .into_result()
-        .expect("Failed to set system mode");
+        unsafe { dect_control::systemmode_set(dect_control::systemmode_values::MAC) }
+            .into_result()
+            .expect("Failed to set system mode");
         SINGLETON_EVENTS
             .receive()
             .await
@@ -86,11 +80,8 @@ impl DectMac {
     }
 
     // &mut is probably not needed. FIXME: ask if C API can be enhanced
-    pub async fn control_configure(
-        &mut self,
-        params: &mut nrfxlib_sys::nrf_modem_dect_control_configure_params,
-    ) {
-        unsafe { nrfxlib_sys::nrf_modem_dect_control_configure(params) }
+    pub async fn control_configure(&mut self, params: &mut dect_control::configure_params) {
+        unsafe { dect_control::configure(params) }
             .into_result()
             .expect("Failed to set configuration params");
         SINGLETON_EVENTS
@@ -100,7 +91,7 @@ impl DectMac {
     }
 
     async fn control_functional_mode_set(&mut self, mode: u8) {
-        unsafe { nrfxlib_sys::nrf_modem_dect_control_functional_mode_set(mode) }
+        unsafe { dect_control::functional_mode_set(mode) }
             .into_result()
             .expect("Failed to set functional mode");
         SINGLETON_EVENTS
@@ -110,11 +101,13 @@ impl DectMac {
     }
 
     pub async fn control_functional_mode_set_deactivate(&mut self) {
-        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_DEACTIVATE).await
+        self.control_functional_mode_set(dect_control::functional_mode_values::DEACTIVATE)
+            .await
     }
 
     pub async fn control_functional_mode_set_activate(&mut self) {
-        self.control_functional_mode_set(nrfxlib_sys::nrf_modem_dect_control_functional_mode_NRF_MODEM_DECT_CONTROL_FUNCTIONAL_MODE_ACTIVATE).await
+        self.control_functional_mode_set(dect_control::functional_mode_values::ACTIVATE)
+            .await
     }
 
     /// Starts a network scan.
@@ -124,10 +117,10 @@ impl DectMac {
     // &mut is probably not needed. FIXME: ask if C API can be enhanced
     pub async fn mac_network_scan<R>(
         &mut self,
-        params: &mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params,
+        params: &mut dect_mac::network_scan_params,
         callback: impl AsyncFnOnce(ScanReceiver<'_>) -> R,
     ) -> Option<R> {
-        unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan(params) }
+        unsafe { dect_mac::network_scan(params) }
             .into_result()
             .expect("Failed to start the scan");
 
@@ -144,7 +137,7 @@ impl DectMac {
                 None
             }
             Second(r) => {
-                unsafe { nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop() }
+                unsafe { dect_mac::network_scan_stop() }
                     .into_result()
                     .expect("Failed to stop the scan");
 
@@ -175,55 +168,51 @@ impl DectMac {
         network_id: NetworkId32,
     ) -> Result<impl core::future::Future<Output = AssociationEndEvent> + use<>, MacError> {
         let mut tx_flow_configs = [
-            nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+            dect_mac::tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
                 priority: 4,
-                dlc_service_type:
-                    nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
-                dlc_sdu_lifetime:
-                    nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
             },
-            nrfxlib_sys::nrf_modem_dect_mac_tx_flow_config {
+            dect_mac::tx_flow_config {
                 //flow_id: 0b11, // Table 6.3.4-2: IE type field encoding for MAC Extension field encoding 00, 01, 10 -- do they really want this for "User Data Plane -- flow 1"?
                 flow_id: 1, // "Higher layer signalling - flow 1"
                 priority: 0,
                 dlc_service_type:
-                    nrfxlib_sys::nrf_modem_dect_dlc_service_type_NRF_MODEM_DECT_DLC_SERVICE_TYPE_3,
+                    dect_dlc::service_type_values::_3,
                 dlc_sdu_lifetime:
                     // picking something long, I think right now we can only TX right after a beacon
-                    nrfxlib_sys::nrf_modem_dect_dlc_sdu_lifetime_NRF_MODEM_DECT_DLC_SDU_LIFETIME_8_S,
+                    dect_dlc::sdu_lifetime_values::_8_S,
             },
         ];
         unsafe {
-            nrfxlib_sys::nrf_modem_dect_mac_association(
-                &mut nrfxlib_sys::nrf_modem_dect_mac_association_params {
-                    // FIXME where do we use the channel information? Did the MAC remember? (Probably:
-                    // After all, it's not just channel but the whole info stuff from the beacon).
-                    long_rd_id: long_rd_id.into(),
-                    network_id: network_id.into(),
-                    info_triggers: nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers {
-                        // This value is practically undocumented, but the dect_shell UI has notes
-                        // on it:
-                        //
-                        // "Set maximum number of consecutive missed cluster beacons. Note: set to
-                        // modem when creating association and has impact when FT device is
-                        // considered as out of range or FT is turned off, resulting the automatic
-                        // disassociation of the FT device. Value 0 means that no limit and no
-                        // automatic disassociation is done."
-                        //
-                        // Observation is that no release event happens beyond the
-                        // cluster_beacon_rx_failure_ntf, so it stands to reason that that event is
-                        // to be treated just like a release event. (They do, however, get sent
-                        // repreatedly).
-                        num_beacon_rx_failures: 3,
-                    },
-                    num_flows: tx_flow_configs
-                        .len()
-                        .try_into()
-                        .expect("Absurd number of configs"),
-                    tx_flow_configs: &mut tx_flow_configs as _,
+            dect_mac::association(&mut dect_mac::association_params {
+                // FIXME where do we use the channel information? Did the MAC remember? (Probably:
+                // After all, it's not just channel but the whole info stuff from the beacon).
+                long_rd_id: long_rd_id.into(),
+                network_id: network_id.into(),
+                info_triggers: dect_mac::parent_info_triggers {
+                    // This value is practically undocumented, but the dect_shell UI has notes
+                    // on it:
+                    //
+                    // "Set maximum number of consecutive missed cluster beacons. Note: set to
+                    // modem when creating association and has impact when FT device is
+                    // considered as out of range or FT is turned off, resulting the automatic
+                    // disassociation of the FT device. Value 0 means that no limit and no
+                    // automatic disassociation is done."
+                    //
+                    // Observation is that no release event happens beyond the
+                    // cluster_beacon_rx_failure_ntf, so it stands to reason that that event is
+                    // to be treated just like a release event. (They do, however, get sent
+                    // repreatedly).
+                    num_beacon_rx_failures: 3,
                 },
-            )
+                num_flows: tx_flow_configs
+                    .len()
+                    .try_into()
+                    .expect("Absurd number of configs"),
+                tx_flow_configs: &mut tx_flow_configs as _,
+            })
         }
         .into_result()
         .expect("Failed to start association attempt");
@@ -244,18 +233,16 @@ impl DectMac {
         data: &[u8],
     ) -> Result<(), MacError> {
         unsafe {
-            nrfxlib_sys::nrf_modem_dect_dlc_data_tx(
-                &mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_params {
-                    // FIXME use when managing those; right now any value is good
-                    transaction_id: 0,
-                    flow_id,
-                    // send to our neighbor
-                    long_rd_id: destination.into(),
-                    // FIXME: verify that the C API really doesn't want to write there
-                    data: data as *const _ as *mut _,
-                    data_len: data.len(),
-                },
-            )
+            dect_dlc::data_tx(&mut dect_dlc::data_tx_params {
+                // FIXME use when managing those; right now any value is good
+                transaction_id: 0,
+                flow_id,
+                // send to our neighbor
+                long_rd_id: destination.into(),
+                // FIXME: verify that the C API really doesn't want to write there
+                data: data as *const _ as *mut _,
+                data_len: data.len(),
+            })
         }
         .into_result()
         // FIXME: Can this fail just because the slice is bad?

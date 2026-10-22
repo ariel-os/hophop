@@ -36,6 +36,7 @@ embassy-net-driver = "0.2.0"
 # dependency here any more. (Then we can also properly introduce features for
 # this rather than just always pulling in everything).
 nrfxlib-sys = { version = "*", features = ["dect-mac"] }
+nrfxlib-sys-pretty.path = "../nrfxlib-sys-pretty/"
 
 # FIXME: Could eventually be conditional, but right now adding features just
 # makes this hard to check.

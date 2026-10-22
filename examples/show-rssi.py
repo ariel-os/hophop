@@ -20,7 +20,7 @@ received_messages = defaultdict(lambda: ([], []))
 abs_min = 0
 abs_max = -128
 
-rotate = False
+rotate = True
 TICKS_PER_FRAME = 691200
 
 escapes = re.compile("\x1b\\[(.*?)m")
