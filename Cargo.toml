@@ -4,7 +4,8 @@
 [workspace]
 resolver = "3"
 members = [
-    "hophop", "nrfxlib-sys-pretty",
+    "hophop",
+    "nrfxlib-sys-pretty",
     "ts-103-636-numbers",
     "ts-103-636-utils",
 ]
