@@ -1,0 +1,198 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// could also use HashMap, but stable sorting is nice in all use cases
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
+use std::io::Write as _;
+
+fn main() {
+    let json_path = rustdoc_json::Builder::default()
+        // No point: For reasons I didn't track down, this already needs to be set on the outer
+        // process anyway.
+        // .toolchain("nightly")
+        .manifest_path("Cargo.toml")
+        // Features are already set in this Cargo.toml.
+        .package("nrfxlib-sys")
+        // Running cargo while running cargo will otherwise get us into a deadlock situation.
+        .target_dir("target-inner")
+        .build()
+        .unwrap();
+
+    #[derive(serde::Deserialize)]
+    struct Root {
+        index: BTreeMap<String, Symbol>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Symbol {
+        name: Option<String>,
+        inner: Inner,
+        docs: Option<String>,
+    }
+    #[derive(serde::Deserialize)]
+    enum Inner {
+        #[serde(rename = "type_alias")]
+        TypeAlias {},
+        #[serde(rename = "constant")]
+        Constant {},
+        #[serde(untagged)]
+        Other {},
+    }
+
+    // Sort by descending length so that most specific always matches first.
+    //
+    // This only has the lower-case variants.
+    let prefixes = [
+        "nrf_modem_dect_phy",
+        "nrf_modem_dect_mac",
+        "nrf_modem_dect_dlc",
+        "nrf_modem_dect_clock",
+        "nrf_modem_dect_control",
+        // Left in there mostly so that we see items that are not filed anywhere else
+        "nrf_modem_dect",
+    ];
+    // Prefixes that don't follow the simple pattern of all variants having the type name as a
+    // prefix.
+    //
+    // No strong need for String other than that .get() acts up when looking up short-lived strings
+    #[rustfmt::skip]
+    let enum_prefixes: BTreeMap<String, &'static str> = [
+        ("nrf_modem_dect_clock_sync_pulse_direction", "NRF_MODEM_DECT_CLOCK_SYNC_PULSE_"),
+        ("nrf_modem_dect_control_systemmode", "NRF_MODEM_DECT_MODE_"),
+        ("nrf_modem_dect_phy_err", "NRF_MODEM_DECT_PHY_"),
+        ("nrf_modem_dect_phy_event_id", "NRF_MODEM_DECT_PHY_EVT_"),
+        ("nrf_modem_dect_clock_sync_err", "NRF_MODEM_DECT_CLOCK_SYNC_"),
+        ("nrf_modem_dect_clock_sync_event_id", "NRF_MODEM_DECT_CLOCK_SYNC_EVT_"),
+        ("nrf_modem_dect_mac_err", "NRF_MODEM_DECT_MAC_STATUS_"),
+        ("nrf_modem_dect_mac_band", "NRF_MODEM_DECT_MAC_"),
+        ("nrf_modem_dect_mac_band_group_index", "NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_"),
+        ("nrf_modem_dect_mac_release_cause", "NRF_MODEM_DECT_MAC_RELEASE_CAUSE_"),
+        ("nrf_modem_dect_dlc_flow_control_status", "NRF_MODEM_DECT_DLC_FLOW_CTRL_STATUS_"),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_owned(), v))
+    .collect();
+
+    let mut groupstrings: BTreeMap<_, _> = prefixes.iter().map(|p| (p, String::new())).collect();
+
+    // Being a type alias is a strong indication that this is actually enum shaped, and we'll
+    // collect all things that use this prefix here so we can link them.
+    let mut constant_prefix_is_type_alias: BTreeMap<_, _> = Default::default();
+
+    let name_and_prefix = |item: &Symbol| {
+        let name = item.name.clone()?;
+        let prefix = prefixes.iter().find(|p| name.starts_with(*p))?;
+        Some((name, prefix))
+    };
+
+    let root: Root = serde_json::from_reader(std::fs::File::open(json_path).unwrap()).unwrap();
+
+    // First pass: extract things we later compare to
+    for item in root.index.values() {
+        let Some(ref name) = item.name else {
+            continue;
+        };
+        if matches!(item.inner, Inner::TypeAlias { .. }) {
+            constant_prefix_is_type_alias.insert(name, BTreeSet::<String>::new());
+        }
+    }
+    assert!(!constant_prefix_is_type_alias.is_empty());
+    // Second pass: compare items to things found in the first pass
+    for item in root.index.values() {
+        let Some((name, _prefix)) = name_and_prefix(item) else {
+            continue;
+        };
+        // Conditions are rather strict: it starts this way, continues with a capital letter
+        // (otherwise nrf_modem_dect_mac_band_group_index_NRF… gets slotted in with
+        // nrf_modem_dect_mac_band), and for good measure we only pick constants
+        // (nrf_modem_dect_mac_band_set would be ruled out by the uppercase rule as well though)
+        // FIXME duplicate condition
+        if let Some((_, variants)) =
+            constant_prefix_is_type_alias
+                .iter_mut()
+                .find(|(alias, _variants)| {
+                    name.starts_with(**alias)
+                        && name
+                            .get(alias.len() + 1..)
+                            .is_some_and(|rest| rest.chars().next().unwrap().is_uppercase())
+                        && matches!(item.inner, Inner::Constant {})
+                })
+        {
+            variants.insert(name);
+        };
+    }
+    // Third pass: output
+    for item in root.index.values() {
+        let Some((name, prefix)) = name_and_prefix(item) else {
+            continue;
+        };
+        let stripped = &name.strip_prefix(prefix).unwrap()[1..];
+        let groupstring = groupstrings.get_mut(prefix).unwrap();
+        // FIXME duplicated condition (because we didn't pop them before)
+        if let Some((_, _)) = constant_prefix_is_type_alias
+            .iter_mut()
+            .find(|(alias, _variants)| {
+                name.starts_with(**alias)
+                    && name
+                        .get(alias.len() + 1..)
+                        .is_some_and(|rest| rest.chars().next().unwrap().is_uppercase())
+                    && matches!(item.inner, Inner::Constant {})
+            })
+        {
+            // FIXME: Should we not document this at all, or just move it into a module?
+            continue;
+        };
+        if let Some(variants) = constant_prefix_is_type_alias.get(&name) {
+            writeln!(groupstring, "/// Possible values for [`{stripped}`]").unwrap();
+            writeln!(groupstring, "pub mod {stripped}_values {{").unwrap();
+            for v in variants {
+                // First remove the prefix; that is easy because that comes from bindgen.
+                let mut v_prestripped = &v.strip_prefix(&name).unwrap()[1..];
+                if v_prestripped == "DECT_MAC_RELEASE_CAUSE_RACH_RESOURCE_FAILURE" {
+                    // A singular bug, I'd guess.
+                    v_prestripped = "NRF_MODEM_DECT_MAC_RELEASE_CAUSE_RACH_RESOURCE_FAILURE";
+                }
+                // Prefixes are often not systematic, picking them from the list
+                let expected_prefix = enum_prefixes
+                    .get(&name)
+                    .map(|n| String::from(*n))
+                    .unwrap_or_else(|| format!("{}_", name.to_ascii_uppercase()));
+                let v_stripped = v_prestripped
+                    .strip_prefix(&expected_prefix)
+                    .ok_or_else(|| format!("enum_prefixes prefix stripping failed for {v_prestripped}: tried to strip {expected_prefix} matching the rule for {name}"))
+                    .unwrap();
+                let v_stripped = if v_stripped.chars().next().unwrap().is_digit(10) {
+                    format!("_{v_stripped}")
+                } else {
+                    v_stripped.into()
+                };
+                writeln!(groupstring, "pub use nrfxlib_sys::{v} as {v_stripped};").unwrap();
+            }
+            writeln!(groupstring, "}}").unwrap();
+            if let Some(docs) = &item.docs {
+                // Repeating original docs so they are visible as the 1st-line summary
+                writeln!(groupstring, "#[doc = r####\"{docs}\"####]").unwrap();
+                writeln!(groupstring, "///").unwrap();
+            }
+            writeln!(groupstring, "/// See [`{stripped}_values`] for variants.").unwrap();
+            if let Some(_docs) = &item.docs {
+                // But we can't go full doc(no_inline), for then we wouldn't get documentation at
+                // all.
+                writeln!(groupstring, "///").unwrap();
+                writeln!(groupstring, "/// Full original documentation:").unwrap();
+                writeln!(groupstring, "///").unwrap();
+            }
+        };
+        writeln!(groupstring, "#[doc(alias = \"{name}\")]").unwrap();
+        writeln!(groupstring, "pub use nrfxlib_sys::{name} as {stripped};").unwrap();
+    }
+
+    let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    let mut outfile =
+        std::fs::File::create(std::path::Path::new(&out_dir).join("grouped.rs")).unwrap();
+    for (prefix, code) in groupstrings {
+        let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
+        writeln!(outfile, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();
+    }
+    //panic!("{:#?}", constant_prefix_is_type_alias);
+}
