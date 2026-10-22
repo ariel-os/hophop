@@ -21,6 +21,7 @@
 //!   * FIXME: It splits event and notify things and links them
 //!
 //! * FIXME: It gathers manually added comments where nrfxlib documentation is lacking.
+#![no_std]
 #![allow(clippy::needless_raw_string_hashes, reason = "simplifies inlining")]
 
 include!(concat!(env!("OUT_DIR"), "/grouped.rs"));
