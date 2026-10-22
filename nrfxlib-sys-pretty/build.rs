@@ -7,7 +7,9 @@ use std::fmt::Write as _;
 use std::io::Write as _;
 
 fn main() {
-    let json_path = rustdoc_json::Builder::default()
+    let persisted_json = std::path::Path::new(&"nrfxlib.json");
+
+    match rustdoc_json::Builder::default()
         // No point: For reasons I didn't track down, this already needs to be set on the outer
         // process anyway.
         // .toolchain("nightly")
@@ -17,7 +19,29 @@ fn main() {
         // Running cargo while running cargo will otherwise get us into a deadlock situation.
         .target_dir("target-inner")
         .build()
-        .unwrap();
+    {
+        Ok(generated_json) => {
+            if std::env::var("REBUILD_NRFXLIB_JSON").is_ok_and(|v| v == "1") {
+                std::fs::copy(generated_json, persisted_json).unwrap();
+            } else {
+                if std::fs::read(&generated_json).unwrap() != std::fs::read(persisted_json).unwrap()
+                {
+                    panic!(
+                        "rustdoc output changed between {} and {}; run with REBUILD_NRFXLIB_JSON=1 to rebuild.",
+                        generated_json.display(),
+                        persisted_json.display()
+                    );
+                }
+            }
+        }
+        e @ Err(_) => {
+            if std::env::var("CI").is_ok() || std::env::var("CHECK_NRFXLIB_JSON").is_ok() {
+                e.unwrap();
+            } else {
+                eprintln!("No nightly toolchain available, trusting generated nrfxlib-json.");
+            }
+        }
+    }
 
     #[derive(serde::Deserialize)]
     struct Root {
@@ -85,7 +109,7 @@ fn main() {
         Some((name, prefix))
     };
 
-    let root: Root = serde_json::from_reader(std::fs::File::open(json_path).unwrap()).unwrap();
+    let root: Root = serde_json::from_reader(std::fs::File::open(persisted_json).unwrap()).unwrap();
 
     // First pass: extract things we later compare to
     for item in root.index.values() {
