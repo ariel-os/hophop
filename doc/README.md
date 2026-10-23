@@ -21,5 +21,6 @@ hophop: Documentation index
 
 * More short-lived or obsolete documents:
 
+  - [Setup for workshop and demo sessions](demo-raspi-setup.md)
   - [Choices for how to interact with the nRF modem](options.md)
   - [Weird things one should be aware when working with the hardware](peculiarities.md)
