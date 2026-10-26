@@ -24,7 +24,9 @@
 #![no_std]
 #![allow(clippy::needless_raw_string_hashes, reason = "simplifies inlining")]
 
-include!(concat!(env!("OUT_DIR"), "/grouped.rs"));
+#[rustfmt::skip]
+mod built;
+pub use built::*;
 
 // Or should we make things searchable this way:
 

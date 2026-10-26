@@ -4,7 +4,6 @@
 // could also use HashMap, but stable sorting is nice in all use cases
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
-use std::io::Write as _;
 
 #[derive(serde::Deserialize)]
 struct Root {
@@ -226,11 +225,13 @@ fn main() {
         writeln!(groupstring, "pub use nrfxlib_sys::{name} as {stripped};").unwrap();
     }
 
-    let out_dir = std::env::var_os("OUT_DIR").unwrap();
-    let mut outfile =
-        std::fs::File::create(std::path::Path::new(&out_dir).join("grouped.rs")).unwrap();
+    let mut generated = String::new();
     for (prefix, code) in groupstrings {
         let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
-        writeln!(outfile, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();
+        writeln!(generated, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();
     }
+
+    let built_file = "src/built.rs";
+
+    std::fs::write(built_file, generated).unwrap();
 }
