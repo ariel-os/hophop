@@ -1,0 +1,13 @@
+[package]
+name = "nrfxlib-sys-pretty-gen"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+rustdoc-json = "0.9.10"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

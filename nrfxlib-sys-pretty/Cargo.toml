@@ -12,8 +12,3 @@ categories.workspace = true
 
 [dependencies]
 nrfxlib-sys = { version = "4.0.0", features = ["nrf9151"] }
-
-[build-dependencies]
-rustdoc-json = "0.9.10"
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.154"

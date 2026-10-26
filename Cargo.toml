@@ -6,6 +6,7 @@ resolver = "3"
 members = [
     "hophop",
     "nrfxlib-sys-pretty",
+    "nrfxlib-sys-pretty/nrfxlib-sys-pretty-gen",
     "ts-103-636-numbers",
     "ts-103-636-utils",
 ]

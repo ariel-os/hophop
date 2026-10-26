@@ -209,7 +209,7 @@ fn main() {
         writeln!(generated, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();
     }
 
-    let built_file = "src/built.rs";
+    let built_file = "../src/built.rs";
 
     std::fs::write(built_file, generated).unwrap();
 }
