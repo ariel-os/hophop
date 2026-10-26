@@ -32,8 +32,8 @@ enum Inner {
 fn build_json() -> std::path::PathBuf {
     rustdoc_json::Builder::default()
         .toolchain("nightly")
-        .manifest_path("Cargo.toml")
-        // Features are already set in this Cargo.toml.
+        .manifest_path("../Cargo.toml")
+        // Features are already set in that Cargo.toml.
         .package("nrfxlib-sys")
         .build()
         .unwrap()
