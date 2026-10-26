@@ -90,7 +90,13 @@ fn main() {
 
     // Being a type alias is a strong indication that this is actually enum shaped, and we'll
     // collect all things that use this prefix here so we can link them.
+    //
+    // Maps all names of type aliases to (later populated) lists of items that are constants of
+    // that type and are prefixed with the alias name.
     let mut constant_prefix_is_type_alias = BTreeMap::default();
+    // All names that are not documented in top-level (well, grouped) because they are documented
+    // somewhere further in.
+    let mut not_toplevel = BTreeSet::default();
 
     let root: Root = serde_json::from_reader(std::fs::File::open(json).unwrap()).unwrap();
 
@@ -113,7 +119,6 @@ fn main() {
         // (otherwise nrf_modem_dect_mac_band_group_index_NRF… gets slotted in with
         // nrf_modem_dect_mac_band), and for good measure we only pick constants
         // (nrf_modem_dect_mac_band_set would be ruled out by the uppercase rule as well though)
-        // FIXME duplicate condition
         if let Some((_, variants)) =
             constant_prefix_is_type_alias
                 .iter_mut()
@@ -125,7 +130,8 @@ fn main() {
                         && matches!(item.inner, Inner::Constant {})
                 })
         {
-            variants.insert(name);
+            variants.insert(name.clone());
+            not_toplevel.insert(name);
         }
     }
     // Third pass: output
@@ -133,22 +139,11 @@ fn main() {
         let Some((name, prefix)) = name_and_prefix(item) else {
             continue;
         };
-        let stripped = &name.strip_prefix(prefix).unwrap()[1..];
-        let groupstring = groupstrings.get_mut(&prefix).unwrap();
-        // FIXME duplicated condition (because we didn't pop them before)
-        if let Some((_, _)) = constant_prefix_is_type_alias
-            .iter_mut()
-            .find(|(alias, _variants)| {
-                name.starts_with(**alias)
-                    && name
-                        .get(alias.len() + 1..)
-                        .is_some_and(|rest| rest.chars().next().unwrap().is_uppercase())
-                    && matches!(item.inner, Inner::Constant {})
-            })
-        {
-            // FIXME: Should we not document this at all, or just move it into a module?
+        if not_toplevel.contains(&name) {
             continue;
         }
+        let stripped = &name.strip_prefix(prefix).unwrap()[1..];
+        let groupstring = groupstrings.get_mut(&prefix).unwrap();
         if let Some(variants) = constant_prefix_is_type_alias.get(&name) {
             writeln!(groupstring, "/// Possible values for [`{stripped}`]").unwrap();
             writeln!(groupstring, "pub mod {stripped}_values {{").unwrap();
