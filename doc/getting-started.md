@@ -49,7 +49,7 @@ Examples to run
   - To see what is actually happening on the radio, you can run the RX [example].
     Note that this only sees little useful data;
     turn MAC layer encryption off in the DECT shell and in the examples' `main.rs` files to see more.
-    (Replace `mode: nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_1` with `…_SECURITY_MODE_NONE` in the hophop source, and reconfigure FT in the DECT shell).
+    (Replace `dect_mac::security_mode_values::_1,` with `…::NONE` in the hophop source or its callers, and reconfigure FT in the DECT shell).
 
 * The `rssi` example contains tools to visualize how much traffic there is in the DECT spectrum.
 
