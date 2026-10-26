@@ -79,6 +79,8 @@ const ENUM_PREFIXES: &[(&str, &str)] = &[
 fn main() {
     let json = build_json();
 
+    println!("Intermediate JSON artifact built at {}", json.display());
+
     // No strong need for String other than that .get() acts up when looking up short-lived strings
     let enum_prefixes: BTreeMap<String, &'static str> = ENUM_PREFIXES
         .iter()
