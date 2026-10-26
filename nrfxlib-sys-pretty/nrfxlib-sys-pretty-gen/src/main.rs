@@ -31,14 +31,10 @@ enum Inner {
 /// Returns a path of a usable JSON file.
 fn build_json() -> std::path::PathBuf {
     rustdoc_json::Builder::default()
-        // No point: For reasons I didn't track down, this already needs to be set on the outer
-        // process anyway.
-        // .toolchain("nightly")
+        .toolchain("nightly")
         .manifest_path("Cargo.toml")
         // Features are already set in this Cargo.toml.
         .package("nrfxlib-sys")
-        // Running cargo while running cargo will otherwise get us into a deadlock situation.
-        .target_dir("target-inner")
         .build()
         .unwrap()
 }
@@ -79,6 +75,7 @@ const ENUM_PREFIXES: &[(&str, &str)] = &[
     ("nrf_modem_dect_dlc_flow_control_status", "NRF_MODEM_DECT_DLC_FLOW_CTRL_STATUS_"),
 ];
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     let json = build_json();
 
@@ -201,8 +198,16 @@ fn main() {
     }
 
     let mut generated = String::new();
-    writeln!(generated, "// SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs").unwrap();
-    writeln!(generated, "// SPDX-License-Identifier: LicenseRef-Nordic-5-Clause").unwrap();
+    writeln!(
+        generated,
+        "// SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs"
+    )
+    .unwrap();
+    writeln!(
+        generated,
+        "// SPDX-License-Identifier: LicenseRef-Nordic-5-Clause"
+    )
+    .unwrap();
 
     for (prefix, code) in groupstrings {
         let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
