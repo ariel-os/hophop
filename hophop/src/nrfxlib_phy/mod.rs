@@ -4,6 +4,7 @@
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use nrf_modem::{Error, ErrorSource, nrfxlib_sys};
+use nrfxlib_sys_pretty::dect_phy;
 
 mod error;
 use error::{MixedError, PhyResult, PhyResultExt as _};
@@ -67,12 +68,12 @@ enum DectEvent {
 
 // FIXME: This is only pub while the DectPhy object doesn't have an init that calls the low-level
 // init.
-extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
-    let arg: &nrfxlib_sys::nrf_modem_dect_phy_event = unsafe { &*arg };
+extern "C" fn dect_event(arg: *const dect_phy::event) {
+    let arg: &dect_phy::event = unsafe { &*arg };
 
     defmt::trace!("Handler called: id {}, time {}", arg.id, arg.time);
     let event = match arg.id {
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_INIT => {
+        dect_phy::event_id_values::INIT => {
             // SAFETY: Checked the discriminator
             let init = unsafe { &arg.__bindgen_anon_1.init };
             defmt::trace!(
@@ -80,23 +81,17 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
                 // FIXME: Best guess is that they internally use packed enums and we don't
                 init.err,
                 match init.err {
-                    nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS => "success",
-                    nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_ERR_NOT_ALLOWED =>
-                        "not allowed",
-                    nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_ERR_TEMP_HIGH =>
-                        "temp high",
-                    nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_ERR_PROD_LOCK =>
-                        "prod lock",
+                    dect_phy::err_values::SUCCESS => "success",
+                    dect_phy::err_values::ERR_NOT_ALLOWED => "not allowed",
+                    dect_phy::err_values::ERR_TEMP_HIGH => "temp high",
+                    dect_phy::err_values::ERR_PROD_LOCK => "prod lock",
                     _ => "unknown",
                 },
                 init.temp,
                 init.voltage,
                 init.temperature_limit
             );
-            assert_eq!(
-                init.err,
-                nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS
-            );
+            assert_eq!(init.err, dect_phy::err_values::SUCCESS);
             // We could optimize here and not even emit this as an init event but start with a
             // configured activation sequence right away. Not doing this yet because having things
             // run in something more async-like is easier to read (and thus to maintain), we don't
@@ -104,29 +99,23 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
             // that'll be easier to integrate.
             DectEvent::Init
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_CONFIGURE => {
+        dect_phy::event_id_values::CONFIGURE => {
             // SAFETY: Checked the discriminator
             let activate = unsafe { &arg.__bindgen_anon_1.activate };
-            assert_eq!(
-                activate.err,
-                nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS
-            );
+            assert_eq!(activate.err, dect_phy::err_values::SUCCESS);
             DectEvent::Configure
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_ACTIVATE => {
+        dect_phy::event_id_values::ACTIVATE => {
             // SAFETY: Checked the discriminator
             let activate = unsafe { &arg.__bindgen_anon_1.activate };
-            assert_eq!(
-                activate.err,
-                nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS
-            );
+            assert_eq!(activate.err, dect_phy::err_values::SUCCESS);
             DectEvent::Activate
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_RSSI => {
+        dect_phy::event_id_values::RSSI => {
             // SAFETY: Checked the discriminator, and function
             unsafe { rssi::event(&raw const arg.__bindgen_anon_1.rssi) }
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_COMPLETED => {
+        dect_phy::event_id_values::COMPLETED => {
             // SAFETY: Checked the discriminator
             let op = unsafe { &arg.__bindgen_anon_1.op_complete };
             defmt::trace!(
@@ -139,31 +128,27 @@ extern "C" fn dect_event(arg: *const nrfxlib_sys::nrf_modem_dect_phy_event) {
             // Go into different queue?
             DectEvent::Completed(op.err.into_phy_result())
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_TIME => {
+        dect_phy::event_id_values::TIME => {
             // SAFETY: Checked the discriminator
             let time_get = unsafe { &arg.__bindgen_anon_1.time_get };
             assert_eq!(
                 time_get.err,
-                nrfxlib_sys::nrf_modem_dect_phy_err_NRF_MODEM_DECT_PHY_SUCCESS,
+                dect_phy::err_values::SUCCESS,
                 "Never saw this fail"
             );
             DectEvent::TimeGet
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PCC => {
+        dect_phy::event_id_values::PCC => {
             // SAFETY: Checked the discriminator, and function
             unsafe { rx::event_pcc(&raw const arg.__bindgen_anon_1.pcc) }
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PCC_ERROR => {
-            DectEvent::PccError(rx::PccError::CrcError)
-        }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PDC => {
+        dect_phy::event_id_values::PCC_ERROR => DectEvent::PccError(rx::PccError::CrcError),
+        dect_phy::event_id_values::PDC => {
             // SAFETY: Checked the discriminator, and function
             unsafe { rx::event_pdc(&raw const arg.__bindgen_anon_1.pdc) }
         }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_PDC_ERROR => {
-            DectEvent::PdcError
-        }
-        nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_LATENCY => {
+        dect_phy::event_id_values::PDC_ERROR => DectEvent::PdcError,
+        dect_phy::event_id_values::LATENCY => {
             // SAFETY: Checked the discriminator, and function
             unsafe { latency::event(&raw const arg.__bindgen_anon_1.latency_get) }
         }
@@ -201,12 +186,11 @@ impl DectPhy {
         // might consider abstracting here, by passing in the original function and accepting a
         // single-call indicrection instead of the extern "C" on the handler.
 
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_event_handler_set(Some(dect_event)) }
-            .into_result()?;
+        unsafe { dect_phy::event_handler_set(Some(dect_event)) }.into_result()?;
 
         defmt::trace!("Initializing DECT PHY");
 
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_init() }.into_result()?;
+        unsafe { dect_phy::init() }.into_result()?;
 
         defmt::trace!("Initialization started.");
 
@@ -219,8 +203,8 @@ impl DectPhy {
         };
 
         // We have to call this before setting a modem mode: After, it will return
-        // NRF_MODEM_DECT_PHY_ERR_NOT_ALLOWED.
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_latency_get() }.into_result()?;
+        // err_values::ERR_NOT_ALLOWED.
+        unsafe { dect_phy::latency_get() }.into_result()?;
         let DectEventOuter {
             event: DectEvent::LatencyGet,
             ..
@@ -230,12 +214,12 @@ impl DectPhy {
         };
 
         // FIXME take parameters
-        let params = nrfxlib_sys::nrf_modem_dect_phy_config_params {
+        let params = dect_phy::config_params {
             band_group_index: 0,
             harq_rx_process_count: 4,
             harq_rx_expiry_time_us: 1000000,
         };
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_configure(&raw const params) }.into_result()?;
+        unsafe { dect_phy::configure(&raw const params) }.into_result()?;
         let DectEventOuter {
             event: DectEvent::Configure,
             ..
@@ -245,9 +229,8 @@ impl DectPhy {
         };
 
         // FIXME power hog? delay to runtime?
-        let mode =
-            nrfxlib_sys::nrf_modem_dect_phy_radio_mode_NRF_MODEM_DECT_PHY_RADIO_MODE_LOW_LATENCY;
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_activate(mode) }.into_result()?;
+        let mode = dect_phy::radio_mode_values::LOW_LATENCY;
+        unsafe { dect_phy::activate(mode) }.into_result()?;
         let DectEventOuter {
             event: DectEvent::Activate,
             ..
@@ -260,7 +243,7 @@ impl DectPhy {
     }
 
     pub async fn time_get(&mut self) -> Result<u64, Error> {
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_time_get() }.into_result()?;
+        unsafe { dect_phy::time_get() }.into_result()?;
 
         let DectEventOuter {
             event: DectEvent::TimeGet,
@@ -293,7 +276,7 @@ impl DectPhy {
 
         unsafe {
             // FIXME: everything
-            nrfxlib_sys::nrf_modem_dect_phy_tx(&nrfxlib_sys::nrf_modem_dect_phy_tx_params {
+            dect_phy::tx(&dect_phy::tx_params {
                 start_time,
                 handle: 2468,
                 // FIXME: Verify that libmodem or the network core does the >> 8 / & 0xff.
@@ -307,6 +290,7 @@ impl DectPhy {
                 // The object may be smaller than expected for phy_header, but then, phy_type tells
                 // to only access the smaller struct fields anyway.
                 phy_header: pcc.as_ptr() as _,
+                // FIXME: Why doesn't _pretty have that?
                 bs_cqi: nrfxlib_sys::NRF_MODEM_DECT_PHY_BS_CQI_NOT_USED as _,
                 // Missing `const` in C? They won't really write in there, will they?
                 data: pdc.as_ptr().cast_mut(),
