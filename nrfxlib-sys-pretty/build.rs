@@ -48,9 +48,9 @@ fn build_json() -> &'static std::path::Path {
             if std::env::var("REBUILD_NRFXLIB_JSON").is_ok_and(|v| v == "1") {
                 std::fs::copy(generated_json, persisted_json).unwrap();
             } else {
-                assert_eq!(
-                    std::fs::read(&generated_json).unwrap(),
-                    std::fs::read(persisted_json).unwrap(),
+                assert!(
+                    std::fs::read(&generated_json).unwrap()
+                        == std::fs::read(persisted_json).unwrap(),
                     "rustdoc output changed between {} and {}; run with REBUILD_NRFXLIB_JSON=1 to rebuild.",
                     generated_json.display(),
                     persisted_json.display()
