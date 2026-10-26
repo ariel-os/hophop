@@ -29,10 +29,8 @@ enum Inner {
 /// file as guided by env vars).
 ///
 /// Returns a path of a usable JSON file.
-fn build_json() -> &'static std::path::Path {
-    let persisted_json = std::path::Path::new(&"nrfxlib.json");
-
-    match rustdoc_json::Builder::default()
+fn build_json() -> std::path::PathBuf {
+    rustdoc_json::Builder::default()
         // No point: For reasons I didn't track down, this already needs to be set on the outer
         // process anyway.
         // .toolchain("nightly")
@@ -42,30 +40,7 @@ fn build_json() -> &'static std::path::Path {
         // Running cargo while running cargo will otherwise get us into a deadlock situation.
         .target_dir("target-inner")
         .build()
-    {
-        Ok(generated_json) => {
-            if std::env::var("REBUILD_NRFXLIB_JSON").is_ok_and(|v| v == "1") {
-                std::fs::copy(generated_json, persisted_json).unwrap();
-            } else {
-                assert!(
-                    std::fs::read(&generated_json).unwrap()
-                        == std::fs::read(persisted_json).unwrap(),
-                    "rustdoc output changed between {} and {}; run with REBUILD_NRFXLIB_JSON=1 to rebuild.",
-                    generated_json.display(),
-                    persisted_json.display()
-                );
-            }
-        }
-        e @ Err(_) => {
-            if std::env::var("CHECK_NRFXLIB_JSON").is_ok() {
-                e.unwrap();
-            } else {
-                eprintln!("No nightly toolchain available, trusting generated nrfxlib-json.");
-            }
-        }
-    }
-
-    persisted_json
+        .unwrap()
 }
 
 // Sort by descending length so that most specific always matches first.
@@ -226,6 +201,9 @@ fn main() {
     }
 
     let mut generated = String::new();
+    writeln!(generated, "// SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs").unwrap();
+    writeln!(generated, "// SPDX-License-Identifier: LicenseRef-Nordic-5-Clause").unwrap();
+
     for (prefix, code) in groupstrings {
         let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
         writeln!(generated, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();

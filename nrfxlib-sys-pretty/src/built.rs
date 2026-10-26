@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs
+// SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 pub mod dect {
  }
 pub mod dect_clock {
