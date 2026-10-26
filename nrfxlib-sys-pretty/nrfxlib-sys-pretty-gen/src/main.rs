@@ -211,7 +211,9 @@ fn main() {
 
     for (prefix, code) in groupstrings {
         let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
-        writeln!(generated, "pub mod {prefix_shortened} {{\n{code} }}").unwrap();
+        if !code.is_empty() {
+            writeln!(generated, "pub mod {prefix_shortened} {{\n{code}}}").unwrap();
+        }
     }
 
     let built_file = "../src/built.rs";

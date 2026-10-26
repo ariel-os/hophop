@@ -1,7 +1,5 @@
 // SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs
 // SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
-pub mod dect {
- }
 pub mod dect_clock {
 #[doc(alias = "nrf_modem_dect_clock_sync_event_handler_set")]
 pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event_handler_set as sync_event_handler_set;
@@ -83,7 +81,7 @@ pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event_id as sync_event_id;
 pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event__bindgen_ty_1 as sync_event__bindgen_ty_1;
 #[doc(alias = "nrf_modem_dect_clock_sync_event")]
 pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event as sync_event;
- }
+}
 pub mod dect_control {
 #[doc(alias = "nrf_modem_dect_control_systemmode_set")]
 pub use nrfxlib_sys::nrf_modem_dect_control_systemmode_set as systemmode_set;
@@ -121,7 +119,7 @@ pub use nrfxlib_sys::nrf_modem_dect_control_configure as configure;
 pub use nrfxlib_sys::nrf_modem_dect_control_configure_params as configure_params;
 #[doc(alias = "nrf_modem_dect_control_configure_params__bindgen_ty_1")]
 pub use nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 as configure_params__bindgen_ty_1;
- }
+}
 pub mod dect_dlc {
 #[doc(alias = "nrf_modem_dect_dlc_data_tx")]
 pub use nrfxlib_sys::nrf_modem_dect_dlc_data_tx as data_tx;
@@ -210,7 +208,7 @@ pub use nrfxlib_sys::nrf_modem_dect_dlc_data_discard_cb_params as data_discard_c
 pub use nrfxlib_sys::nrf_modem_dect_dlc_data_rx_ntf_cb_params as data_rx_ntf_cb_params;
 #[doc(alias = "nrf_modem_dect_dlc_flow_control_ntf_cb_params")]
 pub use nrfxlib_sys::nrf_modem_dect_dlc_flow_control_ntf_cb_params as flow_control_ntf_cb_params;
- }
+}
 pub mod dect_mac {
 #[doc(alias = "nrf_modem_dect_mac_callback_set")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_callback_set as callback_set;
@@ -1172,7 +1170,7 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluste
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_fill as cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_fill;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_periodic")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_periodic as cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_periodic;
- }
+}
 pub mod dect_phy {
 #[doc(alias = "nrf_modem_dect_phy_event_handler_set")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_event_handler_set as event_handler_set;
@@ -1485,4 +1483,4 @@ pub use nrfxlib_sys::nrf_modem_dect_phy_event_id as event_id;
 pub use nrfxlib_sys::nrf_modem_dect_phy_event__bindgen_ty_1 as event__bindgen_ty_1;
 #[doc(alias = "nrf_modem_dect_phy_event")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_event as event;
- }
+}
