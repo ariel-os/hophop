@@ -4,7 +4,7 @@
 [package]
 name = "nrfxlib-sys-pretty"
 version = "0.1.0+4.0.0plus3.4.0"
-license.workspace = true
+license = "(MIT OR Apache-2.0) AND LicenseRef-Nordic-5-Clause"
 edition.workspace = true
 repository.workspace = true
 keywords.workspace = true
