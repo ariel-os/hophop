@@ -58,7 +58,7 @@ fn build_json() -> &'static std::path::Path {
             }
         }
         e @ Err(_) => {
-            if std::env::var("CI").is_ok() || std::env::var("CHECK_NRFXLIB_JSON").is_ok() {
+            if std::env::var("CHECK_NRFXLIB_JSON").is_ok() {
                 e.unwrap();
             } else {
                 eprintln!("No nightly toolchain available, trusting generated nrfxlib-json.");
