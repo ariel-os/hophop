@@ -140,7 +140,7 @@ pub async fn associate<'c>(
             cipher_key,
         }) = network_template.keys
         {
-            dect_control::configure_params__bindgen_ty_1 {
+            dect_control::configure_params_security {
                 // We have to decode the beacon's ciphered parts immediately rather than
                 // doing that later when having read the network ID; see documentation on
                 // "Expected time"
@@ -149,7 +149,7 @@ pub async fn associate<'c>(
                 cipher_key: *cipher_key,
             }
         } else {
-            dect_control::configure_params__bindgen_ty_1 {
+            dect_control::configure_params_security {
                 mode: dect_mac::security_mode_values::NONE,
                 integrity_key: [0; _],
                 cipher_key: [0; _],

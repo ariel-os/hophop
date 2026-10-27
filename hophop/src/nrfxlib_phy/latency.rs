@@ -27,20 +27,20 @@ macro_rules! latency_info {
                     radio_mode_transition: [47001, 41472, 21427],
                 },
             ],
-            operation: dect_phy::latency_info__bindgen_ty_2 {
-                receive: dect_phy::latency_info__bindgen_ty_2__bindgen_ty_1 {
+            operation: dect_phy::latency_info_operation {
+                receive: dect_phy::latency_info_receive {
                     idle_to_active: 24192,
                     active_to_idle_rssi: 13824,
                     active_to_idle_rx: 12441,
                     active_to_idle_rx_rssi: 16588,
                     stop_to_rf_off: 14169,
                 },
-                transmit: dect_phy::latency_info__bindgen_ty_2__bindgen_ty_2 {
+                transmit: dect_phy::latency_info_transmit {
                     idle_to_active: 29030,
                     active_to_idle: 7603,
                 },
             },
-            stack: dect_phy::latency_info__bindgen_ty_3 {
+            stack: dect_phy::latency_info_stack {
                 initialization: 2764800,
                 deinitialization: 62208,
                 configuration: 7119360,

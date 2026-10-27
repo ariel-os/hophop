@@ -21,8 +21,24 @@ enum Inner {
     TypeAlias {},
     #[serde(rename = "constant")]
     Constant {},
+    #[serde(rename = "struct")]
+    Struct {},
+    #[serde(rename = "union")]
+    Union {},
+    #[serde(rename = "function")]
+    Function {},
+    #[serde(rename = "impl")]
+    Impl {},
+    #[serde(rename = "struct_field")]
+    StructField { resolved_path: ResolvedPath },
+    #[serde(rename = "struct")]
     #[serde(untagged)]
     Other {},
+}
+
+#[derive(serde::Deserialize)]
+struct ResolvedPath {
+    path: String,
 }
 
 /// Runs a `cargo doc` to generate the JSON output, if possible (enforcing a check or replacing the
@@ -55,6 +71,20 @@ const GROUP_PREFIXES: &[&str] = &[
 fn name_and_prefix(item: &Symbol) -> Option<(String, &str)> {
     let name = item.name.clone()?;
     let &prefix = GROUP_PREFIXES.iter().find(|p| name.starts_with(*p))?;
+    #[expect(clippy::match_same_arms, reason = "readability")]
+    match item.inner {
+        // Those we expect
+        Inner::TypeAlias {}
+        | Inner::Constant {}
+        | Inner::Struct {}
+        | Inner::Function {}
+        | Inner::Union {} => (),
+        // They don't contribute to what we document
+        Inner::Impl {} => return None,
+        // Things like struct_fields don't usually make it down here because they don't follow the
+        // naming convention, but if they did, we'd be in trouble for pub using them.
+        Inner::StructField { .. } | Inner::Other {} => return None,
+    }
     Some((name, prefix))
 }
 
@@ -99,11 +129,22 @@ fn main() {
     // All names that are not documented in top-level (well, grouped) because they are documented
     // somewhere further in.
     let mut not_toplevel = BTreeSet::default();
+    // Field names under which the key type has been seen.
+    let mut used_as_field_named = BTreeMap::default();
 
     let root: Root = serde_json::from_reader(std::fs::File::open(json).unwrap()).unwrap();
 
-    // First pass: extract things we later compare to
+    // First pass: extract things we later compare to -- or single-pass things
     for item in root.index.values() {
+        if let Inner::StructField { resolved_path } = &item.inner {
+            // We generally don't process struct fields, but ingest them for better names
+            used_as_field_named
+                .entry(&resolved_path.path)
+                .or_insert(BTreeSet::new())
+                .insert(item.name.as_ref().unwrap());
+            continue;
+        }
+
         let Some(ref name) = item.name else {
             continue;
         };
@@ -144,7 +185,18 @@ fn main() {
         if not_toplevel.contains(&name) {
             continue;
         }
-        let stripped = &name.strip_prefix(prefix).unwrap()[1..];
+        let mut stripped = name.strip_prefix(prefix).unwrap()[1..].to_owned();
+        if let Some(bindgen_pos) = stripped.find("__bindgen")
+            && let Some(items) = used_as_field_named.get(&name)
+        {
+            assert_eq!(
+                items.len(),
+                1,
+                "lack of imagination why this could happen and what it'd need"
+            );
+            let prefix = &stripped[..bindgen_pos];
+            stripped = format!("{}_{}", prefix, items.iter().next().unwrap());
+        }
         let groupstring = groupstrings.get_mut(&prefix).unwrap();
         if let Some(variants) = constant_prefix_is_type_alias.get(&name) {
             writeln!(groupstring, "/// Possible values for [`{stripped}`]").unwrap();

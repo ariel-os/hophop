@@ -78,7 +78,7 @@ pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event_id_NRF_MODEM_DECT_CLOCK_SYN
 #[doc(alias = "nrf_modem_dect_clock_sync_event_id")]
 pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event_id as sync_event_id;
 #[doc(alias = "nrf_modem_dect_clock_sync_event__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event__bindgen_ty_1 as sync_event__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event__bindgen_ty_1 as sync_event___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_clock_sync_event")]
 pub use nrfxlib_sys::nrf_modem_dect_clock_sync_event as sync_event;
 }
@@ -118,7 +118,7 @@ pub use nrfxlib_sys::nrf_modem_dect_control_configure as configure;
 #[doc(alias = "nrf_modem_dect_control_configure_params")]
 pub use nrfxlib_sys::nrf_modem_dect_control_configure_params as configure_params;
 #[doc(alias = "nrf_modem_dect_control_configure_params__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 as configure_params__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 as configure_params_security;
 }
 pub mod dect_dlc {
 #[doc(alias = "nrf_modem_dect_dlc_data_tx")]
@@ -1005,17 +1005,17 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_route_info_ie as route_info_ie;
 #[doc(alias = "nrf_modem_dect_mac_ie_resource_alloc")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_ie_resource_alloc as ie_resource_alloc;
 #[doc(alias = "nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1 as resource_allocation_ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1 as resource_allocation_ie___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_resource_allocation_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_resource_allocation_ie as resource_allocation_ie;
 #[doc(alias = "nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1__bindgen_ty_1 as resource_allocation_ie__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_resource_allocation_ie__bindgen_ty_1__bindgen_ty_1 as resource_allocation_ie_flags;
 #[doc(alias = "nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1 as random_access_resource_ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1 as random_access_resource_ie___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_random_access_resource_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_random_access_resource_ie as random_access_resource_ie;
 #[doc(alias = "nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1__bindgen_ty_1 as random_access_resource_ie__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_random_access_resource_ie__bindgen_ty_1__bindgen_ty_1 as random_access_resource_ie_flags;
 #[doc(alias = "nrf_modem_dect_mac_rd_capa_phy_capabilities")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_rd_capa_phy_capabilities as rd_capa_phy_capabilities;
 #[doc(alias = "nrf_modem_dect_mac_rd_capability_ie__bindgen_ty_1")]
@@ -1023,35 +1023,35 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_rd_capability_ie__bindgen_ty_1 as rd_cap
 #[doc(alias = "nrf_modem_dect_mac_rd_capability_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_rd_capability_ie as rd_capability_ie;
 #[doc(alias = "nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1 as neighbouring_ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1 as neighbouring_ie___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_neighbouring_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_neighbouring_ie as neighbouring_ie;
 #[doc(alias = "nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1__bindgen_ty_1 as neighbouring_ie__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_neighbouring_ie__bindgen_ty_1__bindgen_ty_1 as neighbouring_ie_flags;
 #[doc(alias = "nrf_modem_dect_mac_load_info_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_load_info_ie__bindgen_ty_1 as load_info_ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_load_info_ie__bindgen_ty_1 as load_info_ie___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_load_info_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_load_info_ie as load_info_ie;
 #[doc(alias = "nrf_modem_dect_mac_load_info_ie__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_load_info_ie__bindgen_ty_1__bindgen_ty_1 as load_info_ie__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_load_info_ie__bindgen_ty_1__bindgen_ty_1 as load_info_ie_flags;
 #[doc(alias = "nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1 as measurement_report_ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1 as measurement_report_ie___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_measurement_report_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_measurement_report_ie as measurement_report_ie;
 #[doc(alias = "nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1__bindgen_ty_1 as measurement_report_ie__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_measurement_report_ie__bindgen_ty_1__bindgen_ty_1 as measurement_report_ie_flags;
 #[doc(alias = "nrf_modem_dect_mac_radio_device_status_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_radio_device_status_ie as radio_device_status_ie;
 #[doc(alias = "nrf_modem_dect_mac_ie__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_ie__bindgen_ty_1 as ie__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_ie__bindgen_ty_1 as ie_ie;
 #[doc(alias = "nrf_modem_dect_mac_ie")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_ie as ie;
 #[doc(alias = "nrf_modem_dect_mac_association_response__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_response__bindgen_ty_1 as association_response__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_response__bindgen_ty_1 as association_response___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_association_response")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_response as association_response;
 #[doc(alias = "nrf_modem_dect_mac_association_response__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_response__bindgen_ty_1__bindgen_ty_1 as association_response__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_response__bindgen_ty_1__bindgen_ty_1 as association_response_flags;
 #[doc(alias = "nrf_modem_dect_mac_rssi_result")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_rssi_result as rssi_result;
 #[doc(alias = "nrf_modem_dect_mac_control_functional_mode_cb_params")]
@@ -1065,11 +1065,11 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_rx_signal_info_t as rx_signal_info_t;
 #[doc(alias = "nrf_modem_dect_mac_ipv6_address_config_t")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_config_t as ipv6_address_config_t;
 #[doc(alias = "nrf_modem_dect_mac_association_cb_params__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_cb_params__bindgen_ty_1 as association_cb_params__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_cb_params__bindgen_ty_1 as association_cb_params___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_association_cb_params")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_cb_params as association_cb_params;
 #[doc(alias = "nrf_modem_dect_mac_association_cb_params__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_cb_params__bindgen_ty_1__bindgen_ty_1 as association_cb_params__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_cb_params__bindgen_ty_1__bindgen_ty_1 as association_cb_params_flags;
 #[doc(alias = "nrf_modem_dect_mac_association_release_cb_params")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_release_cb_params as association_release_cb_params;
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon_receive_cb_params")]
@@ -1099,23 +1099,23 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params as rssi_scan_cb_para
 #[doc(alias = "nrf_modem_dect_mac_rssi_scan_stop_cb_params")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_stop_cb_params as rssi_scan_stop_cb_params;
 #[doc(alias = "nrf_modem_dect_mac_network_beacon__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_network_beacon__bindgen_ty_1 as network_beacon__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_network_beacon__bindgen_ty_1 as network_beacon___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_network_beacon")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_network_beacon as network_beacon;
 #[doc(alias = "nrf_modem_dect_mac_network_beacon__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_network_beacon__bindgen_ty_1__bindgen_ty_1 as network_beacon__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_network_beacon__bindgen_ty_1__bindgen_ty_1 as network_beacon_flags;
 #[doc(alias = "nrf_modem_dect_mac_association_request__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_request__bindgen_ty_1 as association_request__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_request__bindgen_ty_1 as association_request___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_association_request")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_request as association_request;
 #[doc(alias = "nrf_modem_dect_mac_association_request__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_request__bindgen_ty_1__bindgen_ty_1 as association_request__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_request__bindgen_ty_1__bindgen_ty_1 as association_request_flags;
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1 as cluster_beacon__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1 as cluster_beacon___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon as cluster_beacon;
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1__bindgen_ty_1 as cluster_beacon__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon__bindgen_ty_1__bindgen_ty_1 as cluster_beacon_flags;
 #[doc(alias = "nrf_modem_dect_mac_rssi_scan_ntf_cb_params")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_ntf_cb_params as rssi_scan_ntf_cb_params;
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon_ntf_cb_params")]
@@ -1147,13 +1147,13 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_parent_info_triggers as parent_info_trig
 #[doc(alias = "nrf_modem_dect_mac_cluster_beacon_config")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_config as cluster_beacon_config;
 #[doc(alias = "nrf_modem_dect_mac_association_config__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_association_config__bindgen_ty_1 as association_config__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_association_config__bindgen_ty_1 as association_config_neighbor_info_triggers;
 #[doc(alias = "nrf_modem_dect_mac_association_config__bindgen_ty_2")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_config__bindgen_ty_2 as association_config__bindgen_ty_2;
 #[doc(alias = "nrf_modem_dect_mac_association_config")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_association_config as association_config;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config__bindgen_ty_1 as cluster_config__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config__bindgen_ty_1 as cluster_config___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config as cluster_config_nrf_modem_dect_mac_cluster_rach_config;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config_cluster_info_triggers")]
@@ -1161,7 +1161,7 @@ pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_cluster_info_triggers as 
 #[doc(alias = "nrf_modem_dect_mac_cluster_config")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config as cluster_config;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config__bindgen_ty_1__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config__bindgen_ty_1__bindgen_ty_1 as cluster_config__bindgen_ty_1__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config__bindgen_ty_1__bindgen_ty_1 as cluster_config_flags;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_common_config")]
 pub use nrfxlib_sys::nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_common_config as cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_common_config;
 #[doc(alias = "nrf_modem_dect_mac_cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config")]
@@ -1344,17 +1344,17 @@ pub use nrfxlib_sys::nrf_modem_dect_phy_rssi_interval as rssi_interval;
 #[doc(alias = "nrf_modem_dect_phy_hdr_type_1")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_hdr_type_1 as hdr_type_1;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_1 as feedback__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_1 as feedback_format1;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_2")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_2 as feedback__bindgen_ty_2;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_2 as feedback_format2;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_3")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_3 as feedback__bindgen_ty_3;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_3 as feedback_format3;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_4")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_4 as feedback__bindgen_ty_4;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_4 as feedback_format4;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_5")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_5 as feedback__bindgen_ty_5;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_5 as feedback_format5;
 #[doc(alias = "nrf_modem_dect_phy_feedback__bindgen_ty_6")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_6 as feedback__bindgen_ty_6;
+pub use nrfxlib_sys::nrf_modem_dect_phy_feedback__bindgen_ty_6 as feedback_format6;
 #[doc(alias = "nrf_modem_dect_phy_feedback")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_feedback as feedback;
 #[doc(alias = "nrf_modem_dect_phy_hdr_type_2")]
@@ -1382,15 +1382,15 @@ pub use nrfxlib_sys::nrf_modem_dect_phy_rx_filter as rx_filter;
 #[doc(alias = "nrf_modem_dect_phy_latency_info__bindgen_ty_1")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_1 as latency_info__bindgen_ty_1;
 #[doc(alias = "nrf_modem_dect_phy_latency_info__bindgen_ty_2")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2 as latency_info__bindgen_ty_2;
+pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2 as latency_info_operation;
 #[doc(alias = "nrf_modem_dect_phy_latency_info__bindgen_ty_3")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_3 as latency_info__bindgen_ty_3;
+pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_3 as latency_info_stack;
 #[doc(alias = "nrf_modem_dect_phy_latency_info")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info as latency_info;
 #[doc(alias = "nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_1 as latency_info__bindgen_ty_2__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_1 as latency_info_receive;
 #[doc(alias = "nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_2")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_2 as latency_info__bindgen_ty_2__bindgen_ty_2;
+pub use nrfxlib_sys::nrf_modem_dect_phy_latency_info__bindgen_ty_2__bindgen_ty_2 as latency_info_transmit;
 #[doc(alias = "nrf_modem_dect_phy_init_event")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_init_event as init_event;
 #[doc(alias = "nrf_modem_dect_phy_op_complete_event")]
@@ -1480,7 +1480,7 @@ pub use nrfxlib_sys::nrf_modem_dect_phy_event_id_NRF_MODEM_DECT_PHY_EVT_TIME as 
 #[doc(alias = "nrf_modem_dect_phy_event_id")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_event_id as event_id;
 #[doc(alias = "nrf_modem_dect_phy_event__bindgen_ty_1")]
-pub use nrfxlib_sys::nrf_modem_dect_phy_event__bindgen_ty_1 as event__bindgen_ty_1;
+pub use nrfxlib_sys::nrf_modem_dect_phy_event__bindgen_ty_1 as event___bindgen_anon_1;
 #[doc(alias = "nrf_modem_dect_phy_event")]
 pub use nrfxlib_sys::nrf_modem_dect_phy_event as event;
 }
