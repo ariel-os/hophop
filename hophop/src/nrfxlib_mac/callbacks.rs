@@ -150,7 +150,8 @@ unsafe extern "C" fn cluster_beacon_receive_stop(
     todo!()
 }
 unsafe extern "C" fn cluster_configure(params: *mut dect_mac::cluster_configure_cb_params) {
-    todo!()
+    let &dect_mac::cluster_configure_cb_params { status } = unsafe { &*params };
+    SINGLETON_EVENTS.try_send(status.into_mac_status()).unwrap();
 }
 unsafe extern "C" fn cluster_info(params: *mut dect_mac::cluster_info_cb_params) {
     todo!()
@@ -193,14 +194,49 @@ unsafe extern "C" fn network_scan_stop(params: *mut dect_mac::network_scan_stop_
         .unwrap();
 }
 unsafe extern "C" fn rssi_scan(params: *mut dect_mac::rssi_scan_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::rssi_scan_cb_params { status } = unsafe { &*params };
+    SINGLETON_EVENTS.try_send(status.into_mac_status()).unwrap();
 }
 unsafe extern "C" fn rssi_scan_stop(params: *mut dect_mac::rssi_scan_stop_cb_params) {
     todo!()
 }
 
 unsafe extern "C" fn association_ntf(params: *mut dect_mac::association_ntf_cb_params) {
-    todo!("Only relevant for FTs")
+    // SAFETY: implied in C API
+    let &dect_mac::association_ntf_cb_params {
+        status,
+        tx_method,
+        rx_signal_info:
+            dect_mac::rx_signal_info_t {
+                mcs,
+                transmit_power,
+                rssi_2,
+                snr,
+            },
+        short_rd_id,
+        long_rd_id,
+        number_of_ies,
+        association_request,
+        ies,
+    } = unsafe { &*params };
+    let status = status.into_mac_status();
+    let (Some(short_rd_id), Some(long_rd_id)) =
+        (ShortRdId::new(short_rd_id), LongRdId::new(long_rd_id))
+    else {
+        warn!("Ignoring association NTF with reserved values.");
+        return;
+    };
+    info!(
+        "Association: status {} from {} / {}",
+        status, short_rd_id, long_rd_id
+    );
+    info!(
+        "TX method {}, RX signal info MCS={} TXpwr={} RSSI2={} SNR={}, association request FIXME",
+        tx_method, mcs, transmit_power, rssi_2, snr
+    );
+    // SAFETY: implied by C ABI
+    debug_ies(unsafe { core::slice::from_raw_parts(ies, number_of_ies as _) });
 }
 unsafe extern "C" fn association_release_ntf(
     params: *mut dect_mac::association_release_ntf_cb_params,
@@ -228,7 +264,20 @@ unsafe extern "C" fn cluster_ch_load_change_ntf(
 unsafe extern "C" fn neighbor_inactivity_ntf(
     params: *mut dect_mac::neighbor_inactivity_ntf_cb_params,
 ) {
-    todo!("Only relevant for FTs")
+    // SAFETY: implied in C API
+    let &nrfxlib_sys::nrf_modem_dect_mac_neighbor_inactivity_ntf_cb_params { long_rd_id } =
+        unsafe { &*params };
+    let (Some(long_rd_id),) = (LongRdId::new(long_rd_id),) else {
+        warn!("Ignoring inactivity NTF with reserved value.");
+        return;
+    };
+
+    // This will be tricky to use: We only see the long RD ID. If the device reboots and keeps the
+    // long RD ID and sends a different short RD ID (as hophop PTs currently do), the inactivity
+    // notification only comes after the next association. So in a sense we might need to keep a
+    // counter of how often a device has been registered per RD ID, if we want to act on inactivity
+    // notifications at all.
+    info!("Inactivity notification from {}", long_rd_id);
 }
 unsafe extern "C" fn neighbor_paging_failure_ntf(
     params: *mut dect_mac::neighbor_paging_failure_ntf_cb_params,
@@ -236,7 +285,29 @@ unsafe extern "C" fn neighbor_paging_failure_ntf(
     todo!("Only relevant for FTs")
 }
 unsafe extern "C" fn rssi_scan_ntf(params: *mut dect_mac::rssi_scan_ntf_cb_params) {
-    todo!("Only relevant for FTs")
+    // SAFETY: implied in C API
+    let &dect_mac::rssi_scan_ntf_cb_params {
+        channel,
+        busy_percentage,
+        rssi_meas_array_size,
+        busy,
+        possible,
+        free,
+    } = unsafe { &*params };
+    let Some(channel) = AbsoluteChannel::new(channel) else {
+        warn!("Ignoring rssi_scan_ntf with reserved values.");
+        return;
+    };
+    // SAFETY: explicit in C API
+    // FIXME: semantics are bit strings
+    let busy = unsafe { core::slice::from_raw_parts(busy, rssi_meas_array_size) };
+    let possible = unsafe { core::slice::from_raw_parts(possible, rssi_meas_array_size) };
+    let free = unsafe { core::slice::from_raw_parts(free, rssi_meas_array_size) };
+
+    info!(
+        "RSSI report: channel {} busy {}%: {:x} / {:x} / {:x}",
+        channel, busy_percentage, busy, possible, free
+    );
 }
 unsafe extern "C" fn cluster_beacon_ntf(params: *mut dect_mac::cluster_beacon_ntf_cb_params) {
     // SAFETY: implied in C API
