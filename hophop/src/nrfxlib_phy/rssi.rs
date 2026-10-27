@@ -6,7 +6,8 @@ use heapless::{
     pool::boxed::{Box, BoxBlock},
 };
 use itertools::Itertools as _;
-use nrf_modem::{ErrorSource, nrfxlib_sys};
+use nrf_modem::ErrorSource;
+use nrfxlib_sys_pretty::dect_phy;
 use static_cell::StaticCell;
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
@@ -55,7 +56,7 @@ impl RssiEvent {
 /// This function must only be called in the event handler, which is when libmodem implies that the
 /// pointers inside the event struct are valid.
 #[inline]
-pub(super) unsafe fn event(rssi: *const nrfxlib_sys::nrf_modem_dect_phy_rssi_event) -> DectEvent {
+pub(super) unsafe fn event(rssi: *const dect_phy::rssi_event) -> DectEvent {
     // SAFETY: Checked the discriminator
     let rssi = unsafe { &*rssi };
     // SAFETY: It is valid now, which is as long as we use it
@@ -108,14 +109,14 @@ impl DectPhy {
         //   µ=1 is 2 subslots per slot, and thus matches 10 readings per slot, 5 per subslot.
 
         let configured_handle = Handle(1234);
-        let params = nrfxlib_sys::nrf_modem_dect_phy_rssi_params {
+        let params = dect_phy::rssi_params {
             start_time: 0,
             handle: configured_handle.0,
             carrier: carrier.into(),
             duration: 48, // in subslots; 1 full report
-            reporting_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms
+            reporting_interval: dect_phy::rssi_interval_values::_24_SLOTS, // 24 slots = 10ms
         };
-        unsafe { nrfxlib_sys::nrf_modem_dect_phy_rssi(&raw const params) }.into_result()?;
+        unsafe { dect_phy::rssi(&raw const params) }.into_result()?;
 
         let mut result = None;
 
@@ -180,28 +181,28 @@ impl DectPhy {
         for (handle, (multiples, carrier)) in carriers.iter().dedup_with_count().enumerate() {
             let handle = handle_from_index(handle);
             // We don't need them mut here, but it's easier than asking AsRef too.
-            let params = nrfxlib_sys::nrf_modem_dect_phy_rx_params {
+            let params = dect_phy::rx_params {
                 start_time: current_start_time,
                 handle: handle.0,
                 carrier: (*carrier).into(),
                 // duration: (48 * destbuffers.len()).try_into().map_err(|_| MixedError::UsageError)?, // in half slots
                 duration: u32::try_from(multiples).unwrap() * 691_200, // in time units
-                rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
+                rssi_interval: dect_phy::rssi_interval_values::_24_SLOTS, // 24 slots = 10ms, because we request in that granularity anyway
                 // from here on it's RX params
-                filter: nrfxlib_sys::nrf_modem_dect_phy_rx_filter {
+                filter: dect_phy::rx_filter {
                     short_network_id: 0,
                     is_short_network_id_used: 0,
                     receiver_identity: 0,
                 },
-                mode: nrfxlib_sys::nrf_modem_dect_phy_rx_mode_NRF_MODEM_DECT_PHY_RX_MODE_CONTINUOUS,
-                link_id: nrfxlib_sys::nrf_modem_dect_phy_link_id {
+                mode: dect_phy::rx_mode_values::CONTINUOUS,
+                link_id: dect_phy::link_id {
                     short_network_id: 0,
                     short_rd_id: 0,
                 },
                 network_id: network_id.into(),
                 rssi_level: 0,
             };
-            unsafe { nrfxlib_sys::nrf_modem_dect_phy_rx(&raw const params) }.into_result()?;
+            unsafe { dect_phy::rx(&raw const params) }.into_result()?;
             let duration = u64::try_from(multiples).unwrap() * 691_200 /* 10ms */;
             current_start_time = current_start_time.wrapping_add(duration);
             current_start_time = current_start_time.wrapping_add(

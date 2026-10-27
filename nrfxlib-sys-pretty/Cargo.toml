@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+[package]
+name = "nrfxlib-sys-pretty"
+version = "0.1.0+4.0.0plus3.4.0"
+license = "(MIT OR Apache-2.0) AND LicenseRef-Nordic-5-Clause"
+edition.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+nrfxlib-sys = { version = "4.0.0", features = ["nrf9151"] }

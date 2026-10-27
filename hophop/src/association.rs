@@ -13,6 +13,8 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24, Netw
 
 use super::nrfxlib_mac;
 
+use nrfxlib_sys_pretty::{dect_control, dect_mac};
+
 /// Key material for a network in Mode 1 (AES-128)
 pub struct Mode1Keys<'a> {
     pub integrity_key: &'a [u8; 16],
@@ -138,40 +140,37 @@ pub async fn associate<'c>(
             cipher_key,
         }) = network_template.keys
         {
-            nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
+            dect_control::configure_params_security {
                 // We have to decode the beacon's ciphered parts immediately rather than
                 // doing that later when having read the network ID; see documentation on
                 // "Expected time"
-                mode:
-                    nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_1,
+                mode: dect_mac::security_mode_values::_1,
                 integrity_key: *integrity_key,
                 cipher_key: *cipher_key,
             }
         } else {
-            nrfxlib_sys::nrf_modem_dect_control_configure_params__bindgen_ty_1 {
-                mode:
-                    nrfxlib_sys::nrf_modem_dect_mac_security_mode_NRF_MODEM_DECT_MAC_SECURITY_MODE_NONE,
+            dect_control::configure_params_security {
+                mode: dect_mac::security_mode_values::NONE,
                 integrity_key: [0; _],
                 cipher_key: [0; _],
             }
         };
 
-        dect.control_configure(&mut nrfxlib_sys::nrf_modem_dect_control_configure_params {
+        dect.control_configure(&mut dect_control::configure_params {
             // The maximum; we'll leave it to the network to lower the limits.
             // FIXME: take from hardware (although here it's the the standard's limit, but maybe we
             // have to adjust to a lower one from the hardware?)
             // FIXME why does this fail when we put in 23_DB?
-            max_tx_power: nrfxlib_sys::nrf_modem_dect_mac_tx_power_NRF_MODEM_DECT_MAC_TX_POWER_10_DB,
+            max_tx_power: dect_mac::tx_power_values::_10_DB,
             // FIXME: take from hardware
-            max_mcs: nrfxlib_sys::nrf_modem_dect_mac_max_mcs_NRF_MODEM_DECT_MAC_MAX_MCS_4,
+            max_mcs: dect_mac::max_mcs_values::_4,
             // FIXME: Decide (this is what the vendor examples default to)
             expected_mcs1_rx_rssi_level: -68,
             // FIXME: could we decide that later? (probably not: we come in with som expectation of
             // the network already)
             long_rd_id: config.rd_id.into(),
             // FIXME: configure
-            phy_band_group_index:
-                nrfxlib_sys::nrf_modem_dect_mac_band_group_index_NRF_MODEM_DECT_MAC_PHY_BAND_GROUP_IDX0,
+            phy_band_group_index: dect_mac::band_group_index_values::IDX0,
             power_save: config.power_save,
             security,
             // FIXME: Decide (this is what the vendor uses in their examples)
@@ -205,16 +204,16 @@ pub async fn associate<'c>(
         let (network_id_filter_mode, network_id_filter) = match network_template.network_id {
             // not sure why we'd ever filter for 32bit, those can be different next time around,
             // can they not?
-            Some(n) => (nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_24MSB, n.into_low_u32()),
-            None => (nrfxlib_sys::nrf_modem_dect_mac_nw_id_filter_mode_NRF_MODEM_DECT_MAC_NW_ID_FILTER_MODE_NONE, 0),
+            Some(n) => (dect_mac::nw_id_filter_mode_values::_24MSB, n.into_low_u32()),
+            None => (dect_mac::nw_id_filter_mode_values::NONE, 0),
         };
 
         let Some(params) = dect
             .mac_network_scan(
-                &mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_params {
+                &mut dect_mac::network_scan_params {
                     // FIXME: we could optimize if we accepted "full band" rather than an explicit channel
                     // list
-                    band: 0, // would then be nrfxlib_sys::nrf_modem_dect_mac_band_NRF_MODEM_DECT_MAC_PHY_BAND1,
+                    band: 0, // would then be dect_mac::band_values::BAND1,
                     num_channels: num_channels
                         .try_into()
                         .expect("fitting a much smaller array was just checked"),

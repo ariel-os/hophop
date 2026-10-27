@@ -5,7 +5,8 @@ use heapless::{
     box_pool,
     pool::boxed::{Box, BoxBlock},
 };
-use nrf_modem::{ErrorSource, nrfxlib_sys};
+use nrf_modem::ErrorSource;
+use nrfxlib_sys_pretty::dect_phy;
 use static_cell::StaticCell;
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
@@ -63,7 +64,7 @@ impl PccData {
     /// # Errors
     ///
     /// This returns successfully only on known phy_type values.
-    unsafe fn from_c(event: &nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> Result<Self, PccError> {
+    unsafe fn from_c(event: &dect_phy::pcc_event) -> Result<Self, PccError> {
         match event.phy_type {
             0 => Ok(PccData::Type1(unsafe { event.hdr.type_1 })),
             1 => Ok(PccData::Type2(unsafe { event.hdr.type_2 })),
@@ -199,7 +200,7 @@ impl RecvResultBuilder {
 /// This function must only be called in the event handler, which is when libmodem implies that the
 /// pointers inside the event struct are valid.
 #[inline]
-pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_event) -> DectEvent {
+pub(super) unsafe fn event_pcc(pcc: *const dect_phy::pcc_event) -> DectEvent {
     // SAFETY: Checked the discriminator
     let pcc = unsafe { &*pcc };
 
@@ -233,7 +234,7 @@ pub(super) unsafe fn event_pcc(pcc: *const nrfxlib_sys::nrf_modem_dect_phy_pcc_e
 /// This function must only be called in the event handler, which is when libmodem implies that the
 /// pointers inside the event struct are valid.
 #[inline]
-pub(super) unsafe fn event_pdc(pdc: *const nrfxlib_sys::nrf_modem_dect_phy_pdc_event) -> DectEvent {
+pub(super) unsafe fn event_pdc(pdc: *const dect_phy::pdc_event) -> DectEvent {
     // SAFETY: Checked the discriminator
     let pdc = unsafe { &*pdc };
     // SAFETY: Implied by the C API
@@ -265,13 +266,13 @@ impl DectPhy {
     ) -> Result<Option<RecvResult>, MixedError> {
         unsafe {
             // FIXME: everything
-            nrfxlib_sys::nrf_modem_dect_phy_rx(&nrfxlib_sys::nrf_modem_dect_phy_rx_params {
+            dect_phy::rx(&dect_phy::rx_params {
                 start_time: 0,
                 handle: 54321,
                 network_id: network_id.map(u32::from).unwrap_or(0),
-                mode: nrfxlib_sys::nrf_modem_dect_phy_rx_mode_NRF_MODEM_DECT_PHY_RX_MODE_SINGLE_SHOT,
-                rssi_interval: nrfxlib_sys::nrf_modem_dect_phy_rssi_interval_NRF_MODEM_DECT_PHY_RSSI_INTERVAL_OFF,
-                link_id: nrfxlib_sys::nrf_modem_dect_phy_link_id {
+                mode: dect_phy::rx_mode_values::SINGLE_SHOT,
+                rssi_interval: dect_phy::rssi_interval_values::OFF,
+                link_id: dect_phy::link_id {
                     short_network_id: 0,
                     short_rd_id: 0,
                 },
@@ -279,7 +280,7 @@ impl DectPhy {
                 carrier: carrier.into(),
                 // ~ 1 second
                 duration: 70000000,
-                filter: nrfxlib_sys::nrf_modem_dect_phy_rx_filter {
+                filter: dect_phy::rx_filter {
                     short_network_id: 0,
                     is_short_network_id_used: 0,
                     receiver_identity: 0,

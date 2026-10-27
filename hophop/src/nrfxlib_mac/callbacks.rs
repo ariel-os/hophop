@@ -12,7 +12,7 @@
 )]
 
 use defmt::{info, warn};
-use nrf_modem::nrfxlib_sys;
+use nrfxlib_sys_pretty::{dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
 
@@ -21,47 +21,45 @@ use super::error::MacErrorExt;
 use super::shared_queues::*;
 use super::{AssociationEndEvent, ClusterBeacon, DlcDataRx};
 
-pub(super) static OP_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_op_callbacks =
-    nrfxlib_sys::nrf_modem_dect_mac_op_callbacks {
-        control_functional_mode: Some(control_functional_mode),
-        control_configure: Some(control_configure),
-        control_systemmode: Some(control_systemmode),
-        association: Some(association),
-        association_release: Some(association_release),
-        cluster_beacon_receive: Some(cluster_beacon_receive),
-        cluster_beacon_receive_stop: Some(cluster_beacon_receive_stop),
-        cluster_configure: Some(cluster_configure),
-        cluster_info: Some(cluster_info),
-        neighbor_info: Some(neighbor_info),
-        neighbor_list: Some(neighbor_list),
-        dlc_data_tx: Some(dlc_data_tx),
-        dlc_data_discard: Some(dlc_data_discard),
-        network_beacon_configure: Some(network_beacon_configure),
-        network_scan: Some(network_scan),
-        network_scan_stop: Some(network_scan_stop),
-        rssi_scan: Some(rssi_scan),
-        rssi_scan_stop: Some(rssi_scan_stop),
-    };
+pub(super) static OP_CALLBACKS: dect_mac::op_callbacks = dect_mac::op_callbacks {
+    control_functional_mode: Some(control_functional_mode),
+    control_configure: Some(control_configure),
+    control_systemmode: Some(control_systemmode),
+    association: Some(association),
+    association_release: Some(association_release),
+    cluster_beacon_receive: Some(cluster_beacon_receive),
+    cluster_beacon_receive_stop: Some(cluster_beacon_receive_stop),
+    cluster_configure: Some(cluster_configure),
+    cluster_info: Some(cluster_info),
+    neighbor_info: Some(neighbor_info),
+    neighbor_list: Some(neighbor_list),
+    dlc_data_tx: Some(dlc_data_tx),
+    dlc_data_discard: Some(dlc_data_discard),
+    network_beacon_configure: Some(network_beacon_configure),
+    network_scan: Some(network_scan),
+    network_scan_stop: Some(network_scan_stop),
+    rssi_scan: Some(rssi_scan),
+    rssi_scan_stop: Some(rssi_scan_stop),
+};
 
-pub(super) static MAC_NTF_CALLBACKS: nrfxlib_sys::nrf_modem_dect_mac_ntf_callbacks =
-    nrfxlib_sys::nrf_modem_dect_mac_ntf_callbacks {
-        association_ntf: Some(association_ntf),
-        association_release_ntf: Some(association_release_ntf),
-        cluster_ch_load_change_ntf: Some(cluster_ch_load_change_ntf),
-        neighbor_inactivity_ntf: Some(neighbor_inactivity_ntf),
-        neighbor_paging_failure_ntf: Some(neighbor_paging_failure_ntf),
-        rssi_scan_ntf: Some(rssi_scan_ntf),
-        cluster_beacon_ntf: Some(cluster_beacon_ntf),
-        cluster_beacon_rx_failure_ntf: Some(cluster_beacon_rx_failure_ntf),
-        ipv6_config_update_ntf: Some(ipv6_config_update_ntf),
-        network_beacon_ntf: Some(network_beacon_ntf),
-        capability_ntf: Some(capability_ntf),
-        dlc_data_rx_ntf: Some(dlc_data_rx_ntf),
-        dlc_flow_control_ntf: Some(dlc_flow_control_ntf),
-    };
+pub(super) static MAC_NTF_CALLBACKS: dect_mac::ntf_callbacks = dect_mac::ntf_callbacks {
+    association_ntf: Some(association_ntf),
+    association_release_ntf: Some(association_release_ntf),
+    cluster_ch_load_change_ntf: Some(cluster_ch_load_change_ntf),
+    neighbor_inactivity_ntf: Some(neighbor_inactivity_ntf),
+    neighbor_paging_failure_ntf: Some(neighbor_paging_failure_ntf),
+    rssi_scan_ntf: Some(rssi_scan_ntf),
+    cluster_beacon_ntf: Some(cluster_beacon_ntf),
+    cluster_beacon_rx_failure_ntf: Some(cluster_beacon_rx_failure_ntf),
+    ipv6_config_update_ntf: Some(ipv6_config_update_ntf),
+    network_beacon_ntf: Some(network_beacon_ntf),
+    capability_ntf: Some(capability_ntf),
+    dlc_data_rx_ntf: Some(dlc_data_rx_ntf),
+    dlc_flow_control_ntf: Some(dlc_flow_control_ntf),
+};
 
 unsafe extern "C" fn control_functional_mode(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_functional_mode_cb_params,
+    params: *mut dect_mac::control_functional_mode_cb_params,
 ) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
@@ -73,9 +71,7 @@ unsafe extern "C" fn control_functional_mode(
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn control_configure(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_configure_cb_params,
-) {
+unsafe extern "C" fn control_configure(params: *mut dect_mac::control_configure_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     info!(
@@ -86,9 +82,7 @@ unsafe extern "C" fn control_configure(
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn control_systemmode(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_control_systemmode_cb_params,
-) {
+unsafe extern "C" fn control_systemmode(params: *mut dect_mac::control_systemmode_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     info!(
@@ -99,9 +93,7 @@ unsafe extern "C" fn control_systemmode(
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn association(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_cb_params,
-) {
+unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     info!(
@@ -117,12 +109,16 @@ unsafe extern "C" fn association(
             params.rx_signal_info.rssi_2,
             params.rx_signal_info.snr
         );
-        info!("  IPv6 config: type {} address 0x{:x}", match params.ipv6_config.type_ {
-            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_FULL => "full",
-            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_NONE => "none",
-            nrfxlib_sys::nrf_modem_dect_mac_ipv6_address_type_NRF_MODEM_DECT_MAC_IPV6_ADDRESS_TYPE_PREFIX => "prefix",
-            _ => "?"
-        }, params.ipv6_config.address);
+        info!(
+            "  IPv6 config: type {} address 0x{:x}",
+            match params.ipv6_config.type_ {
+                dect_mac::ipv6_address_type_values::FULL => "full",
+                dect_mac::ipv6_address_type_values::NONE => "none",
+                dect_mac::ipv6_address_type_values::PREFIX => "prefix",
+                _ => "?",
+            },
+            params.ipv6_config.address
+        );
         // FIXME: only valid if bit is set
         info!(
             "  Association response: ack {}, reject…, flows {}, harq…, group_id…, resource_tag…",
@@ -140,42 +136,32 @@ unsafe extern "C" fn association(
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn association_release(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_cb_params,
-) {
+unsafe extern "C" fn association_release(params: *mut dect_mac::association_release_cb_params) {
     todo!()
 }
 unsafe extern "C" fn cluster_beacon_receive(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_receive_cb_params,
+    params: *mut dect_mac::cluster_beacon_receive_cb_params,
 ) {
     todo!()
 }
 unsafe extern "C" fn cluster_beacon_receive_stop(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_receive_stop_cb_params,
+    params: *mut dect_mac::cluster_beacon_receive_stop_cb_params,
 ) {
     todo!()
 }
-unsafe extern "C" fn cluster_configure(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_configure_cb_params,
-) {
+unsafe extern "C" fn cluster_configure(params: *mut dect_mac::cluster_configure_cb_params) {
     todo!()
 }
-unsafe extern "C" fn cluster_info(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_info_cb_params,
-) {
+unsafe extern "C" fn cluster_info(params: *mut dect_mac::cluster_info_cb_params) {
     todo!()
 }
-unsafe extern "C" fn neighbor_info(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_info_cb_params,
-) {
+unsafe extern "C" fn neighbor_info(params: *mut dect_mac::neighbor_info_cb_params) {
     todo!()
 }
-unsafe extern "C" fn neighbor_list(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_list_cb_params,
-) {
+unsafe extern "C" fn neighbor_list(params: *mut dect_mac::neighbor_list_cb_params) {
     todo!()
 }
-unsafe extern "C" fn dlc_data_tx(params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_tx_cb_params) {
+unsafe extern "C" fn dlc_data_tx(params: *mut dect_dlc::data_tx_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
@@ -183,19 +169,15 @@ unsafe extern "C" fn dlc_data_tx(params: *mut nrfxlib_sys::nrf_modem_dect_dlc_da
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn dlc_data_discard(
-    params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_discard_cb_params,
-) {
+unsafe extern "C" fn dlc_data_discard(params: *mut dect_dlc::data_discard_cb_params) {
     todo!()
 }
 unsafe extern "C" fn network_beacon_configure(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_beacon_configure_cb_params,
+    params: *mut dect_mac::network_beacon_configure_cb_params,
 ) {
     todo!()
 }
-unsafe extern "C" fn network_scan(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_cb_params,
-) {
+unsafe extern "C" fn network_scan(params: *mut dect_mac::network_scan_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     // Ignoring num_channels; not sure why how that'd be new information
@@ -203,34 +185,28 @@ unsafe extern "C" fn network_scan(
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn network_scan_stop(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_scan_stop_cb_params,
-) {
+unsafe extern "C" fn network_scan_stop(params: *mut dect_mac::network_scan_stop_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     SINGLETON_EVENTS
         .try_send(params.status.into_mac_status())
         .unwrap();
 }
-unsafe extern "C" fn rssi_scan(params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_cb_params) {
+unsafe extern "C" fn rssi_scan(params: *mut dect_mac::rssi_scan_cb_params) {
     todo!()
 }
-unsafe extern "C" fn rssi_scan_stop(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_stop_cb_params,
-) {
+unsafe extern "C" fn rssi_scan_stop(params: *mut dect_mac::rssi_scan_stop_cb_params) {
     todo!()
 }
 
-unsafe extern "C" fn association_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_ntf_cb_params,
-) {
+unsafe extern "C" fn association_ntf(params: *mut dect_mac::association_ntf_cb_params) {
     todo!("Only relevant for FTs")
 }
 unsafe extern "C" fn association_release_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params,
+    params: *mut dect_mac::association_release_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let &nrfxlib_sys::nrf_modem_dect_mac_association_release_ntf_cb_params {
+    let &dect_mac::association_release_ntf_cb_params {
         release_cause,
         long_rd_id,
     } = unsafe { &*params };
@@ -245,28 +221,24 @@ unsafe extern "C" fn association_release_ntf(
     });
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_ch_load_change_ntf_cb_params,
+    params: *mut dect_mac::cluster_ch_load_change_ntf_cb_params,
 ) {
     todo!("Only relevant for FTs")
 }
 unsafe extern "C" fn neighbor_inactivity_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_inactivity_ntf_cb_params,
+    params: *mut dect_mac::neighbor_inactivity_ntf_cb_params,
 ) {
     todo!("Only relevant for FTs")
 }
 unsafe extern "C" fn neighbor_paging_failure_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_neighbor_paging_failure_ntf_cb_params,
+    params: *mut dect_mac::neighbor_paging_failure_ntf_cb_params,
 ) {
     todo!("Only relevant for FTs")
 }
-unsafe extern "C" fn rssi_scan_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_rssi_scan_ntf_cb_params,
-) {
+unsafe extern "C" fn rssi_scan_ntf(params: *mut dect_mac::rssi_scan_ntf_cb_params) {
     todo!("Only relevant for FTs")
 }
-unsafe extern "C" fn cluster_beacon_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_ntf_cb_params,
-) {
+unsafe extern "C" fn cluster_beacon_ntf(params: *mut dect_mac::cluster_beacon_ntf_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     let (
@@ -315,11 +287,10 @@ unsafe extern "C" fn cluster_beacon_ntf(
     }
 }
 unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params,
+    params: *mut dect_mac::cluster_beacon_rx_failure_ntf_cb_params,
 ) {
     // SAFETY: implied in C API
-    let &nrfxlib_sys::nrf_modem_dect_mac_cluster_beacon_rx_failure_ntf_cb_params { long_rd_id } =
-        unsafe { &*params };
+    let &dect_mac::cluster_beacon_rx_failure_ntf_cb_params { long_rd_id } = unsafe { &*params };
 
     let long_rd_id = LongRdId::new(long_rd_id).unwrap();
 
@@ -329,13 +300,11 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
     });
 }
 unsafe extern "C" fn ipv6_config_update_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_ipv6_config_update_ntf_cb_params,
+    params: *mut dect_mac::ipv6_config_update_ntf_cb_params,
 ) {
     todo!()
 }
-unsafe extern "C" fn network_beacon_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_network_beacon_ntf_cb_params,
-) {
+unsafe extern "C" fn network_beacon_ntf(params: *mut dect_mac::network_beacon_ntf_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     info!(
@@ -344,9 +313,7 @@ unsafe extern "C" fn network_beacon_ntf(
     );
     // FIXME: do we *do* anything with those, esp. w/rt sending them to the scan process?
 }
-unsafe extern "C" fn capability_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_mac_capability_ntf_cb_params,
-) {
+unsafe extern "C" fn capability_ntf(params: *mut dect_mac::capability_ntf_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     info!(
@@ -354,9 +321,7 @@ unsafe extern "C" fn capability_ntf(
         params.max_mcs, params.num_band_info_elems,
     );
 }
-unsafe extern "C" fn dlc_data_rx_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_dlc_data_rx_ntf_cb_params,
-) {
+unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     // SAFETY: implied in C API (and we're only using it in this callback)
@@ -388,8 +353,6 @@ unsafe extern "C" fn dlc_data_rx_ntf(
         warn!("Could not enqueue: too big for heapless vec");
     };
 }
-unsafe extern "C" fn dlc_flow_control_ntf(
-    params: *mut nrfxlib_sys::nrf_modem_dect_dlc_flow_control_ntf_cb_params,
-) {
+unsafe extern "C" fn dlc_flow_control_ntf(params: *mut dect_dlc::flow_control_ntf_cb_params) {
     todo!()
 }
