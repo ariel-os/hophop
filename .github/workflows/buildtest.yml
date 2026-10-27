@@ -15,7 +15,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Install stable toolchain (rest will be pulled by laze target)
-        uses: dtolnay/rust-toolchain@1.95.0
+        uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: rustfmt, clippy, llvm-tools
 
@@ -37,8 +37,8 @@ jobs:
         run: |
           # For unknown reasons this only works in the main repo; a trial run
           # ensures that the right repo is alredy checked out
-          laze build -C examples/ install-toolchain || true
-          laze build -C examples/build/imports/ariel-os/ install-toolchain
+          laze build install-toolchain || true
+          laze build -C build/imports/ariel-os/ install-toolchain
 
       - run: |
           ./test/all.sh

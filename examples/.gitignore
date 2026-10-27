@@ -2,5 +2,4 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
 /target
-/build
 .gdb_history
