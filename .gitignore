@@ -3,3 +3,5 @@
 
 # Created by various Rust based tools
 target/
+# Created by laze
+build/

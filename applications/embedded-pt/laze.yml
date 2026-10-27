@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+apps:
+  - name: hophop-application-embedded-pt
+    selects:
+      - nrf91-modem
+      - nrf-radiocore-firmware-dect
+      # Actually only for the nrfmacdemo
+      - ipv6 # has to be before network
+      - network
+      - user-net-driver-channel
+      - coap-server
+      - ?coap-server-config-storage
+    conflicts:
+      - ipv4
