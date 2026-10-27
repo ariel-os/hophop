@@ -8,7 +8,7 @@ edition = "2024"
 [dependencies]
 hophop.path = "../../hophop"
 
-ariel-os = { path = "../../build/imports/ariel-os/src/ariel-os", features = ["time", "uart"] }
+ariel-os = { path = "../../build/imports/ariel-os/src/ariel-os", features = ["time", "uart", "coap-transport-slipmux-user-ip"] }
 ariel-os-boards = { path = "../../build/imports/ariel-os/src/ariel-os-boards" }
 heapless = { version = "0.9.2", features = ["embedded-io-v0.7", "defmt"] }
 
@@ -19,8 +19,6 @@ ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["defmt"] }
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "4.0.0", features = ["dect-mac"] }
-# Next version after 0.4.1 might have PR https://github.com/Teufelchen1/slipmux/pull/20 in
-slipmux = { git = "https://github.com/chrysn-pull-requests/slipmux", default-features = false, branch = "general-owned-latest-frame" }
 embassy-futures = "0.1.2"
 embedded-io-async = "0.7.0"
 embassy-sync = "0.8.0"
@@ -32,3 +30,4 @@ coap-message-utils = "0.3.9"
 # for pseudostack
 embedded-nal-minimal-coapserver = "0.5.0"
 embedded-nal = "0.9"
+static_cell = "2.1.1"
