@@ -247,6 +247,7 @@ fn main() {
     }
 
     let mut generated = String::new();
+    // REUSE-IgnoreStart
     writeln!(
         generated,
         "// SPDX-FileCopyrightText: Derived file from the nrfxlib-sys inputs"
@@ -257,6 +258,7 @@ fn main() {
         "// SPDX-License-Identifier: LicenseRef-Nordic-5-Clause"
     )
     .unwrap();
+    // REUSE-IgnoreEnd
 
     for (prefix, code) in groupstrings {
         let prefix_shortened = prefix.strip_prefix("nrf_modem_").unwrap();
