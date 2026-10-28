@@ -158,7 +158,7 @@ impl DectPhy {
     pub async fn rssi_bulk(
         &mut self,
         carriers: &[AbsoluteChannel],
-        network_id: NetworkId32,
+        network_id: Option<NetworkId32>,
         mut on_event: impl AsyncFnMut(Option<Box<RssiPool>>),
         mut on_receive: impl AsyncFnMut(super::rx::RecvResult),
     ) -> Result<(), MixedError> {
@@ -199,7 +199,7 @@ impl DectPhy {
                     short_network_id: 0,
                     short_rd_id: 0,
                 },
-                network_id: network_id.into(),
+                network_id: network_id.map(u32::from).unwrap_or_default(),
                 rssi_level: 0,
             };
             unsafe { dect_phy::rx(&raw const params) }.into_result()?;

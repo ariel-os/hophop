@@ -34,7 +34,7 @@ async fn sniff(mut dect: hophop::nrfxlib_phy::DectPhy) {
             // an array of 10 gives us about 100ms of continous capture; slow enough that we don't
             // miss too much at the edges, fast enough that we can switch around quickly.
             &[const { AbsoluteChannel::new(1665).unwrap() }; 10],
-            const { NetworkId32::new(0x87654321).unwrap() },
+            Some(const { NetworkId32::new(0x87654321).unwrap() }),
             async |event| {
                 // FIXME: We'll want to have this at some point, but right now, it's using too much
                 // of the 115200 default UART link.
