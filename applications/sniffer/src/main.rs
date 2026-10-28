@@ -25,6 +25,10 @@ async fn main() {
     // put it in again" in the loop.
     IP2SLIPMUX.signal(BUFFER.take());
 
+    sniff(dect).await;
+}
+
+async fn sniff(mut dect: hophop::nrfxlib_phy::DectPhy) {
     loop {
         dect.rssi_bulk(
             // an array of 10 gives us about 100ms of continous capture; slow enough that we don't
@@ -45,13 +49,13 @@ async fn main() {
                     warn!("RSSI pool overflow");
                 }
             },
-            async |receive| {
-                match receive {
-                    Ok(recv) => send(recv.pcc(), recv.pdc().unwrap_or(&[])).await.unwrap(),
-                    Err(pcc_error) => warn!("Can not express PCC error for Wireshark"),
-                }
-            }
-        ).await.unwrap();
+            async |receive| match receive {
+                Ok(recv) => send(recv.pcc(), recv.pdc().unwrap_or(&[])).await.unwrap(),
+                Err(pcc_error) => warn!("Can not express PCC error for Wireshark"),
+            },
+        )
+        .await
+        .unwrap();
     }
 }
 
