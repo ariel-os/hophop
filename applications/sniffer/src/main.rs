@@ -26,32 +26,32 @@ async fn main() {
     IP2SLIPMUX.signal(BUFFER.take());
 
     loop {
-        if let Some(received) = dect
-            .rx(
-                const { AbsoluteChannel::new(1665).unwrap() },
-                const { NetworkId32::new(0x87654321) },
-            )
-            .await
-            .expect("Receive operation failed as a whole")
-        {
-            if let Ok(received) = received {
-                let start = received.pcc.time;
-                let pcc = received.pcc();
-                match received.pdc() {
-                    Ok(pdc) => {
-                        send(pcc, pdc).await.unwrap();
+        dect.rssi_bulk(
+            // an array of 10 gives us about 100ms of continous capture; slow enough that we don't
+            // miss too much at the edges, fast enough that we can switch around quickly.
+            &[const { AbsoluteChannel::new(1665).unwrap() }; 10],
+            const { NetworkId32::new(0x87654321).unwrap() },
+            async |event| {
+                // FIXME: We'll want to have this at some point, but right now, it's using too much
+                // of the 115200 default UART link.
+                #[cfg(false)]
+                if let Some(event) = event {
+                    // we don't block for this, making RSSI reports kind of lower priority
+                    if let Some(buffer) = SLIPMUX2IP.try_take() {
+                        buffer.extend_from_slice(&[0x60, 0x00, 0x00]);
+                        IP2SLIPMUX.signal(buffer);
                     }
-                    Err(pdc) => {
-                        info!(
-                            "Received at {}: {:?} but data was not received: {:?}",
-                            start, pcc, pdc
-                        );
-                    }
+                } else {
+                    warn!("RSSI pool overflow");
                 }
-            } else {
-                warn!("Received partial transmission",);
+            },
+            async |receive| {
+                match receive {
+                    Ok(recv) => send(recv.pcc(), recv.pdc().unwrap_or(&[])).await.unwrap(),
+                    Err(pcc_error) => warn!("Can not express PCC error for Wireshark"),
+                }
             }
-        }
+        ).await.unwrap();
     }
 }
 
