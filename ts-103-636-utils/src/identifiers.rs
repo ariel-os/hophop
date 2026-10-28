@@ -44,6 +44,16 @@ impl From<AbsoluteChannel> for NonZero<u16> {
     }
 }
 
+#[cfg(feature = "minicbor")]
+impl<'b, C> minicbor::Decode<'b, C> for AbsoluteChannel {
+    fn decode(
+        d: &mut minicbor::Decoder<'b>,
+        _ctx: &mut C,
+    ) -> Result<Self, minicbor::decode::Error> {
+        Self::new(d.u16()?).ok_or(minicbor::decode::Error::message("out of range"))
+    }
+}
+
 impl core::fmt::Debug for AbsoluteChannel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Does using a write rather than just deferring really get us rid of a :x on a surrounding
