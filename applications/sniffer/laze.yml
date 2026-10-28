@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+apps:
+  - name: hophop-application-sniffer
+    depends:
+      - has_host_facing_uart
+    selects:
+      - nrf91-modem
+      - nrf-radiocore-firmware-dect
+      - coap-server
+      - coap-transport-slipmux
+      # Only going over UART, and only changing the behavior of the interface that is offered.
+      - coap-server-config-unprotected
+    disables:
+      # not sure why that gets pulled in automatically
+      - network

@@ -12,3 +12,4 @@ subdirs:
   - examples
   - applications/bridge-pt
   - applications/embedded-pt
+  - applications/sniffer
