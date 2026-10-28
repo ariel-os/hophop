@@ -72,13 +72,13 @@ pub(super) unsafe fn event(rssi: *const dect_phy::rssi_event) -> DectEvent {
         meas.len(),
     );
 
+    let mut data = [0; _];
+    data[..meas.len()].copy_from_slice(meas);
+
     let owned = RssiPool
         .alloc(RssiEvent {
             start_time: rssi.meas_start_time,
-            data: meas
-                .try_into()
-                // FIXME: As some point, we might also receive shorter RSSI data.
-                .unwrap(),
+            data,
         })
         .ok();
 
