@@ -14,7 +14,9 @@ use core::num::NonZero;
 ///
 /// This type uses 13 bit (expressed in a u16).
 #[derive(Copy, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "minicbor", derive(minicbor::Encode))]
+// If the u16 gets alter limited to just the 13 bits available in many places, the Decode will need
+// to be done manually.
+#[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
 #[cfg_attr(feature = "minicbor", cbor(transparent))]
 pub struct AbsoluteChannel(NonZero<u16>);
 
@@ -41,16 +43,6 @@ impl From<AbsoluteChannel> for u16 {
 impl From<AbsoluteChannel> for NonZero<u16> {
     fn from(value: AbsoluteChannel) -> Self {
         value.0
-    }
-}
-
-#[cfg(feature = "minicbor")]
-impl<'b, C> minicbor::Decode<'b, C> for AbsoluteChannel {
-    fn decode(
-        d: &mut minicbor::Decoder<'b>,
-        _ctx: &mut C,
-    ) -> Result<Self, minicbor::decode::Error> {
-        Self::new(d.u16()?).ok_or(minicbor::decode::Error::message("out of range"))
     }
 }
 
