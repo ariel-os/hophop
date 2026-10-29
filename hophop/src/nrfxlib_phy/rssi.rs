@@ -220,50 +220,52 @@ impl DectPhy {
             let handle = handle_from_index(handle);
             recv_result = Default::default();
             // FIXME: When should we clear the recvbuf?
-            for _ in 0..multiples {
-                loop {
-                    match DECT_EVENTS.receive().await.event {
-                        DectEvent::Rssi(received_handle, res) => {
-                            // Protect against AsMut impls that are not actually constant length.
-                            assert_eq!(handle, received_handle);
 
-                            if let Some(res) = &res {
-                                defmt::debug!("Got some RSSI at {}", res.start_time());
-                            } else {
-                                defmt::warn!("Got RSSI but data could not be allocate");
-                            }
-                            on_event(res).await;
-                            break;
+            // We expect to receive exaclty as many RSSI events as requested, and then a Completion
+            // -- but data can arrive even after the last RSSI.
+            let mut expected_receive: usize = multiples;
+            loop {
+                let event = DECT_EVENTS.receive().await.event;
+                match (event, expected_receive) {
+                    (DectEvent::Rssi(_, _), 0) => panic!("Sequence violation"),
+                    (DectEvent::Rssi(received_handle, res), _) => {
+                        expected_receive -= 1;
+
+                        // Protect against AsMut impls that are not actually constant length.
+                        assert_eq!(handle, received_handle);
+
+                        if let Some(res) = &res {
+                            defmt::debug!("Got some RSSI at {}", res.start_time());
+                        } else {
+                            defmt::warn!("Got RSSI but data could not be allocate");
                         }
+                        on_event(res).await;
+                    }
+                    (
                         e @ (DectEvent::Pcc(..)
                         | DectEvent::Pdc(..)
                         | DectEvent::PccError(..)
-                        | DectEvent::PdcError) => {
-                            // Both the Break and the Error case only occur when feeding a
-                            // Completed, which we don't do.
-                            let _ = recv_result.feed(e)?;
-                            if recv_result.is_ready() {
-                                let result = core::mem::take(&mut recv_result);
-                                let result =
-                                    result.finish().expect("Done states have Some content");
-                                on_receive(result).await;
-                            }
-                            continue;
+                        | DectEvent::PdcError),
+                        _,
+                    ) => {
+                        // Both the Break and the Error case only occur when feeding a
+                        // Completed, which we don't do.
+                        let _ = recv_result.feed(e)?;
+                        if recv_result.is_ready() {
+                            let result = core::mem::take(&mut recv_result);
+                            let result = result.finish().expect("Done states have Some content");
+                            on_receive(result).await;
                         }
-                        e => panic!("Sequence violation: {e:?}"),
+                        continue;
                     }
+                    (DectEvent::Completed(completion), 0) => {
+                        completion?;
+                        break;
+                    }
+                    _ => panic!("Sequence violation"),
                 }
             }
-            match DECT_EVENTS.receive().await.event {
-                DectEvent::Completed(Ok(())) => (),
-                DectEvent::Completed(e) => {
-                    defmt::info!("Completed with error {:?}", e);
-                    e?
-                }
-                _ => panic!("Sequence violation"),
-            };
         }
-
         Ok(())
     }
 }
