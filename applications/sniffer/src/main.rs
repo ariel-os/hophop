@@ -11,11 +11,46 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
 
 use ariel_os::coap::{self, IP2SLIPMUX, SLIPMUX2IP};
 
+#[derive(minicbor::Decode, minicbor::Encode, Copy, Clone, defmt::Format, Debug)]
+#[cbor(map)]
+struct Config {
+    #[n(0)]
+    channel: AbsoluteChannel,
+    #[n(1)]
+    network_id: Option<NetworkId32>,
+}
+
+struct ConfigStore(core::cell::Cell<Config>);
+
+impl coap_handler_implementations::GetRenderable for &ConfigStore {
+    type Get = Config;
+
+    fn get(&mut self) -> Result<Self::Get, coap_message_utils::Error> {
+        Ok(self.0.get())
+    }
+}
+
+// This is just the trivial put implementation for a cell without any push notifications around
+// changed state: the main loop picks it up regularly anyway.
+impl coap_handler_implementations::PutRenderable for &ConfigStore {
+    type Put = Config;
+
+    fn put(&mut self, representation: &Self::Put) -> Result<(), coap_message_utils::Error> {
+        self.0.set(*representation);
+        Ok(())
+    }
+}
+
 #[ariel_os::task(autostart)]
 async fn main() {
-    let mut dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
+    let dect = hophop::nrfxlib_phy::DectPhy::init_after_modem_init(())
         .await
         .unwrap();
+
+    let config = ConfigStore(core::cell::Cell::new(Config {
+        channel: const { AbsoluteChannel::new(1665).unwrap() },
+        network_id: const { Some(NetworkId32::new(0x87654321).unwrap()) },
+    }));
 
     // Buffer through which we send data to slipmux
     use static_cell::ConstStaticCell;
@@ -25,16 +60,27 @@ async fn main() {
     // put it in again" in the loop.
     IP2SLIPMUX.signal(BUFFER.take());
 
-    sniff(dect).await;
+    embassy_futures::join::join(sniff(dect, &config), coap(&config)).await;
 }
 
-async fn sniff(mut dect: hophop::nrfxlib_phy::DectPhy) {
+async fn sniff(mut dect: hophop::nrfxlib_phy::DectPhy, config: &ConfigStore) {
+    // An array of 10 gives us about 100ms of continous capture; slow enough that we don't miss too
+    // much at the edges, fast enough that we can switch around quickly.
+    //
+    // Initializing with an arbitrary value; it's overwritten at the start of every loop step
+    // anyway.
+    let mut channels = [const { AbsoluteChannel::new(1665).unwrap() }; 10];
+
     loop {
+        let current_config = config.0.get();
+
+        for c in channels.iter_mut() {
+            *c = current_config.channel;
+        }
+
         dect.rssi_bulk(
-            // an array of 10 gives us about 100ms of continous capture; slow enough that we don't
-            // miss too much at the edges, fast enough that we can switch around quickly.
-            &[const { AbsoluteChannel::new(1665).unwrap() }; 10],
-            Some(const { NetworkId32::new(0x87654321).unwrap() }),
+            &channels,
+            current_config.network_id,
             async |event| {
                 // FIXME: We'll want to have this at some point, but right now, it's using too much
                 // of the 115200 default UART link.
@@ -59,9 +105,15 @@ async fn sniff(mut dect: hophop::nrfxlib_phy::DectPhy) {
     }
 }
 
-#[ariel_os::task(autostart)]
-async fn coap() {
-    coap::coap_run(coap_handler_implementations::new_dispatcher()).await;
+async fn coap(config: &ConfigStore) {
+    use coap_handler_implementations::*;
+
+    let handler = new_dispatcher().at_with_attributes(
+        &["sniffconf"],
+        &[coap_handler::Attribute::Interface("core.p")],
+        TypeHandler::new_minicbor_2(with_get_put(config)),
+    );
+    coap::coap_run(handler).await;
 }
 
 async fn send(pcc: &[u8], pdc: &[u8]) -> Result<(), heapless::CapacityError> {

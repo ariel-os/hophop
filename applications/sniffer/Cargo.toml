@@ -15,6 +15,10 @@ coap-handler-implementations = "0.6.2"
 coap-message-utils = "0.3.9"
 
 ts-103-636-numbers = { path = "../../ts-103-636-numbers/" }
-ts-103-636-utils = { path = "../../ts-103-636-utils/" }
+ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["minicbor"] }
 static_cell = "2.1.1"
 heapless = "0.9.3"
+minicbor = { version = "2.3.1", features = ["derive"] }
+defmt = "1.2.0"
+embassy-futures = "0.1.2"
+coap-handler = "0.2.1"
