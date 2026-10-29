@@ -74,6 +74,7 @@ A USB stick is used during setup.
   ```console
   # export CARGO_HOME=/opt/rust
   # cargo install cargo-generate laze probe-rs-tools
+  # cargo install Jelly --git https://github.com/chrysn-pull-requests/jelly/ --branch core.p-edit
   # rustup target add thumbv8m.main-none-eabihf
   # echo "source <(COMPLETE=bash laze)" | sudo tee -a /etc/skel/.bashrc
   # rm -rf /opt/rust/registry

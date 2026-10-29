@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+[package]
+name = "hophop-application-sniffer"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+hophop.path = "../../hophop"
+
+ariel-os = { path = "../../build/imports/ariel-os/src/ariel-os", features = ["coap-transport-slipmux-user-ip"] }
+ariel-os-boards = { path = "../../build/imports/ariel-os/src/ariel-os-boards" }
+
+coap-handler-implementations = "0.6.2"
+coap-message-utils = "0.3.9"
+
+ts-103-636-numbers = { path = "../../ts-103-636-numbers/" }
+ts-103-636-utils = { path = "../../ts-103-636-utils/", features = ["minicbor"] }
+static_cell = "2.1.1"
+heapless = "0.9.3"
+minicbor = { version = "2.3.1", features = ["derive"] }
+defmt = "1.2.0"
+embassy-futures = "0.1.2"
+coap-handler = "0.2.1"

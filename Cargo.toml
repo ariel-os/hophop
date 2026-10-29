@@ -12,7 +12,7 @@ members = [
 ]
 
 # Not part of the workspace because that doesn't work well with Ariel OS setups (?)
-exclude = ["examples", "applications/embedded-pt", "applications/bridge-pt", "build"]
+exclude = ["examples", "applications/embedded-pt", "applications/bridge-pt", "applications/sniffer", "build"]
 
 [workspace.package]
 license = "MIT OR Apache-2.0"

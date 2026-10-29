@@ -11,10 +11,11 @@ This line is rather wobbly at the time of writing.
 
 ---
 
-Currently, this contains two applications:
+Currently, this contains those applications:
 
 * [`embedded-pt`](./embedded-pt/): IPv6 processed in the device, which takes the PT role.
 * [`bridge-pt`](./bridge-pt/): IPv6 forwarded to SLIP, with the device taking the PT role.
+* [`sniffer`](./sniffer/): A packet dumping application, built on the PHY, that dumps the sniffed data out via slipmux and UDP for Wireshark.
 
 Other envisioned applications are
 and `bridge-ft` (serving as a sink) and `embedded-ft` (which makes most sense for isolated networks or when Ariel OS gains border router functionality).

@@ -37,7 +37,7 @@ async fn main() {
         if let Err(e) = dect
             .rssi_bulk(
                 scans,
-                const { NetworkId32::new(0x87654321).unwrap() },
+                Some(const { NetworkId32::new(0x87654321).unwrap() }),
                 async |result| {
                     let channel = scan_iterator.next().unwrap();
                     let Some(result) = result else {
