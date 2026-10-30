@@ -4,7 +4,7 @@
 //! the application.
 
 use super::error::MacError;
-use super::{AssociationEndEvent, ClusterBeacon, DlcDataRx};
+use super::{AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx};
 
 // This should evolve a bit
 //
@@ -33,6 +33,12 @@ pub(crate) static BEACON_EVENTS: Channel<
     ClusterBeacon,
     // FIXME: What's a good number?
     2,
+> = Channel::new();
+
+pub(crate) static ASSOCIATION_EVENTS: Channel<
+    CriticalSectionRawMutex,
+    Result<AssociationEvent, MacError>,
+    1,
 > = Channel::new();
 
 /// Errors from associations.

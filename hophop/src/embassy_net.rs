@@ -131,6 +131,18 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
         if let Some(assoc) = assoc {
             self.association.set(Some(assoc));
             state_runner.set_link_state(LinkState::Up);
+
+            let mut address = [0; 16];
+            address[8..12].copy_from_slice(&u32::from(assoc.parent).to_be_bytes());
+            address[12..].copy_from_slice(&u32::from(self.static_config.rd_id).to_be_bytes());
+
+            use crate::nrfxlib_mac::Ipv6Config;
+            match assoc.ipv6_config {
+                Ipv6Config::Full(full) => address = full,
+                Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(&prefix),
+                Ipv6Config::None => address[..2].copy_from_slice(&[0xfe, 0x80]),
+            }
+            info!("Inferring IPv6 interface identifier: {:02x}", address);
         } else {
             self.association.set(None);
             state_runner.set_link_state(LinkState::Down);

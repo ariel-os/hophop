@@ -7,7 +7,7 @@
 
 // FIXME: which log level is suitable? probably debug, but defmt not having per-module granularity
 // doesn't help.
-use defmt::info;
+use defmt::{info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24, NetworkId32};
 
@@ -85,6 +85,8 @@ pub struct Association {
     pub parent: LongRdId,
     #[n(2)]
     pub channel: AbsoluteChannel,
+    #[n(3)]
+    pub ipv6_config: nrfxlib_mac::Ipv6Config,
 }
 
 /// Run a one-off association based on a list of candidate networks.
@@ -240,12 +242,19 @@ pub async fn associate<'c>(
             .mac_association(params.transmitter_long_rd_id, params.network_id)
             .await
         {
-            Ok(release) => {
+            Ok((association, release)) => {
+                if association.long_rd_id != params.transmitter_long_rd_id {
+                    warn!(
+                        "Attempted association with {} but now associated with {}",
+                        params.transmitter_long_rd_id, association.long_rd_id
+                    )
+                }
                 return Some((
                     Association {
                         network: params.network_id,
-                        parent: params.transmitter_long_rd_id,
+                        parent: association.long_rd_id,
                         channel: params.channel,
+                        ipv6_config: association.ipv6_config,
                     },
                     release,
                 ));

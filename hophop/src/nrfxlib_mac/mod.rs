@@ -166,7 +166,13 @@ impl DectMac {
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<impl core::future::Future<Output = AssociationEndEvent> + use<>, MacError> {
+    ) -> Result<
+        (
+            AssociationEvent,
+            impl core::future::Future<Output = AssociationEndEvent> + use<>,
+        ),
+        MacError,
+    > {
         let mut tx_flow_configs = [
             dect_mac::tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -217,9 +223,9 @@ impl DectMac {
         .into_result()
         .expect("Failed to start association attempt");
 
-        SINGLETON_EVENTS.receive().await?;
+        let association_event = ASSOCIATION_EVENTS.receive().await?;
 
-        Ok(RELEASE_EVENTS.receive())
+        Ok((association_event, RELEASE_EVENTS.receive()))
     }
 
     /// Transmits data in one of the flows.
@@ -315,4 +321,23 @@ pub(crate) enum ReleaseOrBeaconFailure {
 pub struct AssociationEndEvent {
     pub(crate) long_rd_id: LongRdId,
     pub(crate) release_cause: ReleaseOrBeaconFailure,
+}
+
+#[derive(defmt::Format)]
+pub struct AssociationEvent {
+    pub(crate) long_rd_id: LongRdId,
+    pub(crate) ipv6_config: Ipv6Config,
+    // Deliberately not in here: RSSI, MCS etc -- those might change, right?
+}
+
+#[derive(defmt::Format, Debug, Copy, Clone, minicbor::Encode)]
+// FIXME: Why can't this be cbor(transparent)?
+#[cbor(flat)]
+pub enum Ipv6Config {
+    #[n(2)]
+    Full(#[n(0)] [u8; 16]),
+    #[n(1)]
+    Prefix(#[n(0)] [u8; 8]),
+    #[n(0)]
+    None,
 }

@@ -19,7 +19,7 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, Shor
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
-use super::{AssociationEndEvent, ClusterBeacon, DlcDataRx};
+use super::{AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx, Ipv6Config};
 
 pub(super) static OP_CALLBACKS: dect_mac::op_callbacks = dect_mac::op_callbacks {
     control_functional_mode: Some(control_functional_mode),
@@ -95,45 +95,83 @@ unsafe extern "C" fn control_systemmode(params: *mut dect_mac::control_systemmod
 }
 unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
-    info!(
-        "Association callback, status {:?}, long_rd_id 0x{:x}",
-        params.status.into_mac_status(),
-        params.long_rd_id
-    );
-    if params.status == 0 {
-        info!(
-            "  RX signal info: MCS {}, TX power {}, RSSI2 {}, SNR {}",
-            params.rx_signal_info.mcs,
-            params.rx_signal_info.transmit_power,
-            params.rx_signal_info.rssi_2,
-            params.rx_signal_info.snr
-        );
-        info!(
-            "  IPv6 config: type {} address 0x{:x}",
-            match params.ipv6_config.type_ {
-                dect_mac::ipv6_address_type_values::FULL => "full",
-                dect_mac::ipv6_address_type_values::NONE => "none",
-                dect_mac::ipv6_address_type_values::PREFIX => "prefix",
-                _ => "?",
-            },
-            params.ipv6_config.address
-        );
-        // FIXME: only valid if bit is set
-        info!(
-            "  Association response: ack {}, reject…, flows {}, harq…, group_id…, resource_tag…",
-            params.association_response.ack_status,
-            match params.association_response.number_of_flows {
-                7 => "all that were",
-                _ => "some…",
-            }
-        );
-        debug_ies(unsafe { core::slice::from_raw_parts(params.ies, params.number_of_ies as _) });
-        // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
-    }
+    let &dect_mac::association_cb_params {
+        status,
+        __bindgen_anon_1,
+        long_rd_id,
+        rx_signal_info,
+        ipv6_config,
+        number_of_ies,
+        association_response,
+        ies,
+    } = unsafe { &*params };
+    // SAFETY: Both variants are always valid, they just provide different views.
+    let flags = unsafe { __bindgen_anon_1.flags };
+    let (status, Some(long_rd_id)) = (status.into_mac_status(), LongRdId::new(long_rd_id)) else {
+        warn!("Ignoring association event reserved values.");
+        return;
+    };
 
-    SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+    info!(
+        "Association callback, status {:?}, long_rd_id {}",
+        status, long_rd_id,
+    );
+    let event = match status {
+        Ok(()) => {
+            info!(
+                "  RX signal info: MCS {}, TX power {}, RSSI2 {}, SNR {}",
+                rx_signal_info.mcs,
+                rx_signal_info.transmit_power,
+                rx_signal_info.rssi_2,
+                rx_signal_info.snr
+            );
+
+            let ipv6_config = match ipv6_config.type_ {
+                dect_mac::ipv6_address_type_values::FULL => {
+                    Ok(Ipv6Config::Full(ipv6_config.address))
+                }
+                dect_mac::ipv6_address_type_values::NONE => Ok(Ipv6Config::None),
+                dect_mac::ipv6_address_type_values::PREFIX => Ok(Ipv6Config::Prefix(
+                    *ipv6_config.address.first_chunk().unwrap(),
+                )),
+                _ => Err("unknown IPv6 configuration"),
+            };
+
+            info!("  IPv6 config: {}", ipv6_config,);
+            // FIXME: only valid if bit is set
+            if flags.has_association_response() == 1 {
+                info!(
+                    "  Association response: ack {}, reject…, flows {}, harq…, group_id…, resource_tag…",
+                    association_response.ack_status,
+                    match association_response.number_of_flows {
+                        7 => "all that were",
+                        _ => "some…",
+                    }
+                );
+            }
+            debug_ies(unsafe { core::slice::from_raw_parts(ies, number_of_ies as _) });
+            // Unclear: When is which kind of the flags relevant? Or is this just a type punning union?
+
+            if let Ok(ipv6_config) = ipv6_config {
+                Ok(AssociationEvent {
+                    long_rd_id,
+                    ipv6_config,
+                })
+            } else {
+                warn!(
+                    "IPv6 configuration arrived with unknown value, expressing this as INVALID_PARAM"
+                );
+                Err(dect_mac::err_values::INVALID_PARAM
+                    .into_mac_status()
+                    .unwrap_err())
+            }
+        }
+        Err(e) => Err(e),
+    };
+
+    ASSOCIATION_EVENTS
+        .try_send(event)
+        .ok() // avoid pulling in formatter for this
         .unwrap();
 }
 unsafe extern "C" fn association_release(params: *mut dect_mac::association_release_cb_params) {
