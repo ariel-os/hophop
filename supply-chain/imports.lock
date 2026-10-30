@@ -47,6 +47,18 @@ criteria = "safe-to-deploy"
 delta = "1.1.0 -> 1.1.1"
 notes = "All of the changes consist in dropping proc-macro-error2 and replacing it with syn::Error."
 
+[[audits.ariel.audits.embassy-time-driver]]
+who = "ROMemories <152802150+ROMemories@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.0 -> 0.2.1"
+notes = "A very minor update: only an extra tick setting is added, a few methods inlined, and the Cargo.lock is now distributed."
+
+[[audits.ariel.audits.embassy-time-driver]]
+who = "ROMemories <152802150+ROMemories@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+notes = "Edition 2024 is now used, which requires a few extra `unsafe` keywords that do not affect the behavior in any way, and a new tick rate has been introduced."
+
 [[audits.ariel.audits.embedded-io]]
 who = "chrysn <chrysn@fsfe.org>"
 criteria = "safe-to-deploy"
@@ -152,6 +164,12 @@ delta = "0.3.28 -> 0.3.31"
 who = "Chris Fallin <chris@cfallin.org>"
 criteria = "safe-to-deploy"
 delta = "0.14.5 -> 0.15.2"
+
+[[audits.bytecode-alliance.audits.managed]]
+who = "Chris Fallin <chris@cfallin.org>"
+criteria = "safe-to-deploy"
+version = "0.8.0"
+notes = "No unsafe code."
 
 [[audits.bytecode-alliance.audits.num-traits]]
 who = "Andrew Brown <andrew.brown@intel.com>"
