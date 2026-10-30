@@ -89,6 +89,23 @@ pub struct Association {
     pub ipv6_config: nrfxlib_mac::Ipv6Config,
 }
 
+impl Association {
+    pub fn local_ipv6_address(&self, local_rd_id: LongRdId) -> core::net::Ipv6Addr {
+        let mut address = [0; 16];
+        address[8..12].copy_from_slice(&u32::from(self.parent).to_be_bytes());
+        address[12..].copy_from_slice(&u32::from(local_rd_id).to_be_bytes());
+
+        use crate::nrfxlib_mac::Ipv6Config;
+        match self.ipv6_config {
+            Ipv6Config::Full(full) => address = full,
+            Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(&prefix),
+            Ipv6Config::None => address[..2].copy_from_slice(&[0xfe, 0x80]),
+        }
+
+        address.into()
+    }
+}
+
 /// Run a one-off association based on a list of candidate networks.
 ///
 /// # API considerations
