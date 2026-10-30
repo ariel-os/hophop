@@ -72,14 +72,8 @@ Running the application
 * Run the example:
 
     ```console
-    $ CONFIG_NET_IPV6_STATIC_ADDRESS=fe80::70d1:776d:f9cf:c820 CONFIG_NET_IPV6_STATIC_GATEWAY_ADDRESS=:: laze build -b nrf9151-dk -D LOG=info run
+    $ laze build -b nrf9151-dk -D LOG=info run
     ```
-
-    FIXME: The IP address will initially be wrong and nothing will work.
-    Run `net nbr` on the FT (see below) and run again with that now correct IP address.
-
-    (Options using `network-config-override` were explored, but that does not help
-    because that configuration would not be generated at runtime).
 
 * Observe on the device being eventually associated with the shell FT:
 
@@ -93,12 +87,25 @@ Running the application
         Neighbor long RD ID 4027574958
     ```
 
-* Find your device's IP address and ping it:
+* Find your device's IP address and ping it.
+
+    Its logs will report:
+
+    ```
+    Setting IPv6 interface identifier: fe80:0000:0000:0000:70d1:776d:f9cf:c820
+    ```
+
+    and you can find the same address also when asking the FT:
 
     ```console
     desh:~$ net nbr
        Neighbor  Interface  Flags    State     Remain  Link              Address
     [ 1] 0x2000d16c  1          0/1/0/0  reachable      0  70:D1:77:6D:70:D1:77:6D fe80::70d1:776d:f9cf:c820
+    ```
+
+    Now you can ping it from the FT:
+
+    ```console
     desh:~# ping -d fe80::70d1:776d:f9cf:c820
     Initiating ping to: fe80::70d1:776d:f9cf:c820
     Source IP addr: fe80::70d1:776d:70d1:776d

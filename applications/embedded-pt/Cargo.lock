@@ -2001,6 +2001,7 @@ dependencies = [
  "coap-message-utils",
  "defmt",
  "embassy-futures",
+ "embassy-net",
  "embassy-net-driver",
  "embassy-net-driver-channel",
  "embassy-sync 0.7.2",

@@ -48,9 +48,12 @@ async fn main() {
         rd_id: our_long_id,
     };
 
+    let stack = ariel_os::net::network_stack().await.unwrap();
+
     let control_hub = hophop::embassy_net::Ni6wNetworkController::new(
         config,
         ariel_os::net::user_net_runner().await,
+        stack,
     );
 
     embassy_futures::join::join(
