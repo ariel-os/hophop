@@ -799,9 +799,9 @@ dependencies = [
 
 [[package]]
 name = "coap-handler-implementations"
-version = "0.6.2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be376890958ba8ccf700300361ee426bc1a1539714690e4ab5128c50400d578c"
+checksum = "e235b2a3bf23d555af6049695ca47ee0e373a4d0942c14da5e97b89d6440edb5"
 dependencies = [
  "coap-handler",
  "coap-message",
@@ -1229,7 +1229,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 3.0.6",
+ "syn 1.0.109",
 ]
 
 [[package]]
