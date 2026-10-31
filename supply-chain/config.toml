@@ -88,6 +88,10 @@ criteria = "safe-to-deploy"
 version = "1.9.1"
 criteria = "safe-to-deploy"
 
+[[exemptions.coap-handler-implementations]]
+version = "0.6.4"
+criteria = "safe-to-deploy"
+
 [[exemptions.coap-message]]
 version = "0.3.7"
 criteria = "safe-to-deploy"
