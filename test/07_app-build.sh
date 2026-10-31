@@ -21,7 +21,7 @@ done
 cd ..
 
 cd applications
-for APP in embedded-pt bridge-pt
+for APP in embedded-pt bridge-pt sniffer
 do
     laze build -C $APP/ ${BOARDS} -D LOG=trace
 done
