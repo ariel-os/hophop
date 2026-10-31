@@ -44,6 +44,11 @@ pub struct Ni6wNetworkController {
     state_runner: core::cell::RefCell<embassy_net_driver_channel::StateRunner<'static>>,
     rx_runner: core::cell::RefCell<embassy_net_driver_channel::RxRunner<'static, 1500>>,
     tx_runner: core::cell::RefCell<embassy_net_driver_channel::TxRunner<'static, 1500>>,
+    /// Stack whose address is set to the address per ETSI TS 103 874-3 V1.2 (IPv6 profile)
+    // It's kind of a layering violation for an embassy-net-driver implementation to also reach up
+    // into the stack -- but that's how addressing in NR+ works (see
+    // <https://github.com/Opener-Initiative/proposals/issues/10> though).
+    stack: ::embassy_net::Stack<'static>,
 }
 
 /// Error returned in the exotic case of a [`Ni6wNetworkController`] fallible function currently not working.
@@ -55,6 +60,7 @@ impl Ni6wNetworkController {
     pub fn new(
         static_config: crate::association::PtConfiguration<'static>,
         net_runner: embassy_net_driver_channel::Runner<'static, 1500>,
+        stack: ::embassy_net::Stack<'static>,
     ) -> Self {
         let (state_runner, rx_runner, tx_runner) = net_runner.split();
 
@@ -65,6 +71,7 @@ impl Ni6wNetworkController {
             state_runner: state_runner.into(),
             rx_runner: rx_runner.into(),
             tx_runner: tx_runner.into(),
+            stack,
         }
     }
 
@@ -131,6 +138,16 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
         if let Some(assoc) = assoc {
             self.association.set(Some(assoc));
             state_runner.set_link_state(LinkState::Up);
+
+            let address = assoc.local_ipv6_address(self.static_config.rd_id);
+            info!("Setting IPv6 address: {:02x}", address);
+
+            use ::embassy_net::*;
+            self.stack.set_config_v6(ConfigV6::Static(StaticConfigV6 {
+                address: Ipv6Cidr::new(address, 64),
+                dns_servers: [].into(),
+                gateway: None,
+            }));
         } else {
             self.association.set(None);
             state_runner.set_link_state(LinkState::Down);

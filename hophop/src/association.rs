@@ -7,7 +7,7 @@
 
 // FIXME: which log level is suitable? probably debug, but defmt not having per-module granularity
 // doesn't help.
-use defmt::info;
+use defmt::{info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24, NetworkId32};
 
@@ -85,6 +85,25 @@ pub struct Association {
     pub parent: LongRdId,
     #[n(2)]
     pub channel: AbsoluteChannel,
+    #[n(3)]
+    pub ipv6_config: nrfxlib_mac::Ipv6Config,
+}
+
+impl Association {
+    pub fn local_ipv6_address(&self, local_rd_id: LongRdId) -> core::net::Ipv6Addr {
+        let mut address = [0; 16];
+        address[8..12].copy_from_slice(&u32::from(self.parent).to_be_bytes());
+        address[12..].copy_from_slice(&u32::from(local_rd_id).to_be_bytes());
+
+        use crate::nrfxlib_mac::Ipv6Config;
+        match self.ipv6_config {
+            Ipv6Config::Full(full) => address = full,
+            Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(&prefix),
+            Ipv6Config::None => address[..2].copy_from_slice(&[0xfe, 0x80]),
+        }
+
+        address.into()
+    }
 }
 
 /// Run a one-off association based on a list of candidate networks.
@@ -240,12 +259,19 @@ pub async fn associate<'c>(
             .mac_association(params.transmitter_long_rd_id, params.network_id)
             .await
         {
-            Ok(release) => {
+            Ok((association, release)) => {
+                if association.long_rd_id != params.transmitter_long_rd_id {
+                    warn!(
+                        "Attempted association with {} but now associated with {}",
+                        params.transmitter_long_rd_id, association.long_rd_id
+                    )
+                }
                 return Some((
                     Association {
                         network: params.network_id,
-                        parent: params.transmitter_long_rd_id,
+                        parent: association.long_rd_id,
                         channel: params.channel,
+                        ipv6_config: association.ipv6_config,
                     },
                     release,
                 ));

@@ -6,11 +6,20 @@ apps:
     selects:
       - nrf91-modem
       - nrf-radiocore-firmware-dect
-      # Actually only for the nrfmacdemo
       - ipv6 # has to be before network
+      # Actually "we set it at runtime", but there is no module for that, so we
+      # just put in dummy values statically, and then call functions of the
+      # stack to set the addresses when associated.
+      - network-config-ipv6-static
       - network
       - user-net-driver-channel
       - coap-server
       - ?coap-server-config-storage
     conflicts:
       - ipv4
+    env:
+      global:
+        CARGO_ENV:
+          - >-
+            CONFIG_NET_IPV6_STATIC_ADDRESS=::
+            CONFIG_NET_IPV6_STATIC_GATEWAY_ADDRESS=::
