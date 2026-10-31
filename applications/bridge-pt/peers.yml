@@ -4,6 +4,8 @@
 - from: unauthenticated
   scope:
     /.well-known/core: GET
+    # Only accessible from UART right now
+    /id: GET
     /d: GET
 
 - kccs: |

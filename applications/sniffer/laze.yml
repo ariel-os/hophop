@@ -12,6 +12,7 @@ apps:
       - coap-transport-slipmux
       # Only going over UART, and only changing the behavior of the interface that is offered.
       - coap-server-config-unprotected
+      - coap-server-resource-identity
     disables:
       # not sure why that gets pulled in automatically
       - network
