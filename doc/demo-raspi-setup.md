@@ -131,6 +131,17 @@ A USB stick is used during setup.
 
   (picking any funny password as above)
 
+* To give people SSH access more easily:
+
+  ```console
+  # apt install shellinabox
+  ```
+
+  and
+
+  - edit /etc/defaults/shellinabox, add `-t` to `SHELLINABOX_ARGS` (so it works with plain http)
+  - switch the _ and + in the 00 css files in options-enabled
+
 * Preparations from the GUI:
 
   - Set up wireshark as per [../applications/sniffer/README.md](sniffer README)
