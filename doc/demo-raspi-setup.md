@@ -49,10 +49,10 @@ A USB stick is used during setup.
   $ sudo passwd -l myusername
   ```
 
-* Install base packages needed for Ariel (plus socat for using `dect_shell`; note that a testing socat just broke very weirdly):
+* Install base packages needed for Ariel (plus socat for using `dect_shell`):
 
   ```
-  $ sudo apt install git ninja-build pkg-config libudev-dev clang gcc-arm-none-eabi gcc-riscv64-unknown-elf gcc curl make 'socat=1.8.0.3-1+deb13u1'
+  $ sudo apt install git ninja-build pkg-config libudev-dev clang gcc-arm-none-eabi gcc-riscv64-unknown-elf gcc curl make socat
   ```
 
 * Install a few things as root so that they are available for all users (who don't need to change anything about that).
@@ -136,3 +136,7 @@ A USB stick is used during setup.
   - Set up wireshark as per [../applications/sniffer/README.md](sniffer README)
   - Add hophop website (repo) and Ariel OS website as bookmarks in the default browser in the bookmark bar group, and remove the predefined entries
   - Kate: set font to DejaVu Sans mono
+
+* Debug tips:
+
+  - UART output has been acting up in some cases; power cycling the full board helped.
