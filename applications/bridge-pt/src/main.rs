@@ -100,28 +100,8 @@ impl DirectToSlipmuxController {
         }
     }
 
-    // FIXME copied and adjusted from hophop::embassy_net
-    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        use coap_handler_implementations::*;
-        use coap_message_utils::Error;
-
-        struct ServeStatus<'a>(&'a DirectToSlipmuxController);
-
-        impl GetRenderable for ServeStatus<'_> {
-            type Get = Option<hophop::association::Association>;
-
-            fn get(&mut self) -> Result<Self::Get, Error> {
-                Ok(self.0.association.get())
-            }
-        }
-
-        wkc::ConstantSingleRecordReport::new(
-            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
-            &[coap_handler::Attribute::ResourceType(
-                "tag:ariel-os.org,2026:experimental-hophop",
-            )],
-        )
+        hophop::coap::association_status(|| self.association.get())
     }
 }
 

@@ -92,27 +92,11 @@ impl Ni6wNetworkController {
             .map_err(|_| RetryLater(()))
     }
 
-    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
+    /// Builds a CoAP resource for viewing an `Association`
+    ///
+    /// To retain flexibility of the implementation, use this with `.below()` rather than `.at()`.
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        use coap_handler_implementations::*;
-        use coap_message_utils::Error;
-
-        struct ServeStatus<'a>(&'a Ni6wNetworkController);
-
-        impl GetRenderable for ServeStatus<'_> {
-            type Get = Option<crate::association::Association>;
-
-            fn get(&mut self) -> Result<Self::Get, Error> {
-                Ok(self.0.association_status())
-            }
-        }
-
-        wkc::ConstantSingleRecordReport::new(
-            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
-            &[coap_handler::Attribute::ResourceType(
-                "tag:ariel-os.org,2026:experimental-hophop",
-            )],
-        )
+        super::coap::association_status(|| self.association_status())
     }
 }
 
