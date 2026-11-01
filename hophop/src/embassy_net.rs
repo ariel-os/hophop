@@ -27,7 +27,7 @@ use defmt::*;
 /// The code currently assumes that the associated PT is also the sink, i.e., that this is just a
 /// leaf node. This might be a fundamental restriction of the NI6W mode.
 pub struct Ni6wNetworkController {
-    static_config: crate::association::PtConfiguration<'static>,
+    static_config: crate::association::PtConfiguration,
     association: core::cell::Cell<Option<crate::association::Association>>,
     poke: embassy_sync::channel::Channel<
         embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
@@ -58,7 +58,7 @@ pub struct RetryLater(());
 
 impl Ni6wNetworkController {
     pub fn new(
-        static_config: crate::association::PtConfiguration<'static>,
+        static_config: crate::association::PtConfiguration,
         net_runner: embassy_net_driver_channel::Runner<'static, 1500>,
         stack: ::embassy_net::Stack<'static>,
     ) -> Self {
@@ -175,8 +175,7 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
 
     fn next_config(
         &mut self,
-    ) -> impl core::future::Future<Output = crate::association::PtConfiguration<'static>> + use<'a>
-    {
+    ) -> impl core::future::Future<Output = crate::association::PtConfiguration> + use<'a> {
         // FIXME: This relies on the consumer just querying it once; on the long run, we must be
         // sure to always return Pending after the first emission, or already forward changing
         // configurations.

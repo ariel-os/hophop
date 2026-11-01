@@ -29,23 +29,23 @@ async fn main() {
 
     let config = hophop::association::PtConfiguration {
         power_save: true,
-        networks: const {
-            &[
-                // The network pre-configured with Nordic DECT shell
-                hophop::association::CandidateNetwork {
-                    beacon_interval_ms: 2_000,
-                    channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
-                    network_id: Some(
-                        NetworkId24::new(0x876543).expect("is not 6 digits and not 0"),
-                    ),
-                    keys: Some(hophop::association::Mode1Keys {
-                        // 4A7573744164656661756C7421212121 is more readable as:
-                        cipher_key: b"JustAdefault!!!!",
-                        integrity_key: b"JustAdefault!!!!",
-                    }),
-                },
-            ]
-        },
+        networks: heapless::vec::Vec::from_slice(&[
+            // The network pre-configured with Nordic DECT shell
+            hophop::association::CandidateNetwork {
+                beacon_interval_ms: 2_000,
+                channels: heapless::vec::Vec::from_slice(&[
+                    AbsoluteChannel::new(1665).expect("is a channel")
+                ])
+                .unwrap(),
+                network_id: Some(NetworkId24::new(0x876543).expect("is not 6 digits and not 0")),
+                keys: Some(hophop::association::Mode1Keys {
+                    // 4A7573744164656661756C7421212121 is more readable as:
+                    cipher_key: *b"JustAdefault!!!!",
+                    integrity_key: *b"JustAdefault!!!!",
+                }),
+            },
+        ])
+        .unwrap(),
         rd_id: our_long_id,
     };
 
@@ -73,7 +73,7 @@ async fn main() {
 // This has parallels with the Ni6wNetworkController, but goes into the SLIPMUX2IP/IP2SLIPMUX
 // controls.
 struct DirectToSlipmuxController {
-    static_config: hophop::association::PtConfiguration<'static>,
+    static_config: hophop::association::PtConfiguration,
     association: core::cell::Cell<Option<hophop::association::Association>>,
     // FIXME: Currently, nothing sends into that
     poke: embassy_sync::channel::Channel<
@@ -86,7 +86,7 @@ struct DirectToSlipmuxController {
 }
 
 impl DirectToSlipmuxController {
-    fn new(static_config: hophop::association::PtConfiguration<'static>) -> Self {
+    fn new(static_config: hophop::association::PtConfiguration) -> Self {
         use static_cell::ConstStaticCell;
         static BUFFER: ConstStaticCell<ariel_os::coap::SingleBuffer> =
             ConstStaticCell::new(ariel_os::coap::SingleBuffer::new());
@@ -169,8 +169,7 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
     // FIXME duplicate from hophop::embassy_net
     fn next_config(
         &mut self,
-    ) -> impl core::future::Future<Output = hophop::association::PtConfiguration<'static>> + use<'a>
-    {
+    ) -> impl core::future::Future<Output = hophop::association::PtConfiguration> + use<'a> {
         // FIXME: This relies on the consumer just querying it once; on the long run, we must be
         // sure to always return Pending after the first emission, or already forward changing
         // configurations.

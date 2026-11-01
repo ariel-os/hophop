@@ -45,7 +45,7 @@ pub trait MacController {
     /// to send eventually consistent configs through there.
     fn next_config(
         &mut self,
-    ) -> impl core::future::Future<Output = super::association::PtConfiguration<'static>> + use<Self>;
+    ) -> impl core::future::Future<Output = super::association::PtConfiguration> + use<Self>;
     /// Next simple operation the MAC layer should perform.
     ///
     /// This lumps together a bunch of operations that can either be performed immediately or be
