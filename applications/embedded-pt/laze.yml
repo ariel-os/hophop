@@ -15,6 +15,7 @@ apps:
       - user-net-driver-channel
       - coap-server
       - ?coap-server-config-storage
+      - coap-server-resource-identity
     conflicts:
       - ipv4
     env:

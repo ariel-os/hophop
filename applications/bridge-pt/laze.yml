@@ -11,6 +11,7 @@ apps:
       - coap-server
       - coap-transport-slipmux
       - coap-server-config-storage
+      - coap-server-resource-identity
     disables:
       # not sure why that gets pulled in automatically
       - network

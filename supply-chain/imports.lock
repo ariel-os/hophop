@@ -13,11 +13,6 @@ who = "chrysn <chrysn@fsfe.org>"
 criteria = "safe-to-deploy"
 version = "0.2.1"
 
-[[audits.ariel.audits.coap-handler-implementations]]
-who = "chrysn <chrysn@fsfe.org>"
-criteria = "safe-to-deploy"
-version = "0.6.2"
-
 [[audits.ariel.audits.crc]]
 who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
 criteria = "safe-to-deploy"
