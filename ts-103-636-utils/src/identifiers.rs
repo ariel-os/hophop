@@ -197,6 +197,16 @@ impl NetworkId24 {
     }
 }
 
+#[cfg(feature = "minicbor")]
+impl<'b, C> minicbor::Decode<'b, C> for NetworkId24 {
+    fn decode(
+        d: &mut minicbor::Decoder<'b>,
+        _ctx: &mut C,
+    ) -> Result<Self, minicbor::decode::Error> {
+        Self::new(d.u32()?).ok_or(minicbor::decode::Error::message("out of range"))
+    }
+}
+
 impl core::fmt::Debug for NetworkId24 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "0x{:06x}..", u32::from(self.0))
