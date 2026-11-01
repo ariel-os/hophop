@@ -147,6 +147,7 @@ A USB stick is used during setup.
   - Set up wireshark as per [../applications/sniffer/README.md](sniffer README)
   - Add hophop website (repo) and Ariel OS website as bookmarks in the default browser in the bookmark bar group, and remove the predefined entries
   - Kate: set font to DejaVu Sans mono
+  - Run `cargo doc` on an example, and bookmark that in the browser
 
 * Debug tips:
 
