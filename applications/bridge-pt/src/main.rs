@@ -166,17 +166,10 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         }
     }
 
-    // FIXME duplicate from hophop::embassy_net
     fn next_config(
         &mut self,
     ) -> impl core::future::Future<Output = hophop::association::PtConfiguration> + use<'a> {
-        // FIXME: This relies on the consumer just querying it once; on the long run, we must be
-        // sure to always return Pending after the first emission, or already forward changing
-        // configurations.
-
-        let static_config = self.config.get();
-
-        async move { static_config }
+        self.config.next()
     }
 
     fn next_action(
