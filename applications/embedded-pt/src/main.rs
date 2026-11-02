@@ -65,7 +65,7 @@ async fn main() {
 
             let handler = new_dispatcher()
                 .at(&["hello"], SimpleRendered("Hello from hophop"))
-                .below(&["d"], control_hub.coap_server());
+                .below(&["hop"], control_hub.coap_server());
             ariel_os::coap::coap_run(handler).await;
         },
     )

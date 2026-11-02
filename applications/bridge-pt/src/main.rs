@@ -57,7 +57,7 @@ async fn main() {
     let handler = new_dispatcher()
         .at(&["hello"], SimpleRendered("Hello from hophop"))
         // FIXME generalize so it works here as well
-        .below(&["d"], control_hub.coap_server())
+        .below(&["hop"], control_hub.coap_server())
         // FIXME: This, as well as security, would be handled better by the Ariel OS CoAP server,
         // but right now we're sidestepping that; see laze-project.yml comment
         .with_wkc();
@@ -73,7 +73,7 @@ async fn main() {
 // This has parallels with the Ni6wNetworkController, but goes into the SLIPMUX2IP/IP2SLIPMUX
 // controls.
 struct DirectToSlipmuxController {
-    static_config: hophop::association::PtConfiguration,
+    config: hophop::coap::ControllablePtConfiguration,
     association: core::cell::Cell<Option<hophop::association::Association>>,
     // FIXME: Currently, nothing sends into that
     poke: embassy_sync::channel::Channel<
@@ -86,14 +86,14 @@ struct DirectToSlipmuxController {
 }
 
 impl DirectToSlipmuxController {
-    fn new(static_config: hophop::association::PtConfiguration) -> Self {
+    fn new(initial_config: hophop::association::PtConfiguration) -> Self {
         use static_cell::ConstStaticCell;
         static BUFFER: ConstStaticCell<ariel_os::coap::SingleBuffer> =
             ConstStaticCell::new(ariel_os::coap::SingleBuffer::new());
         let buffer = Some(BUFFER.take()).into();
 
         Self {
-            static_config,
+            config: hophop::coap::ControllablePtConfiguration::new(initial_config),
             association: Default::default(),
             poke: embassy_sync::channel::Channel::new(),
             buffer,
@@ -101,7 +101,7 @@ impl DirectToSlipmuxController {
     }
 
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        hophop::coap::association_status(|| self.association.get())
+        hophop::coap::all(|| self.association.get(), &self.config)
     }
 }
 
@@ -174,7 +174,7 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         // sure to always return Pending after the first emission, or already forward changing
         // configurations.
 
-        let static_config = self.static_config.clone();
+        let static_config = self.config.get();
 
         async move { static_config }
     }

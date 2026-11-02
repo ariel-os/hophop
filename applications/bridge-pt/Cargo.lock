@@ -2572,6 +2572,7 @@ dependencies = [
  "heapless 0.9.3",
  "itertools 0.14.0",
  "minicbor",
+ "minicbor-adapters",
  "nrf-modem",
  "nrfxlib-sys",
  "nrfxlib-sys-pretty",

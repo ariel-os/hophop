@@ -16,9 +16,11 @@ use super::nrfxlib_mac;
 use nrfxlib_sys_pretty::{dect_control, dect_mac};
 
 /// Key material for a network in Mode 1 (AES-128)
-#[derive(Clone)]
+#[derive(Clone, minicbor::Decode, minicbor::Encode)]
 pub struct Mode1Keys {
+    #[cbor(n(0))] //, with = "")]
     pub integrity_key: [u8; 16],
+    #[n(1)]
     pub cipher_key: [u8; 16],
 }
 
@@ -36,20 +38,24 @@ impl defmt::Format for Mode1Keys {
 pub const MAX_CONFIG_CHANNELS: usize = 20;
 
 /// Description of a network that could be joined.
-#[derive(Clone, defmt::Format)]
+#[derive(Clone, defmt::Format, minicbor::Decode, minicbor::Encode)]
+#[cbor(map)]
 pub struct CandidateNetwork {
     /// List of channels that should be scanned for beacons.
     ///
     /// FIXME: Allow channels of multiple bands, and/or more channels than can be scanned in one
     /// go.
+    #[cbor(n(0), with = "minicbor_adapters::with")]
     pub channels: heapless::vec::Vec<AbsoluteChannel, MAX_CONFIG_CHANNELS>,
     /// Network ID by which the network would be recognized.
     ///
     /// This can be left blank to accept any network that matches any other criteria.
+    #[n(1)]
     pub network_id: Option<NetworkId24>,
     /// Network keys.
     ///
     /// If set, only a network encrypted with those keys will be joined.
+    #[n(2)]
     pub keys: Option<Mode1Keys>,
     /// Beacon interval of the network.
     ///
@@ -68,6 +74,7 @@ pub struct CandidateNetwork {
     ///
     /// FIXME: Use proper milliseconds type (but with the current back-end, using ms is just too
     /// easy)
+    #[n(3)]
     pub beacon_interval_ms: u16,
 }
 
@@ -77,16 +84,20 @@ pub struct CandidateNetwork {
 /// `IntoIterator`.
 pub const MAX_CANDIDATE_NETWORKS: usize = 4;
 
-#[derive(defmt::Format, Clone)]
+#[derive(defmt::Format, Clone, minicbor::Encode, minicbor::Decode)]
+#[cbor(map)]
 pub struct PtConfiguration {
     /// Hint to various choices of power-vs-latency trade-offs
+    #[n(2)]
     pub power_save: bool,
     /// Radio ID to pick.
     ///
     /// FIXME: Should be more random/automated, but which part thereof?
     ///
     /// FIXME: Should this be per network?
+    #[n(1)]
     pub rd_id: LongRdId,
+    #[cbor(n(0), with = "minicbor_adapters::with")]
     pub networks: heapless::vec::Vec<CandidateNetwork, MAX_CANDIDATE_NETWORKS>,
 }
 
