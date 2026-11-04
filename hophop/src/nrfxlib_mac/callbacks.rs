@@ -193,7 +193,17 @@ unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
         .unwrap();
 }
 unsafe extern "C" fn association_release(params: *mut dect_mac::association_release_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::association_release_cb_params { long_rd_id } = unsafe { &*params };
+    let Some(long_rd_id) = LongRdId::new(long_rd_id) else {
+        warn!("Ignoring association release event with reserved values.");
+        return;
+    };
+
+    let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
+        long_rd_id,
+        release_cause: super::Release::OurRelease,
+    });
 }
 unsafe extern "C" fn cluster_beacon_receive(
     params: *mut dect_mac::cluster_beacon_receive_cb_params,
@@ -288,7 +298,7 @@ unsafe extern "C" fn association_release_ntf(
 
     let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
         long_rd_id,
-        release_cause: super::ReleaseOrBeaconFailure::Release(release_cause),
+        release_cause: super::Release::PeerRelease(release_cause),
     });
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
@@ -367,7 +377,7 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
 
     let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
         long_rd_id,
-        release_cause: super::ReleaseOrBeaconFailure::BeaconRxFailure,
+        release_cause: super::Release::BeaconRxFailure,
     });
 }
 unsafe extern "C" fn ipv6_config_update_ntf(

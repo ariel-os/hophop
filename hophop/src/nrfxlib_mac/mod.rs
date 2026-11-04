@@ -370,15 +370,23 @@ impl DlcDataRx {
 }
 
 #[derive(defmt::Format)]
-pub(crate) enum ReleaseOrBeaconFailure {
-    Release(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+#[allow(
+    clippy::enum_variant_names,
+    reason = "the enum is about the abstract effect of a relase; some of them involve a concrete release message"
+)]
+pub(crate) enum Release {
+    /// Received a Release notification from the peer.
+    PeerRelease(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+    /// Received a Beacon RX failure, assuming the association is released.
     BeaconRxFailure,
+    /// Release due to the asynchronous response to an own [`dect_mac::assoc_release()`] call.
+    OurRelease,
 }
 
 #[derive(defmt::Format)]
 pub struct AssociationEndEvent {
     pub(crate) long_rd_id: LongRdId,
-    pub(crate) release_cause: ReleaseOrBeaconFailure,
+    pub(crate) release_cause: Release,
 }
 
 #[derive(defmt::Format)]
