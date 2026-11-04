@@ -57,16 +57,33 @@ Examples to run
 [`bridge-pt`]: ../applications/bridge-pt/README.md
 [example]: ../examples/README.md
 
-Unsorted tips and tricks
-------------------------
+Tips and recovery
+-----------------
+
+* Depending on the program and programmer,
+  flashing steps might complain about locked cores.
+
+  To recover, run `laze build -b nrf9151-dk flash-erase-all-uicr`.
+
+  This typically works for errors such as:
+
+  "Core 0 is not accessible. Erase procedure will be started to recover access."
+
+  It is the current assumption that this allows recovering from all lock-up situations.
+  As there might be situations that were not recenlty accounted,
+  you might need some older recovery mechanisms.
+  If the above does not work, please try those, **and report** at the recovery issue [#82](https://github.com/ariel-os/hophop/issues/82).
+
+  * With a non-hophop application, run the Ariel OS hello-world example,
+    and run the `flash-erase-all` target and the `run` target (possibly twice; please document the Ariel version and whether the first run already showed the hello message).
+
+  * The `nrfutil` ([from Nordic](https://github.com/ariel-os/hophop/issues/82)) has an `nrfutil device recover` command.
+    Note that this only works with JLink based programmers (as on their devkits).
+
+  * Press the reset button shortly before the flashing step (and stop pressing once you see any progress).
 
 * If ever you have multiple DKs connected,
   probe-rs will give you interactive options.
 
   You can skip that and statically set the probe to use
   by adding `-- --probe 1366:1059:xxxxxxxxxxxx` after the laze call (or without the `--` if you already).
-
-* Depending on the program,
-  flashing steps might complain about locked cores.
-  Until the programmer's defaults are configured more aggressively,
-  pressing the reset button shortly before the flashing step is actually executed usually helps.

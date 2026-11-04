@@ -1,0 +1,15 @@
+// SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// See laze-project.yml's recover target for more information.
+
+// base 0x00FF 8000
+:0200000400FFFB
+// APPROTECT: HwUnprotected
+:04800000FA50FA50E8
+// 8000 + 1C = HFXOSRC, +20 = HFXOCNT
+// HFXOSRC: 0, HFXOCNT = 32
+:08801C0000000000200000003C
+// SECUREAPPROTECT: HwUnprotected
+:04802C00FA50FA50BC
+:00000001FF
