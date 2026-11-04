@@ -6,8 +6,30 @@ on:
   pull_request:
 
 jobs:
+  detect:
+    runs-on: ubuntu-24.04
+    outputs:
+      morethandocs: ${{ steps.filter.outputs.morethandocs }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          predicate-quantifier: every
+          filters: |
+            morethandocs:
+              - '!doc/**'
+              - '!README.md'
+
   build:
     runs-on: ubuntu-24.04
+    # This is not 100% sharp because it means that commits can slip by SPDX if
+    # they only touch the docs, but that'll be caught soon enough. (We could be
+    # granular if we did every single tests/ as a step).
+    if: needs.detect.outputs.morethandocs == 'true'
+    needs: detect
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
