@@ -4,7 +4,7 @@
 //! the application.
 
 use super::error::MacError;
-use super::{AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx};
+use super::{AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx, SingletonEvent};
 
 // This should evolve a bit
 //
@@ -19,10 +19,14 @@ use embassy_sync::channel::Channel;
 /// task, this does carry a 1-byte return value because in *some* cases we need it (eg.
 /// for [`DectMac::dlc_data_tx()`]), and then it's simpler to do it everywhere consistently.
 ///
+/// It also carries the kindof event that triggered it: This is strictly debug information, and if
+/// we ever run into performance issues before changes to the underlying MAC make this construction
+/// obsolete, those can be made optional in a feature (see `SingletonEvent`).
+///
 /// Length is 2 to allow use for scan and scan_stop: If a scan is stopped before time, confirmation
 /// of the end of scan and of the stop command will both arrive. They will be indistinguishable,
 /// and that doesn't matter.
-pub(crate) static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, Result<(), MacError>, 2> =
+pub(crate) static SINGLETON_EVENTS: Channel<CriticalSectionRawMutex, SingletonEvent, 2> =
     Channel::new();
 
 /// Events during a scan (maybe also during associated operation).

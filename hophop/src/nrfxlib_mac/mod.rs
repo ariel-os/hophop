@@ -71,19 +71,26 @@ impl DectMac {
 
     /// Waits for an event on the SINGLETON channel, and reports its success.
     ///
-    /// As by the singleton channel's design, this discards information of *which* process
-    /// terminated, the idea being that the caller knows what's pending anyway.
-    async fn receive_singleton_event(&mut self) -> Result<(), MacError> {
+    /// To detect misunderstanding of the authors' about the callback machinery, this takes an
+    /// expectation of the event that triggered the singleton event; if need be, that could be
+    /// turned into a debug_assert, and with corresponding changes in the `SingletonEvent` type to
+    /// not use actual memory for the variants.
+    async fn receive_singleton_event(
+        &mut self,
+        source: SingletonEventSource,
+    ) -> Result<(), MacError> {
         // Not micro-optimizing into non-async -> impl Future -- for readability, and because this
         // is about to be fixed in https://github.com/rust-lang/goals/issues/623
-        SINGLETON_EVENTS.receive().await
+        let event = SINGLETON_EVENTS.receive().await;
+        assert_eq!(event.source, source);
+        event.result
     }
 
     pub async fn systemmode_set_mac(&mut self) {
         unsafe { dect_control::systemmode_set(dect_control::systemmode_values::MAC) }
             .into_result()
             .expect("Failed to set system mode");
-        self.receive_singleton_event()
+        self.receive_singleton_event(SingletonEventSource::SystemMode)
             .await
             .expect("Failed to set system mode");
     }
@@ -93,7 +100,7 @@ impl DectMac {
         unsafe { dect_control::configure(params) }
             .into_result()
             .expect("Failed to set configuration params");
-        self.receive_singleton_event()
+        self.receive_singleton_event(SingletonEventSource::Configure)
             .await
             .expect("Failed to set configuration params");
     }
@@ -102,7 +109,7 @@ impl DectMac {
         unsafe { dect_control::functional_mode_set(mode) }
             .into_result()
             .expect("Failed to set functional mode");
-        self.receive_singleton_event()
+        self.receive_singleton_event(SingletonEventSource::FunctionalMode)
             .await
             .expect("Failed to set functional mode");
     }
@@ -134,7 +141,7 @@ impl DectMac {
         use embassy_futures::select::{Either::*, select};
 
         match select(
-            self.receive_singleton_event(),
+            self.receive_singleton_event(SingletonEventSource::NetworkScan),
             callback(ScanReceiver(Default::default())),
         )
         .await
@@ -148,9 +155,16 @@ impl DectMac {
                     .into_result()
                     .expect("Failed to stop the scan");
 
-                // One of those is the First that never happened / was cancelled.
-                let _ = self.receive_singleton_event().await;
-                let _ = self.receive_singleton_event().await;
+                // One of those is the First that never happened / was cancelled -- so we don't
+                // really care about their sequence or success
+                let ev1 = SINGLETON_EVENTS.receive().await;
+                let ev2 = SINGLETON_EVENTS.receive().await;
+                assert!(
+                    (ev1.source == SingletonEventSource::NetworkScan
+                        && ev2.source == SingletonEventSource::NetworkScanStop)
+                        || (ev1.source == SingletonEventSource::NetworkScanStop
+                            && ev2.source == SingletonEventSource::NetworkScan)
+                );
 
                 // FIXME: cancel and await two end events
                 Some(r)
@@ -260,7 +274,8 @@ impl DectMac {
         .into_result()
         // FIXME: Can this fail just because the slice is bad?
         .expect("Failed to start TX attempt");
-        self.receive_singleton_event().await
+        self.receive_singleton_event(SingletonEventSource::DataTx)
+            .await
     }
 
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
@@ -272,6 +287,42 @@ impl DectMac {
             if let Some(d) = PACKETS.lock().await.pop_front() {
                 return d;
             }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SingletonEventSource {
+    Configure,
+    DataTx,
+    FunctionalMode,
+    NetworkScan,
+    NetworkScanStop,
+    SystemMode,
+}
+
+/// An event that goes through the single big event queue because the application generally expects
+/// one of them to return.
+///
+/// This carries the source practically needlessly, as the application already awaits the queue
+/// from a place where it knows what comes in. The source is strictly debug information, that is
+/// asserted on -- future versions could make the asserts debug_asserts, and the source field
+/// optional.
+#[derive(Debug)]
+struct SingletonEvent {
+    source: SingletonEventSource,
+    result: Result<(), MacError>,
+}
+
+trait ResultMacErrorExt {
+    fn originating_from(self, source: SingletonEventSource) -> SingletonEvent;
+}
+
+impl ResultMacErrorExt for Result<(), MacError> {
+    fn originating_from(self, source: SingletonEventSource) -> SingletonEvent {
+        SingletonEvent {
+            source,
+            result: self,
         }
     }
 }

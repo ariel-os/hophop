@@ -19,7 +19,10 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, Shor
 use super::debug_helpers::debug_ies;
 use super::error::MacErrorExt;
 use super::shared_queues::*;
-use super::{AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx, Ipv6Config};
+use super::{
+    AssociationEndEvent, AssociationEvent, ClusterBeacon, DlcDataRx, Ipv6Config,
+    ResultMacErrorExt as _, SingletonEventSource as SES,
+};
 
 pub(super) static OP_CALLBACKS: dect_mac::op_callbacks = dect_mac::op_callbacks {
     control_functional_mode: Some(control_functional_mode),
@@ -68,7 +71,12 @@ unsafe extern "C" fn control_functional_mode(
         params.status.into_mac_status(),
     );
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::FunctionalMode),
+        )
         .unwrap();
 }
 unsafe extern "C" fn control_configure(params: *mut dect_mac::control_configure_cb_params) {
@@ -79,7 +87,12 @@ unsafe extern "C" fn control_configure(params: *mut dect_mac::control_configure_
         params.status.into_mac_status(),
     );
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::Configure),
+        )
         .unwrap();
 }
 unsafe extern "C" fn control_systemmode(params: *mut dect_mac::control_systemmode_cb_params) {
@@ -90,7 +103,12 @@ unsafe extern "C" fn control_systemmode(params: *mut dect_mac::control_systemmod
         params.status.into_mac_status()
     );
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::SystemMode),
+        )
         .unwrap();
 }
 unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
@@ -204,7 +222,12 @@ unsafe extern "C" fn dlc_data_tx(params: *mut dect_dlc::data_tx_cb_params) {
     let params = unsafe { &*params };
     // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::DataTx),
+        )
         .unwrap();
 }
 unsafe extern "C" fn dlc_data_discard(params: *mut dect_dlc::data_discard_cb_params) {
@@ -220,14 +243,24 @@ unsafe extern "C" fn network_scan(params: *mut dect_mac::network_scan_cb_params)
     let params = unsafe { &*params };
     // Ignoring num_channels; not sure why how that'd be new information
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::NetworkScan),
+        )
         .unwrap();
 }
 unsafe extern "C" fn network_scan_stop(params: *mut dect_mac::network_scan_stop_cb_params) {
     // SAFETY: implied in C API
     let params = unsafe { &*params };
     SINGLETON_EVENTS
-        .try_send(params.status.into_mac_status())
+        .try_send(
+            params
+                .status
+                .into_mac_status()
+                .originating_from(SES::NetworkScanStop),
+        )
         .unwrap();
 }
 unsafe extern "C" fn rssi_scan(params: *mut dect_mac::rssi_scan_cb_params) {
