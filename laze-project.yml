@@ -18,3 +18,29 @@ subdirs:
   - applications/bridge-pt
   - applications/embedded-pt
   - applications/sniffer
+
+# Workaround for https://github.com/ariel-os/ariel-os/issues/2430:
+# flash-erase-all, the typical recovey command from "Core 0 is locked", leaves
+# the UICR uninitialized and relies on embassy-nrf/src/lib.rs to fix that at
+# runtime and reboot -- but then the application starts already without
+# attached console, and might already crash in the same way that brought us
+# into the "Core 0 is locked" situation.
+modules:
+  - name: probe-rs-with-uicr
+    depends: [probe-rs]
+    tasks:
+      flash-erase-all-uicr:
+        # If this were not a workaround as a whole, we might try deduplicating
+        # this with Ariel's flash-erase-all task, possibly chaining them like
+        # Makefiles do
+        help: Erases the whole chip including user data. Unlocks it if locked.
+        build: false
+        cmd:
+          - probe-rs erase --chip ${PROBE_RS_CHIP} --allow-erase-all $@
+          - grep -v / ${root}/uicr.hex > ${build-dir}/uicr.hex
+          - probe-rs download --chip ${PROBE_RS_CHIP} ${build-dir}/uicr.hex --binary-format hex
+
+defaults:
+  app:
+    depends: [probe-rs-with-uicr]
+
