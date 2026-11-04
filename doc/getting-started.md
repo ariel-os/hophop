@@ -87,3 +87,6 @@ Tips and recovery
 
   You can skip that and statically set the probe to use
   by adding `-- --probe 1366:1059:xxxxxxxxxxxx` after the laze call (or without the `--` if you already).
+
+  In the same situations, do not use `/dev/ttyACM0` & co, as those numbers are highly dependent on state and sequence.
+  Instead, use names such as `/dev/serial/by-id/usb-SEGGER_J-Link_xxxxxxxxxxxx-if00`, which show the same serial numbers that probe-rs takes.
