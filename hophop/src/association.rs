@@ -18,9 +18,9 @@ use nrfxlib_sys_pretty::{dect_control, dect_mac};
 /// Key material for a network in Mode 1 (AES-128)
 #[derive(Clone, minicbor::Decode, minicbor::Encode)]
 pub struct Mode1Keys {
-    #[cbor(n(0))] //, with = "")]
+    #[cbor(n(0), with = "minicbor::bytes")]
     pub integrity_key: [u8; 16],
-    #[n(1)]
+    #[cbor(n(1), with = "minicbor::bytes")]
     pub cipher_key: [u8; 16],
 }
 
