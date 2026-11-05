@@ -25,6 +25,14 @@ Also, have a picture of two hops:
 
 (Picture by rob Stoeltje, [CC-BY](https://flickr.com/photos/46198971@N06/18990969281)) <!-- via Wikimedia Commons, https://commons.wikimedia.org/wiki/File:Hop_met_Jong_(18990969281).jpg -->
 
+## License and administrativa
+
+This project is licensed under either of [the Apache License, Version 2.0](LICENSES/Apache-2.0.txt) or the [MIT license](./LICENSES/MIT.txt);
+see [reuse.software compatible SPDX annotations](https://reuse.software/) at all files for details and copyright holders.
+
+The project's stable web address is <https://hophop.org/>;
+currently, source and issue tracker reside [at GitHub](https://github.com/ariel-os/hophop/) as part of the Ariel organization.
+
 [`ts-103-636-numbers`]: https://crates.io/crates/ts-103-636-numbers
 [`ts-103-636-utils`]: https://crates.io/crates/ts-103-636-utils
 [getting-started documentation]: ./doc/getting-started.md
