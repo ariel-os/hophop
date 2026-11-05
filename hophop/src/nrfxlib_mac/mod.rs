@@ -49,10 +49,15 @@ use shared_queues::*;
 /// ## Further development
 ///
 /// As long as there is no state that needs to be held at runtime, this is a ZST, and exclusive
-/// access to it ensures that the static queues set up in the private `shared_queues` module are
-/// not accessed simultaneously (which would make them unreliable in that one party might expect an
-/// event that was taken by another party, or simultaneous polling might result in a busy wait).
+/// access to it ensures that the static queues set up in the private `shared_queues` module
+/// (except for those split off at startup) are not accessed simultaneously (which would make them
+/// unreliable in that one party might expect an event that was taken by another party, or
+/// simultaneous polling might result in a busy wait).
 pub struct DectMac(());
+
+pub struct DlcTx(());
+
+pub struct DlcRx(());
 
 impl DectMac {
     /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context
@@ -61,7 +66,7 @@ impl DectMac {
     /// that, there'll probably be some kind of "desiccated" form of this object where a user can
     /// first initialize the desiccated form and then do a "set MAC system mode" function, both
     /// which steps this combines.
-    pub fn create(_modem_is_set_up: ()) -> Self {
+    pub fn create(_modem_is_set_up: ()) -> (Self, DlcTx, DlcRx) {
         // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
         unsafe { dect_mac::callback_set(&callbacks::OP_CALLBACKS, &callbacks::MAC_NTF_CALLBACKS) }
             .into_result()
@@ -69,7 +74,7 @@ impl DectMac {
                 "Unsuccessful operation would mean we passed NULL or had a None in the callbacks.",
             );
 
-        Self(())
+        (Self(()), DlcTx(()), DlcRx(()))
     }
 
     /// Waits for an event on the SINGLETON channel, and reports its success.

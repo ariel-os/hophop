@@ -12,7 +12,7 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
 #[ariel_os::task(autostart)]
 async fn main() {
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
-    let mut dect = hophop::nrfxlib_mac::DectMac::create(());
+    let (mut dect, dlc_tx, dlc_rx) = hophop::nrfxlib_mac::DectMac::create(());
 
     dect.systemmode_set_mac().await;
 
