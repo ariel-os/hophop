@@ -85,7 +85,7 @@ impl Stack {
         loop {
             let association = super::association::associate(&mut self.dect, &config).await;
 
-            let Some((association, mut release)) = association else {
+            let Some(association) = association else {
                 warn!("No network beacons found, sleeping before retrying");
                 // FIXME: make configurable
                 time.delay_ms(5000).await;
@@ -105,7 +105,7 @@ impl Stack {
                     // conditions that we'd really rather have a complete "disassociate fully" step
                     // before we associate again, as otherwise we can't tell if "still not getting
                     // beacons" is from the last association of the current one.
-                    &mut release,
+                    self.dect.next_association_end(),
                 )
                 .await
                 {

@@ -195,13 +195,7 @@ impl DectMac {
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<
-        (
-            AssociationEvent,
-            impl core::future::Future<Output = AssociationEndEvent> + use<>,
-        ),
-        MacError,
-    > {
+    ) -> Result<AssociationEvent, MacError> {
         let mut tx_flow_configs = [
             dect_mac::tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -254,7 +248,13 @@ impl DectMac {
 
         let association_event = ASSOCIATION_EVENTS.receive().await?;
 
-        Ok((association_event, RELEASE_EVENTS.receive()))
+        Ok(association_event)
+    }
+
+    pub async fn next_association_end(&mut self) -> AssociationEndEvent {
+        // Not optimizing into a fn -> impl future: The compiler is already learning to do this
+        // itself.
+        RELEASE_EVENTS.receive().await
     }
 }
 

@@ -168,10 +168,7 @@ impl Association {
 pub async fn associate(
     dect: &mut nrfxlib_mac::DectMac,
     config: &PtConfiguration,
-) -> Option<(
-    Association,
-    impl core::future::Future<Output = nrfxlib_mac::AssociationEndEvent> + use<>,
-)> {
+) -> Option<Association> {
     for network_template in &config.networks {
         info!("Scanning for network {}", network_template);
 
@@ -284,22 +281,19 @@ pub async fn associate(
             .mac_association(params.transmitter_long_rd_id, params.network_id)
             .await
         {
-            Ok((association, release)) => {
+            Ok(association) => {
                 if association.long_rd_id != params.transmitter_long_rd_id {
                     warn!(
                         "Attempted association with {} but now associated with {}",
                         params.transmitter_long_rd_id, association.long_rd_id
                     )
                 }
-                return Some((
-                    Association {
-                        network: params.network_id,
-                        parent: association.long_rd_id,
-                        channel: params.channel,
-                        ipv6_config: association.ipv6_config,
-                    },
-                    release,
-                ));
+                return Some(Association {
+                    network: params.network_id,
+                    parent: association.long_rd_id,
+                    channel: params.channel,
+                    ipv6_config: association.ipv6_config,
+                });
             }
             Err(e) => info!("Association failed: {}; continuing.", e),
         }
