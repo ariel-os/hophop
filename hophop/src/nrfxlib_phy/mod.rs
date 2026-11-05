@@ -19,6 +19,10 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, NetworkId32};
 pub const TICKS_PER_SECOND: u64 = 69_120_000;
 pub const TICKS_PER_MILLISECOND: u64 = 69_120;
 
+/// Radio mode the PHY is activated in.
+// FIXME power hog? delay to runtime?
+const RADIO_MODE: dect_phy::radio_mode = dect_phy::radio_mode_values::LOW_LATENCY;
+
 // FIXME: What's a good length? Probably events can pile up, like "here's the last data and by the
 // way the transaction is now complete". And do we need the CS mutex?
 //
@@ -228,9 +232,7 @@ impl DectPhy {
             panic!("Sequence violation");
         };
 
-        // FIXME power hog? delay to runtime?
-        let mode = dect_phy::radio_mode_values::LOW_LATENCY;
-        unsafe { dect_phy::activate(mode) }.into_result()?;
+        unsafe { dect_phy::activate(RADIO_MODE) }.into_result()?;
         let DectEventOuter {
             event: DectEvent::Activate,
             ..

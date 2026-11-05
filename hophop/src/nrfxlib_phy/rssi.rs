@@ -205,14 +205,14 @@ impl DectPhy {
             unsafe { dect_phy::rx(&raw const params) }.into_result()?;
             let duration = u64::try_from(multiples).unwrap() * 691_200 /* 10ms */;
             current_start_time = current_start_time.wrapping_add(duration);
-            current_start_time = current_start_time.wrapping_add(
-                u64::from(
-                    super::latency::LATENCY_INFO
-                        .operation
-                        .receive
-                        .active_to_idle_rx_rssi,
-                ) - 138, // -138 works on this firmware (eg. when switching from 1665 to 1667), -139 does not (even when staying on 1665)
-            );
+
+            // Nordic: https://github.com/nrfconnect/sdk-nrfxlib/blob/aa61ca35788bcdea3b27b3a70e788dbe666d63e5/nrf_modem/include/nrf_modem_dect_phy.h#L930
+            // Min scheduled operation start time = previous scheduled operation start time + its
+            // duration + the scheduled operation transition time for the current radio mode.
+            current_start_time = current_start_time.wrapping_add(u64::from(
+                super::latency::LATENCY_INFO.radio_mode[super::RADIO_MODE as usize]
+                    .scheduled_operation_transition,
+            ));
         }
 
         let mut recv_result: super::rx::RecvResultBuilder;
