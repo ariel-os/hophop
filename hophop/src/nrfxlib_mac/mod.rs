@@ -48,7 +48,10 @@ use shared_queues::*;
 ///
 /// ## Further development
 ///
-/// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
+/// As long as there is no state that needs to be held at runtime, this is a ZST, and exclusive
+/// access to it ensures that the static queues set up in the private `shared_queues` module are
+/// not accessed simultaneously (which would make them unreliable in that one party might expect an
+/// event that was taken by another party, or simultaneous polling might result in a busy wait).
 pub struct DectMac(());
 
 impl DectMac {
