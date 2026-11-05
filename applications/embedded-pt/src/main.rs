@@ -57,7 +57,8 @@ async fn main() {
     );
 
     embassy_futures::join::join(
-        hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
+        hophop::runner::Stack::new(dect, dlc_tx, dlc_rx)
+            .run(ariel_os::time::Delay, &mut &control_hub),
         // FIXME: Should this get its dedicated task? That'd give it its own waker, but then we
         // can't just use the reference.
         async {

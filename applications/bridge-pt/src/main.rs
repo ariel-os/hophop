@@ -63,7 +63,8 @@ async fn main() {
         .with_wkc();
 
     embassy_futures::join::join(
-        hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
+        hophop::runner::Stack::new(dect, dlc_tx, dlc_rx)
+            .run(ariel_os::time::Delay, &mut &control_hub),
         ariel_os::coap::coap_run(handler),
     )
     .await

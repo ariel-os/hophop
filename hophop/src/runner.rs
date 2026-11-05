@@ -15,6 +15,8 @@ use ts_103_636_utils::identifiers::LongRdId;
 /// consumers.
 pub struct Stack {
     dect: crate::nrfxlib_mac::DectMac,
+    dlc_rx: crate::nrfxlib_mac::DlcRx,
+    dlc_tx: crate::nrfxlib_mac::DlcTx,
 }
 
 /// Message sent into a running stack
@@ -57,8 +59,16 @@ pub trait MacController {
 }
 
 impl Stack {
-    pub fn new(dect: crate::nrfxlib_mac::DectMac) -> Self {
-        Self { dect }
+    pub fn new(
+        dect: crate::nrfxlib_mac::DectMac,
+        dlc_tx: crate::nrfxlib_mac::DlcTx,
+        dlc_rx: crate::nrfxlib_mac::DlcRx,
+    ) -> Self {
+        Self {
+            dect,
+            dlc_tx,
+            dlc_rx,
+        }
     }
 
     pub async fn run<MC: MacController>(
@@ -66,6 +76,9 @@ impl Stack {
         mut time: impl embedded_hal_async::delay::DelayNs,
         controller: &mut MC,
     ) -> ! {
+        // FIXME: This should be simplifyable now that the MAC, DLC RX and TX can be used in
+        // parallel.
+
         controller.on_assoc_change(None);
         // FIXME keep polling that for config changes
         let config = controller.next_config().await;
@@ -86,7 +99,7 @@ impl Stack {
                 // FIXME: Or just wait for disassociation
                 match select3(
                     // of all the dect functions, this one fortunately is already cancel safe
-                    self.dect.dlc_data_rx(),
+                    self.dlc_rx.dlc_data_rx(),
                     controller.next_dlc_tx(),
                     // FIXME: This should be properly drained, which might mean in face of race
                     // conditions that we'd really rather have a complete "disassociate fully" step
@@ -99,7 +112,7 @@ impl Stack {
                     Either3::First(received) => controller.on_dlc_rx(received),
                     Either3::Second((flow_id, dest, data)) => {
                         // FIXME: Should we back-signal?
-                        let _ = self.dect.dlc_data_tx(flow_id, dest, &data).await;
+                        let _ = self.dlc_tx.dlc_data_tx(flow_id, dest, &data).await;
                     }
                     Either3::Third(release) => {
                         info!("Association released ({}), going back to scanning", release);

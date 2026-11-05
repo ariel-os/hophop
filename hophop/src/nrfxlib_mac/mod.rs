@@ -256,7 +256,9 @@ impl DectMac {
 
         Ok((association_event, RELEASE_EVENTS.receive()))
     }
+}
 
+impl DlcTx {
     /// Transmits data in one of the flows.
     ///
     /// This is a primitive wrapper in that it only returns after transmission; a better version
@@ -286,7 +288,9 @@ impl DectMac {
         let done = shared_queues::DLC_TX_DONE.receive().await;
         done.status
     }
+}
 
+impl DlcRx {
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
         if let Some(d) = PACKETS.lock().await.pop_front() {
             return d;
