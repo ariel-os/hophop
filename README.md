@@ -16,7 +16,8 @@ To jump right into using it, see the [getting-started documentation].
 
 This project is currently active,
 and documentation may be incomplete and/or outdated.
-If you have any questions, anything is unclear or does not work, please open an issue in the issue tracker.
+If you have any questions, anything is unclear or does not work, please open an issue in the issue tracker,
+or reach out on [our matrix channel](https://matrix.to/#/#hophop-dev:matrix.org).
 
 Also, have a picture of two hops:
 
