@@ -277,8 +277,9 @@ impl DectMac {
         .into_result()
         // FIXME: Can this fail just because the slice is bad?
         .expect("Failed to start TX attempt");
-        self.receive_singleton_event(SingletonEventSource::DataTx)
-            .await
+
+        let done = shared_queues::DLC_TX_DONE.receive().await;
+        done.status
     }
 
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
@@ -297,7 +298,6 @@ impl DectMac {
 #[derive(Debug, PartialEq, Eq)]
 enum SingletonEventSource {
     Configure,
-    DataTx,
     FunctionalMode,
     NetworkScan,
     NetworkScanStop,
@@ -350,6 +350,14 @@ impl<'brand> ScanReceiver<'brand> {
     pub async fn next(self) -> ClusterBeacon {
         BEACON_EVENTS.receive().await
     }
+}
+
+#[derive(defmt::Format)]
+struct DlcDataTxDone {
+    pub transaction_id: u32,
+    pub status: Result<(), MacError>,
+    pub flow_id: u8,
+    pub peer: LongRdId,
 }
 
 pub struct DlcDataRx {
