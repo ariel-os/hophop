@@ -33,20 +33,18 @@ async fn main() {
                 AbsoluteChannel::new(1677).unwrap(),
             ]
         };
-        let mut scan_iterator = scans.iter();
         if let Err(e) = dect
             .rssi_bulk(
                 scans,
                 Some(const { NetworkId32::new(0x87654321).unwrap() }),
                 async |result| {
-                    let channel = scan_iterator.next().unwrap();
                     let Some(result) = result else {
-                        info!("RSSI missed for channel {}.", channel);
+                        info!("RSSI missed.");
                         return;
                     };
                     info!(
                         "RSSI for {} at {}: {:?}",
-                        channel,
+                        result.carrier(),
                         result.start_time(),
                         result.data()
                     );
