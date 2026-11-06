@@ -6,7 +6,7 @@
 //! currently tied to the [`crate::nrfxlib_mac`].
 
 use defmt::*;
-use embassy_futures::select::{Either3, select3};
+use embassy_futures::select::{Either4, select, select4};
 
 use ts_103_636_utils::identifiers::LongRdId;
 
@@ -85,24 +85,35 @@ impl Stack {
         // parallel.
 
         controller.on_assoc_change(None);
-        // FIXME keep polling that for config changes
-        let config = controller.next_config().await;
+
+        let mut config = controller.next_config().await;
         loop {
+            // associate() must be polled to completion, so we're not racing it with next_config()
+            // here -- whoever switches away from a setting that has many channels and long beacon
+            // intervals will just have to wait for their config to take effect.
             let association = super::association::associate(&mut self.dect, &config).await;
 
             let Some(association) = association else {
                 warn!("No network beacons found, sleeping before retrying");
-                // FIXME: make configurable
-                time.delay_ms(5000).await;
-                // FIXME race with next_action
+                select(
+                    // FIXME: make configurable
+                    time.delay_ms(5000),
+                    async {
+                        config = controller.next_config().await;
+                    },
+                )
+                .await;
                 continue;
             };
 
             controller.on_assoc_change(Some(association));
 
+            // Set at the moment when we ask to release -- because then, we start ignoring
+            // "released because of peer" or "of timeout" until we see "on our own", at which point
+            // everything else is properly drained.
+            let mut wait_for_our_release = false;
             loop {
-                // FIXME: Or just wait for disassociation
-                match select3(
+                match select4(
                     // of all the dect functions, this one fortunately is already cancel safe
                     self.dlc_rx.dlc_data_rx(),
                     controller.next_dlc_tx(),
@@ -111,17 +122,45 @@ impl Stack {
                     // before we associate again, as otherwise we can't tell if "still not getting
                     // beacons" is from the last association of the current one.
                     self.dect.next_association_end(),
+                    controller.next_config(),
                 )
                 .await
                 {
-                    Either3::First(received) => controller.on_dlc_rx(received),
-                    Either3::Second((flow_id, dest, data)) => {
+                    Either4::First(received) => controller.on_dlc_rx(received),
+                    Either4::Second((flow_id, dest, data)) => {
                         // FIXME: Should we back-signal?
                         let _ = self.dlc_tx.dlc_data_tx(flow_id, dest, &data).await;
                     }
-                    Either3::Third(release) => {
+                    Either4::Third(release) => {
+                        defmt::assert_eq!(release.long_rd_id, association.parent);
+                        if wait_for_our_release
+                            && release.release_cause != crate::nrfxlib_mac::Release::OurRelease
+                        {
+                            warn!(
+                                "Got release notification {} but still waiting for acknowledgement of the release triggered by this module. This is a warning because it hinges on unclear aspects of the Nordic MAC layer.",
+                                release
+                            );
+                            continue;
+                        }
                         info!("Association released ({}), going back to scanning", release);
                         break;
+                    }
+                    Either4::Fourth(new_config) => {
+                        config = new_config;
+                        if self
+                            .dect
+                            .initiate_release_association(
+                                association.parent,
+                                nrfxlib_sys_pretty::dect_mac::release_cause_values::OTHER_REASON,
+                            )
+                            .is_ok()
+                        {
+                            wait_for_our_release = true;
+                        } else {
+                            warn!(
+                                "Failed to kick off release association. The working hypothesis about the Nordic MAC layer's workings is that this would only happen if it thinks that that association is already released, and that a Third case is already on its way in our queue to tell us that it's fine and we did release."
+                            );
+                        }
                     }
                 }
             }

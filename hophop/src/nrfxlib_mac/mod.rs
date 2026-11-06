@@ -256,6 +256,34 @@ impl DectMac {
         // itself.
         RELEASE_EVENTS.receive().await
     }
+
+    /// Asks the MAC to end the association with a given peer.
+    ///
+    /// This returns immediately; the effect is that [`Self::next_association_end()`] .
+    ///
+    /// # Caveats
+    ///
+    /// It is unclear how this acts in race conditions between associations being terminated by the
+    /// peer or by beacon timeouts and this function; possible outcomes that the application should
+    /// handle are receiving an error here (in which case it is plausible to expect that
+    /// [`Self::next_association_end()`] will produce something), and that two release events (one
+    /// from the other source and one from this function) occur, or just one event.
+    ///
+    /// The working assumption used in the rest of the crate is that up to two events are produced,
+    /// but the `OurRelease` variant comes last.
+    pub fn initiate_release_association(
+        &mut self,
+        peer: LongRdId,
+        cause: dect_mac::release_cause,
+    ) -> Result<(), nrf_modem::Error> {
+        unsafe {
+            dect_mac::association_release(&mut dect_mac::association_release_params {
+                release_cause: cause,
+                long_rd_id: peer.into(),
+            })
+        }
+        .into_result()
+    }
 }
 
 impl DlcTx {
@@ -389,7 +417,7 @@ impl DlcDataRx {
     }
 }
 
-#[derive(defmt::Format)]
+#[derive(defmt::Format, PartialEq, Eq)]
 #[allow(
     clippy::enum_variant_names,
     reason = "the enum is about the abstract effect of a relase; some of them involve a concrete release message"
