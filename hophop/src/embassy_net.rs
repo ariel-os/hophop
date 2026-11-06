@@ -27,7 +27,7 @@ use defmt::*;
 /// The code currently assumes that the associated PT is also the sink, i.e., that this is just a
 /// leaf node. This might be a fundamental restriction of the NI6W mode.
 pub struct Ni6wNetworkController {
-    static_config: crate::association::PtConfiguration,
+    config: crate::coap::ControllablePtConfiguration,
     association: core::cell::Cell<Option<crate::association::Association>>,
     poke: embassy_sync::channel::Channel<
         embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
@@ -58,14 +58,14 @@ pub struct RetryLater(());
 
 impl Ni6wNetworkController {
     pub fn new(
-        static_config: crate::association::PtConfiguration,
+        initial_config: crate::association::PtConfiguration,
         net_runner: embassy_net_driver_channel::Runner<'static, 1500>,
         stack: ::embassy_net::Stack<'static>,
     ) -> Self {
         let (state_runner, rx_runner, tx_runner) = net_runner.split();
 
         Self {
-            static_config,
+            config: super::coap::ControllablePtConfiguration::new(initial_config),
             association: core::cell::Cell::new(None),
             poke: embassy_sync::channel::Channel::new(),
             state_runner: state_runner.into(),
@@ -96,7 +96,7 @@ impl Ni6wNetworkController {
     ///
     /// To retain flexibility of the implementation, use this with `.below()` rather than `.at()`.
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        super::coap::association_status(|| self.association_status())
+        super::coap::all(|| self.association.get(), &self.config)
     }
 }
 
@@ -123,7 +123,7 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
             self.association.set(Some(assoc));
             state_runner.set_link_state(LinkState::Up);
 
-            let address = assoc.local_ipv6_address(self.static_config.rd_id);
+            let address = assoc.local_ipv6_address(self.config.get().rd_id);
             info!("Setting IPv6 address: {:02x}", address);
 
             use ::embassy_net::*;
@@ -176,13 +176,7 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
     fn next_config(
         &mut self,
     ) -> impl core::future::Future<Output = crate::association::PtConfiguration> + use<'a> {
-        // FIXME: This relies on the consumer just querying it once; on the long run, we must be
-        // sure to always return Pending after the first emission, or already forward changing
-        // configurations.
-
-        let static_config = self.static_config.clone();
-
-        async move { static_config }
+        self.config.next()
     }
 
     fn next_action(&mut self) -> impl core::future::Future<Output = crate::runner::Poke> + use<'a> {
