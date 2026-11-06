@@ -70,7 +70,7 @@ pub(super) unsafe fn event(rssi: *const dect_phy::rssi_event) -> DectEvent {
     // bytes).
     let meas = unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
     let carrier =
-        AbsoluteChannel::new(rssi.carrier).expect("Modem measures on channels it was asked for");
+        AbsoluteChannel::new(rssi.carrier).expect("reserved value given in MAC argument");
     let handle = Handle(rssi.handle);
     defmt::trace!(
         "RSSI handle {} start {} carrier {}; {} measurements",
