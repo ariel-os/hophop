@@ -228,8 +228,8 @@ impl DectPhy {
             ));
         }
 
-        // Every operation ends in exactly one completion → also one that fails (eg. could not be started in time). 
-        // And reports no RSSI. DectEvent::Completed does not carry the handle, 
+        // Every operation ends in exactly one completion → also one that fails (eg. could not be started in time).
+        // And reports no RSSI. DectEvent::Completed does not carry the handle,
         // so completions are counted. Rather than returning at the first error,
         // this waits for all of them: otherwise, the remaining operations events would reach the
         // next user of the modem.
@@ -276,7 +276,7 @@ impl DectPhy {
                     if let Err(e) = completion {
                         defmt::warn!("RSSI operation failed: {}", e);
                         // only keep the first error, but still wait for all operations to complete
-                        first_error.get_or_insert(e); 
+                        first_error.get_or_insert(e);
                     }
                 }
                 _ => panic!("Sequence violation"),
