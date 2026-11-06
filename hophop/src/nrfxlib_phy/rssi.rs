@@ -165,7 +165,7 @@ impl DectPhy {
     ///
     /// If an operation fails (eg. because it could not be started in time), the others still run.
     /// The failed one does not produce an `on_event` call, and the first error is returned once all
-    /// are done. [`RssiEvent::carrier()`] tells which channel a measurement belongs to.
+    /// are done. `RssiEvent::carrier()` tells which channel a measurement belongs to.
     ///
     /// See [`Self::rx()`] for the relevance of `network_id`.
     pub async fn rssi_bulk(
