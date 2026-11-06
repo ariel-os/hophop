@@ -27,7 +27,7 @@ use defmt::*;
 /// The code currently assumes that the associated PT is also the sink, i.e., that this is just a
 /// leaf node. This might be a fundamental restriction of the NI6W mode.
 pub struct Ni6wNetworkController {
-    static_config: crate::association::PtConfiguration<'static>,
+    config: crate::coap::ControllablePtConfiguration,
     association: core::cell::Cell<Option<crate::association::Association>>,
     poke: embassy_sync::channel::Channel<
         embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
@@ -58,14 +58,14 @@ pub struct RetryLater(());
 
 impl Ni6wNetworkController {
     pub fn new(
-        static_config: crate::association::PtConfiguration<'static>,
+        initial_config: crate::association::PtConfiguration,
         net_runner: embassy_net_driver_channel::Runner<'static, 1500>,
         stack: ::embassy_net::Stack<'static>,
     ) -> Self {
         let (state_runner, rx_runner, tx_runner) = net_runner.split();
 
         Self {
-            static_config,
+            config: super::coap::ControllablePtConfiguration::new(initial_config),
             association: core::cell::Cell::new(None),
             poke: embassy_sync::channel::Channel::new(),
             state_runner: state_runner.into(),
@@ -92,27 +92,11 @@ impl Ni6wNetworkController {
             .map_err(|_| RetryLater(()))
     }
 
-    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
+    /// Builds a CoAP resource for viewing an `Association`
+    ///
+    /// To retain flexibility of the implementation, use this with `.below()` rather than `.at()`.
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        use coap_handler_implementations::*;
-        use coap_message_utils::Error;
-
-        struct ServeStatus<'a>(&'a Ni6wNetworkController);
-
-        impl GetRenderable for ServeStatus<'_> {
-            type Get = Option<crate::association::Association>;
-
-            fn get(&mut self) -> Result<Self::Get, Error> {
-                Ok(self.0.association_status())
-            }
-        }
-
-        wkc::ConstantSingleRecordReport::new(
-            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
-            &[coap_handler::Attribute::ResourceType(
-                "tag:ariel-os.org,2026:experimental-hophop",
-            )],
-        )
+        super::coap::all(|| self.association.get(), &self.config)
     }
 }
 
@@ -139,8 +123,8 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
             self.association.set(Some(assoc));
             state_runner.set_link_state(LinkState::Up);
 
-            let address = assoc.local_ipv6_address(self.static_config.rd_id);
-            info!("Setting IPv6 address: {:02x}", address);
+            let address = assoc.local_ipv6_address(self.config.get().rd_id);
+            info!("Setting IPv6 address: {}", address);
 
             use ::embassy_net::*;
             self.stack.set_config_v6(ConfigV6::Static(StaticConfigV6 {
@@ -191,15 +175,8 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
 
     fn next_config(
         &mut self,
-    ) -> impl core::future::Future<Output = crate::association::PtConfiguration<'static>> + use<'a>
-    {
-        // FIXME: This relies on the consumer just querying it once; on the long run, we must be
-        // sure to always return Pending after the first emission, or already forward changing
-        // configurations.
-
-        let static_config = self.static_config.clone();
-
-        async move { static_config }
+    ) -> impl core::future::Future<Output = crate::association::PtConfiguration> + use<'a> {
+        self.config.next()
     }
 
     fn next_action(&mut self) -> impl core::future::Future<Output = crate::runner::Poke> + use<'a> {

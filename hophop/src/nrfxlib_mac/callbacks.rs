@@ -11,7 +11,7 @@
     reason = "stop complaining while there are todo!() items"
 )]
 
-use defmt::{info, warn};
+use defmt::{info, unwrap, warn};
 use nrfxlib_sys_pretty::{dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
@@ -193,7 +193,17 @@ unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
         .unwrap();
 }
 unsafe extern "C" fn association_release(params: *mut dect_mac::association_release_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::association_release_cb_params { long_rd_id } = unsafe { &*params };
+    let Some(long_rd_id) = LongRdId::new(long_rd_id) else {
+        warn!("Ignoring association release event with reserved values.");
+        return;
+    };
+
+    let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
+        long_rd_id,
+        release_cause: super::Release::OurRelease,
+    });
 }
 unsafe extern "C" fn cluster_beacon_receive(
     params: *mut dect_mac::cluster_beacon_receive_cb_params,
@@ -219,16 +229,24 @@ unsafe extern "C" fn neighbor_list(params: *mut dect_mac::neighbor_list_cb_param
 }
 unsafe extern "C" fn dlc_data_tx(params: *mut dect_dlc::data_tx_cb_params) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
-    // FIXME: use a more elaborate channel once we support more than the current dlc_data_tx
-    SINGLETON_EVENTS
-        .try_send(
-            params
-                .status
-                .into_mac_status()
-                .originating_from(SES::DataTx),
-        )
-        .unwrap();
+    let &dect_dlc::data_tx_cb_params {
+        transaction_id,
+        status,
+        flow_id,
+        long_rd_id,
+    } = unsafe { &*params };
+
+    let (status, Some(long_rd_id)) = (status.into_mac_status(), LongRdId::new(long_rd_id)) else {
+        warn!("Ignoring TX CB with reserved values.");
+        return;
+    };
+
+    unwrap!(DLC_TX_DONE.try_send(super::DlcDataTxDone {
+        transaction_id,
+        status,
+        flow_id,
+        peer: long_rd_id,
+    }));
 }
 unsafe extern "C" fn dlc_data_discard(params: *mut dect_dlc::data_discard_cb_params) {
     todo!()
@@ -288,7 +306,7 @@ unsafe extern "C" fn association_release_ntf(
 
     let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
         long_rd_id,
-        release_cause: super::ReleaseOrBeaconFailure::Release(release_cause),
+        release_cause: super::Release::PeerRelease(release_cause),
     });
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
@@ -367,7 +385,7 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
 
     let _ = RELEASE_EVENTS.try_send(AssociationEndEvent {
         long_rd_id,
-        release_cause: super::ReleaseOrBeaconFailure::BeaconRxFailure,
+        release_cause: super::Release::BeaconRxFailure,
     });
 }
 unsafe extern "C" fn ipv6_config_update_ntf(
