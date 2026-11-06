@@ -124,7 +124,7 @@ impl<'a> crate::runner::MacController for &'a Ni6wNetworkController {
             state_runner.set_link_state(LinkState::Up);
 
             let address = assoc.local_ipv6_address(self.config.get().rd_id);
-            info!("Setting IPv6 address: {:02x}", address);
+            info!("Setting IPv6 address: {}", address);
 
             use ::embassy_net::*;
             self.stack.set_config_v6(ConfigV6::Static(StaticConfigV6 {

@@ -127,6 +127,9 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         // FIXME can we signal that over SLIP, or do we rely on the CoAP server to pick it up?
         if let Some(assoc) = assoc {
             self.association.set(Some(assoc));
+
+            let address = assoc.local_ipv6_address(self.config.get().rd_id);
+            info!("Please set this IPv6 address on the host: {}", address);
         } else {
             self.association.set(None);
         }
