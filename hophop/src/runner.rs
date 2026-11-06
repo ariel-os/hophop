@@ -43,8 +43,13 @@ pub trait MacController {
     fn next_dlc_tx(&mut self) -> impl core::future::Future<Output = DlcTxItem> + use<Self>;
     /// Producer of whichever is the current configuration.
     ///
-    /// FIXME Currently this is only awaited once; generally, the producer should just be allowed
-    /// to send eventually consistent configs through there.
+    /// FIXME: The `use<Self>` is an indication that we don't really need the mut self, so we should
+    /// consider either of
+    /// * explaining how this is needed, or
+    /// * let this run on `&self`, or
+    /// * use a message passing architecture where the runner can wait for any message from the
+    ///   controller, or
+    /// * wait for field projections to express this more sharply.
     fn next_config(
         &mut self,
     ) -> impl core::future::Future<Output = super::association::PtConfiguration> + use<Self>;
