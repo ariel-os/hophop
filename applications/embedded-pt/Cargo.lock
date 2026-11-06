@@ -1218,6 +1218,7 @@ checksum = "73974a3edbd0bd286759b3d483540f0ebef705919a5f56f4fc7709066f71689b"
 dependencies = [
  "cfg-if",
  "critical-section",
+ "defmt",
  "embedded-io-async 0.6.1",
  "futures-core",
  "futures-sink",
@@ -1974,6 +1975,7 @@ version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
 dependencies = [
+ "defmt",
  "embedded-io 0.7.1",
  "hash32",
  "portable-atomic",
@@ -2009,6 +2011,7 @@ dependencies = [
  "heapless 0.9.3",
  "itertools 0.14.0",
  "minicbor",
+ "minicbor-adapters",
  "nrf-modem",
  "nrfxlib-sys",
  "nrfxlib-sys-pretty",
