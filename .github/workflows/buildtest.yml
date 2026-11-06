@@ -53,7 +53,10 @@ jobs:
           tool: laze@0.1,cargo-doc2readme,cargo-vet
 
       - name: "Installing Ariel OS prerequisites through apt (plus pipx for reuse.software)"
-        run: sudo apt-get install ninja-build gcc-arm-none-eabi pipx
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
+        with:
+          packages: ninja-build gcc-arm-none-eabi pipx
+          version: 20261106
 
       - name: "Install Ariel OS prerequisites through laze"
         run: |
