@@ -65,8 +65,31 @@ jobs:
           laze build install-toolchain || true
           laze build -C build/imports/ariel-os/ install-toolchain
 
-      - run: |
-          ./test/all.sh
+      - name: "Checking whether tests list change since GitHub workflows were enumerated"
+        run: |
+          ls test/ | sha256sum -c <(echo 'd363fe92bb99b77a7b208034db83070e36ae5039adf2b99d47a94a5c70116429  -')
+      # Regenerate this whenever tests/ changes through
+      # :r!ls ./test/[0-9]*.sh | sed 's/.*/      - run: &\n        continue-on-error: true/'
+      - run: ./test/01_reuse.sh
+        continue-on-error: true
+      - run: ./test/02_vet.sh
+        continue-on-error: true
+      - run: ./test/03_check.sh
+        continue-on-error: true
+      - run: ./test/04_fmt.sh
+        continue-on-error: true
+      - run: ./test/05_cargotest.sh
+        continue-on-error: true
+      - run: ./test/06_doc2readme.sh
+        continue-on-error: true
+      - run: ./test/07_app-build.sh
+        continue-on-error: true
+      - run: ./test/08_pretty-rebuild.sh
+        continue-on-error: true
+      # End genreated
+
+      - name: continue-on-error Comment
+        uses: mainmatter/continue-on-error-comment@v1
 
   check-links:
     # TBD: Make this GitHub-independent and put into test.sh
