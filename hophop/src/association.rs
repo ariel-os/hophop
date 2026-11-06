@@ -165,6 +165,11 @@ impl Association {
 /// The network ID will often not tell much either.)
 ///
 /// If no network is found, the function returns empty.
+///
+/// # Cancel safety
+///
+/// Cancelling this function (i.e., calling it but not polling it to completion), no matter whether
+/// the function is dropped or leaked, may result in state mismatches and eventual panics.
 pub async fn associate(
     dect: &mut nrfxlib_mac::DectMac,
     config: &PtConfiguration,
