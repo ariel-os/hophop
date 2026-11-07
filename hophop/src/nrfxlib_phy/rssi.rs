@@ -38,12 +38,18 @@ pub(super) fn init() {
 #[derive(Debug)]
 pub struct RssiEvent {
     start_time: u64,
+    carrier: AbsoluteChannel,
     data: [u8; 240],
 }
 
 impl RssiEvent {
     pub fn start_time(&self) -> u64 {
         self.start_time
+    }
+
+    /// The channel on which the measurement was taken.
+    pub fn carrier(&self) -> AbsoluteChannel {
+        self.carrier
     }
 
     pub fn data(&self) -> &[u8] {
@@ -63,12 +69,13 @@ pub(super) unsafe fn event(rssi: *const dect_phy::rssi_event) -> DectEvent {
     // Casting because it's not precisely a signed integer anyuway (and our buffer is just
     // bytes).
     let meas = unsafe { core::slice::from_raw_parts(rssi.meas as *const u8, rssi.meas_len as _) };
+    let carrier = AbsoluteChannel::new(rssi.carrier).expect("reserved value given in MAC argument");
     let handle = Handle(rssi.handle);
     defmt::trace!(
         "RSSI handle {} start {} carrier {}; {} measurements",
         handle,
         rssi.meas_start_time,
-        AbsoluteChannel::new(rssi.carrier).unwrap(),
+        carrier,
         meas.len(),
     );
 
@@ -78,6 +85,7 @@ pub(super) unsafe fn event(rssi: *const dect_phy::rssi_event) -> DectEvent {
     let owned = RssiPool
         .alloc(RssiEvent {
             start_time: rssi.meas_start_time,
+            carrier,
             data,
         })
         .ok();
@@ -154,6 +162,10 @@ impl DectPhy {
     /// otherwise it may receive None events that indicate the overflow (but are still emitted so
     /// that the receiver knows which events were empty).
     ///
+    /// If an operation fails (eg. because it could not be started in time), the others still run.
+    /// The failed one does not produce an `on_event` call, and the first error is returned once all
+    /// are done. `RssiEvent::carrier()` tells which channel a measurement belongs to.
+    ///
     /// See [`Self::rx()`] for the relevance of `network_id`.
     pub async fn rssi_bulk(
         &mut self,
@@ -215,57 +227,63 @@ impl DectPhy {
             ));
         }
 
-        let mut recv_result: super::rx::RecvResultBuilder;
-        for (handle, (multiples, _carrier)) in carriers.iter().dedup_with_count().enumerate() {
-            let handle = handle_from_index(handle);
-            recv_result = Default::default();
-            // FIXME: When should we clear the recvbuf?
+        // Every operation ends in exactly one completion → also one that fails (eg. could not be started in time).
+        // And reports no RSSI. DectEvent::Completed does not carry the handle,
+        // so completions are counted. Rather than returning at the first error,
+        // this waits for all of them: otherwise, the remaining operations events would reach the
+        // next user of the modem.
+        let operations = carriers.iter().dedup_with_count().count();
+        let mut completed = 0;
+        let mut first_error = None;
+        let mut recv_result = super::rx::RecvResultBuilder::default();
+        while completed < operations {
+            match DECT_EVENTS.receive().await.event {
+                DectEvent::Rssi(received_handle, res) => {
+                    assert!(
+                        (received_handle.0 as usize) < operations,
+                        "Sequence violation"
+                    );
 
-            // We expect to receive exaclty as many RSSI events as requested, and then a Completion
-            // -- but data can arrive even after the last RSSI.
-            let mut expected_receive: usize = multiples;
-            loop {
-                let event = DECT_EVENTS.receive().await.event;
-                match (event, expected_receive) {
-                    (DectEvent::Rssi(_, _), 0) => panic!("Sequence violation"),
-                    (DectEvent::Rssi(received_handle, res), _) => {
-                        expected_receive -= 1;
-
-                        // Protect against AsMut impls that are not actually constant length.
-                        assert_eq!(handle, received_handle);
-
-                        if let Some(res) = &res {
-                            defmt::debug!("Got some RSSI at {}", res.start_time());
-                        } else {
-                            defmt::warn!("Got RSSI but data could not be allocate");
-                        }
-                        on_event(res).await;
+                    if let Some(res) = &res {
+                        defmt::debug!("Got some RSSI at {}", res.start_time());
+                    } else {
+                        defmt::warn!("Got RSSI but data could not be allocate");
                     }
-                    (
-                        e @ (DectEvent::Pcc(..)
-                        | DectEvent::Pdc(..)
-                        | DectEvent::PccError(..)
-                        | DectEvent::PdcError),
-                        _,
-                    ) => {
-                        // Both the Break and the Error case only occur when feeding a
-                        // Completed, which we don't do.
-                        let _ = recv_result.feed(e)?;
-                        if recv_result.is_ready() {
-                            let result = core::mem::take(&mut recv_result);
-                            let result = result.finish().expect("Done states have Some content");
-                            on_receive(result).await;
-                        }
-                        continue;
-                    }
-                    (DectEvent::Completed(completion), 0) => {
-                        completion?;
-                        break;
-                    }
-                    _ => panic!("Sequence violation"),
+                    on_event(res).await;
                 }
+                e @ (DectEvent::Pcc(..)
+                | DectEvent::Pdc(..)
+                | DectEvent::PccError(..)
+                | DectEvent::PdcError) => {
+                    // Both the Break and the Error case only occur when feeding a Completed,
+                    // which we don't do.
+                    let _ = recv_result.feed(e)?;
+                    if recv_result.is_ready() {
+                        let result = core::mem::take(&mut recv_result);
+                        let result = result.finish().expect("Done states have Some content");
+                        on_receive(result).await;
+                    }
+                }
+                DectEvent::Completed(completion) => {
+                    completed += 1;
+
+                    // a packet whose PDC did not arrive by the end of the operation will not get one
+                    // any more.
+                    // this assumes that no other operation completes between a packet's
+                    // PCC and PDC → telling them apart needs the handles, which DectEvent drops
+                    recv_result = Default::default();
+                    if let Err(e) = completion {
+                        defmt::warn!("RSSI operation failed: {}", e);
+                        // only keep the first error, but still wait for all operations to complete
+                        first_error.get_or_insert(e);
+                    }
+                }
+                _ => panic!("Sequence violation"),
             }
         }
-        Ok(())
+        match first_error {
+            Some(e) => Err(e.into()),
+            None => Ok(()),
+        }
     }
 }
