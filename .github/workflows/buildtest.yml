@@ -57,6 +57,9 @@ jobs:
         with:
           packages: ninja-build gcc-arm-none-eabi pipx
           version: 20261106
+          # "fatal error: stdio.h: No such file or directory" arises otherwise;
+          # presumably, compiler paths are set up in post-install scripts.
+          execute_install_scripts: true
 
       - name: "Install Ariel OS prerequisites through laze"
         run: |
@@ -65,8 +68,31 @@ jobs:
           laze build install-toolchain || true
           laze build -C build/imports/ariel-os/ install-toolchain
 
-      - run: |
-          ./test/all.sh
+      - name: "Checking whether tests list change since GitHub workflows were enumerated"
+        run: |
+          ls test/ | sha256sum -c <(echo 'd363fe92bb99b77a7b208034db83070e36ae5039adf2b99d47a94a5c70116429  -')
+      # Regenerate this whenever tests/ changes through
+      # :r!ls ./test/[0-9]*.sh | sed 's/.*/      - run: & || echo & >> FAILED\n        name: &/'
+      - run: ./test/01_reuse.sh || echo ./test/01_reuse.sh >> FAILED
+        name: ./test/01_reuse.sh
+      - run: ./test/02_vet.sh || echo ./test/02_vet.sh >> FAILED
+        name: ./test/02_vet.sh
+      - run: ./test/03_check.sh || echo ./test/03_check.sh >> FAILED
+        name: ./test/03_check.sh
+      - run: ./test/04_fmt.sh || echo ./test/04_fmt.sh >> FAILED
+        name: ./test/04_fmt.sh
+      - run: ./test/05_cargotest.sh || echo ./test/05_cargotest.sh >> FAILED
+        name: ./test/05_cargotest.sh
+      - run: ./test/06_doc2readme.sh || echo ./test/06_doc2readme.sh >> FAILED
+        name: ./test/06_doc2readme.sh
+      - run: ./test/07_app-build.sh || echo ./test/07_app-build.sh >> FAILED
+        name: ./test/07_app-build.sh
+      - run: ./test/08_pretty-rebuild.sh || echo ./test/08_pretty-rebuild.sh >> FAILED
+        name: ./test/08_pretty-rebuild.sh
+      # End genreated
+
+      - name: Summary of failed steps
+        run: "! grep '' FAILED"
 
   check-links:
     # TBD: Make this GitHub-independent and put into test.sh
