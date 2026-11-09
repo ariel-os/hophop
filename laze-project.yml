@@ -15,6 +15,7 @@ imports:
 
 subdirs:
   - examples
+  - applications/bridge-ft
   - applications/bridge-pt
   - applications/embedded-pt
   - applications/sniffer
