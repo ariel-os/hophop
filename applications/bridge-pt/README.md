@@ -32,7 +32,8 @@ Running the application
 -----------------------
 
 * Run a peer with the `embedded-pt` applications (which means also running a DECT shell FT)
-  as per its [documentation](../embedded-pt/README.md)
+  as per its [documentation](../embedded-pt/README.md);
+  together with this example, that results in a network as explained / depicted in the "Data flow" section above.
 
 * Run the example:
 
@@ -45,14 +46,23 @@ Running the application
   You can do this by:
 
   ```console
-  $ cargo install Jelly
-  $ Jelly /dev/ttyACM2 -t tun0
+  $ Jelly /dev/serial/by-id/usb-Makerdiary_IFMCU_CMSIS-DAP_9876543210ABCDEF-if00 -t tun0
   ```
 
   which will guide you towards setting up your tun0 device if it is not available yet.
 
-* Run `net nbr` on the FT to see your own IP address --
-  NI6W is rather picky when it comes to those.
+* Similar to the PT example, you will be shown your IP address --
+  however, as hophop is not in control of your IP stack, it will need some manual setup:
+
+  ```
+  [INFO ] Scanning succeeded, attempting association with the found FT ClusterBeacon { channel: 1665, … }
+  [INFO ] Learned about association: Some(Association { network: 0x87654321, … }
+  [INFO ] Please set this IPv6 address on the host: fe80:0000:0000:0000:7d99:e9b0:922f:5140
+  ```
+
+  At the current stage of development, the host is required to use that precise address.
+
+  Set up that address as your link-local address:
 
   ```console
   $ sudo ip -6 a add dev tun0 fe80::7d99:e9b0:922f:5140/64
@@ -86,20 +96,24 @@ Running the application
   This has room for optimization on many layers;
   for the time being, be patient and retry.
 
-  (Some notes-to-self:
+  <!-- Some notes-to-self:
   The NI6W layer reorders packets somewhere,
   something duplicates packets a lot,
   aiocoap could be more patient when reordered unsuccessful OSCORE responses come back,
   and the CoAP parameters should be tuned for 2s+ expected RTTs, avoiding needless retransmissions.
   Running the example in a mode where not every invocation runs EDHOC will help too.)
+  -->
 
   Use the logs, `--verbose` aiocoap output, or Wireshark
-  to verify that .
+  to verify that indeed all communication is encrypted.
 
   Note that those credentials do not contain real keys, but merely state that opportunistic encryption is used.
   Ariel OS contains examples of using actual credentials,
   but that would only increase the demo complexity,
   without significant changes to message size/content or computational complexity.
+
+* As in the PT example, you can alter the configuration of your device using the `/hop/config` resource,
+  or inspect it as `/hop/assoc`.
 
 * You may notice that latencies are very bad -- but then again, the system is configured for long sleeps (even though they are not utilized well yet) and low power in general, and not low latencies.
 

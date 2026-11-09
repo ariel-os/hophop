@@ -22,6 +22,17 @@ Basic steps common to all examples and applications
   and placing [the probe-rs rules file](https://probe.rs/files/69-probe-rs.rules) inside `/etc/udev/rules.d`.
   The typical error that indicates that this step is missing is "USB device: permission denied".
 
+* Install [Jelly](https://github.com/teufelchen1/jelly), a slipmux (SLIP and CoAP) tool used with many hophop applications.
+
+  At the time of writing, some examples (where it is used to alter a device's setup) require a feature branch:
+
+  ```
+  $ cargo install Jelly --git https://github.com/chrysn-pull-requests/jelly/ --branch core.p-edit
+  ```
+
+  Should that fail, try plain `cargo install Jelly` -- the relevant features might already be part of Jelly in that case
+  (and please open an [issue in hophop, or alter this documentation right away](https://github.com/ariel-os/hophop/issues)).
+
 * [Ensure that you have the DECT firmware running](../doc/dect-firmware.md).
 
 * Beware that this is a research example,

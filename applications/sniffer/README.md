@@ -35,10 +35,26 @@ Running the application
   You can do this by:
 
   ```console
-  $ cargo install Jelly
   $ Jelly /dev/serial/by-id/usb-SEGGER_J-Link_001012345678-if00 -t tun0
   ```
 
 * Run Wireshark on tun0, configured as follows:
 
   - In Edit / Preferences / Protocols / DECT NR+, set Cipher Key 0 to "4a7573744164656661756c7421212121" (or whichever network you expect to decode), and port to 45319
+
+* Successful sniffing not only requires that the channel is configured right.
+  For capturing data (but not beacons), it also requires that the network ID is configured right,
+  since there is scrambling on the PHY layer.
+  That is, data is not encrypted, but the encoding is influenced by the network ID to reduce interference.
+
+  You can view the settings in Jelly by accessing the `/sniffconf` resource
+  (i.e., entering `/sniffconf` in the user input field; tab completion is available):
+
+  ```cbor
+  {0: 1665, 1: 2271560481}
+  ```
+
+  This indicates the current channel and the network ID, respectively.
+
+  Using the `edit` command,
+  you can alter the channel and network ID.

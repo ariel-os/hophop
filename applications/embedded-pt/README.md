@@ -87,7 +87,41 @@ Running the application
     $ laze build -b nrf9151-dk -D LOG=info run
     ```
 
-* Observe on the device being eventually associated with the shell FT:
+    Among other log messages, you will see how it connects, and that it obtains an IP address:
+
+    ```
+    [INFO ] Scanning succeeded, attempting association with the found FT ClusterBeacon { channel: 1665, … }
+    [INFO ] Learned about association: Some(Association { network: 0x87654321, … }
+    [INFO ] Setting IPv6 address: fe80:0000:0000:0000:70d1:776d:f9cf:c820
+    ```
+
+    **Not associating?**
+    Compare the FT's settings with the settings above, maybe the channel, network ID or encryption key differs from those shown above (`dect sett -r`).
+
+* You can also query the association status from Jelly:
+
+  ```console
+  $ Jelly /dev/serial/by-id/usb-Makerdiary_IFMCU_CMSIS-DAP_0123456789ABCDEF-if00
+  ```
+
+  (For small numbers of devices, you may also use the shorter `/dev/ttyACM0` style names,
+  but the longer names are easier to match with the programmers.)
+
+  Jelly automatically discovers the available resources
+  (as shown in the CoAP pane on the right),
+  as well as some details about the board.
+
+  Enter `/hop/assoc` (tab completion is available);
+  pressing return will send a GET request to that resource,
+  and the CoAP pane will show that an association is present:
+
+  ```cbor
+  {0: 2271560481, 1: 160740142, 2: 1665, 3: [0]}
+  ```
+
+  (Items here signify the network ID, the parent's long RD ID, the channel number, and the type of IPv6 address, respectively).
+
+* You can also verify the association from the shell at the FT:
 
     ```console
     desh:~$ dect neighbor_list
@@ -97,19 +131,6 @@ Running the application
       Neighbor count: 1
       Neighbor list:
         Neighbor long RD ID 4027574958
-    ```
-
-* Find your device's IP address and ping it.
-
-    Its logs will report:
-
-    ```
-    Setting IPv6 interface identifier: fe80:0000:0000:0000:70d1:776d:f9cf:c820
-    ```
-
-    and you can find the same address also when asking the FT:
-
-    ```console
     desh:~$ net nbr
        Neighbor  Interface  Flags    State     Remain  Link              Address
     [ 1] 0x2000d16c  1          0/1/0/0  reachable      0  70:D1:77:6D:70:D1:77:6D fe80::70d1:776d:f9cf:c820
@@ -147,5 +168,27 @@ Running the application
     The ping command then waits 1 second, starts the next ping,
     but then it takes again 1s until the next beacon is availab.e
 
+* Settings of the PT are available through Jelly as well:
+  Enter `/hop/config` (again, `/hop/c<TAB>` auto-completes),
+  and it shows the default configuration:
+
+  ```cbor
+  {0: [{0: [1665], 1: 8873283, 2: [h'4a7573744164656661756c7421212121', h'4a7573744164656661756c7421212121'], 3: 2000}], 1: 3898463644, 2: true}
+  ```
+
+  (Pressing F3 makes the CoAP pane full-screen).
+
+  This lists that there is one known network, to be scanned at channel 1665, with encryption keys given in hexadecimal and a beacon interval of 2000ms;
+  beyond the configured networks, it also lists the own RD ID and whether to use power saving mode.
+
+  When you enter the `edit` command,
+  Jelly will open your editor, and allow you to alter those settings,
+  which are applied when saving and exiting.
+
+  You can use this to associate with different FTs,
+  or to intentionally sever the network connection.
+
+  In the current example application, those settings are not persisted across reboots.
+
 * The PT also runs a CoAP server with EDHOC/OSCORE.
-  This can be tested using the `bridge-pt` example.
+  This can be tested most easily using the `bridge-pt` example.
