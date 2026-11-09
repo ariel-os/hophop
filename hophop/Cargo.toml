@@ -13,9 +13,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-heapless = { version = "0.9.2", features = ["embedded-io-v0.7"] }
+heapless = { version = "0.9.2", features = ["embedded-io-v0.7", "defmt"] }
 
-embassy-sync = "0.7.2"
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
 defmt = "1"
 
 nrf-modem = { version = "*", features = ["dect", "nrf9151", "defmt"] }
@@ -47,7 +47,10 @@ nrfxlib-sys-pretty.path = "../nrfxlib-sys-pretty/"
 minicbor = { version = "2.3.0", features = ["derive"] }
 coap-handler = "0.2.1"
 coap-handler-implementations = "0.6.2"
-coap-message-utils = "0.3.9"
+# Error details are helpful because we have many -handler-implementations CBOR
+# renderers that provide the info but don't make the type store it..
+coap-message-utils = { version = "0.3.9", features = ["error_title", "error_request_body_error_position", "error_unprocessed_coap_option"] }
+minicbor-adapters = "0.0.8"
 
 [target.'cfg(not(target = "thumbv8m.main-none-eabihf"))'.dependencies]
 # We're using box_pool, and while that works on thumbv8m without portable

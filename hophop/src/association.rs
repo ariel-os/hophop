@@ -16,33 +16,47 @@ use super::nrfxlib_mac;
 use nrfxlib_sys_pretty::{dect_control, dect_mac};
 
 /// Key material for a network in Mode 1 (AES-128)
-pub struct Mode1Keys<'a> {
-    pub integrity_key: &'a [u8; 16],
-    pub cipher_key: &'a [u8; 16],
+#[derive(Clone, minicbor::Decode, minicbor::Encode)]
+pub struct Mode1Keys {
+    #[cbor(n(0), with = "minicbor::bytes")]
+    pub integrity_key: [u8; 16],
+    #[cbor(n(1), with = "minicbor::bytes")]
+    pub cipher_key: [u8; 16],
 }
 
-impl defmt::Format for Mode1Keys<'_> {
+impl defmt::Format for Mode1Keys {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(fmt, "Mode1Keys {{ [cryptographic keys not shown] }}")
     }
 }
 
+/// Maximum number of channels that can be associated with a network.
+///
+/// Conveniently coincides with current nrf_mac parameters. If that, at any point, becomes
+/// troublesome, those can be decoupled, or the channels list can be turned into some
+/// `IntoIterator`.
+pub const MAX_CONFIG_CHANNELS: usize = 20;
+
 /// Description of a network that could be joined.
-#[derive(defmt::Format)]
-pub struct CandidateNetwork<'a> {
+#[derive(Clone, defmt::Format, minicbor::Decode, minicbor::Encode)]
+#[cbor(map)]
+pub struct CandidateNetwork {
     /// List of channels that should be scanned for beacons.
     ///
     /// FIXME: Allow channels of multiple bands, and/or more channels than can be scanned in one
     /// go.
-    pub channels: &'a [AbsoluteChannel],
+    #[cbor(n(0), with = "minicbor_adapters::with")]
+    pub channels: heapless::vec::Vec<AbsoluteChannel, MAX_CONFIG_CHANNELS>,
     /// Network ID by which the network would be recognized.
     ///
     /// This can be left blank to accept any network that matches any other criteria.
+    #[n(1)]
     pub network_id: Option<NetworkId24>,
     /// Network keys.
     ///
     /// If set, only a network encrypted with those keys will be joined.
-    pub keys: Option<Mode1Keys<'a>>,
+    #[n(2)]
+    pub keys: Option<Mode1Keys>,
     /// Beacon interval of the network.
     ///
     /// Channels are listened to for long enough to catch a beacon if one is sent. Setting this too
@@ -60,20 +74,31 @@ pub struct CandidateNetwork<'a> {
     ///
     /// FIXME: Use proper milliseconds type (but with the current back-end, using ms is just too
     /// easy)
+    #[n(3)]
     pub beacon_interval_ms: u16,
 }
 
-#[derive(defmt::Format, Clone)]
-pub struct PtConfiguration<'a> {
+/// Maximum number of channels that can be associated with a network.
+///
+/// If this constant, at any point, becomes troublesome, its users can be convert to using
+/// `IntoIterator`.
+pub const MAX_CANDIDATE_NETWORKS: usize = 4;
+
+#[derive(defmt::Format, Clone, minicbor::Encode, minicbor::Decode)]
+#[cbor(map)]
+pub struct PtConfiguration {
     /// Hint to various choices of power-vs-latency trade-offs
+    #[n(2)]
     pub power_save: bool,
     /// Radio ID to pick.
     ///
     /// FIXME: Should be more random/automated, but which part thereof?
     ///
     /// FIXME: Should this be per network?
+    #[n(1)]
     pub rd_id: LongRdId,
-    pub networks: &'a [CandidateNetwork<'a>],
+    #[cbor(n(0), with = "minicbor_adapters::with")]
+    pub networks: heapless::vec::Vec<CandidateNetwork, MAX_CANDIDATE_NETWORKS>,
 }
 
 #[derive(defmt::Format, Debug, Copy, Clone, minicbor::Encode)]
@@ -140,14 +165,16 @@ impl Association {
 /// The network ID will often not tell much either.)
 ///
 /// If no network is found, the function returns empty.
-pub async fn associate<'c>(
+///
+/// # Cancel safety
+///
+/// Cancelling this function (i.e., calling it but not polling it to completion), no matter whether
+/// the function is dropped or leaked, may result in state mismatches and eventual panics.
+pub async fn associate(
     dect: &mut nrfxlib_mac::DectMac,
-    config: &PtConfiguration<'c>,
-) -> Option<(
-    Association,
-    impl core::future::Future<Output = nrfxlib_mac::AssociationEndEvent> + use<>,
-)> {
-    for network_template in config.networks {
+    config: &PtConfiguration,
+) -> Option<Association> {
+    for network_template in &config.networks {
         info!("Scanning for network {}", network_template);
 
         // FIXME: Can we require the Dect to be in deactivated mode, and then should we (or do we even
@@ -164,8 +191,8 @@ pub async fn associate<'c>(
                 // doing that later when having read the network ID; see documentation on
                 // "Expected time"
                 mode: dect_mac::security_mode_values::_1,
-                integrity_key: *integrity_key,
-                cipher_key: *cipher_key,
+                integrity_key,
+                cipher_key,
             }
         } else {
             dect_control::configure_params_security {
@@ -259,22 +286,19 @@ pub async fn associate<'c>(
             .mac_association(params.transmitter_long_rd_id, params.network_id)
             .await
         {
-            Ok((association, release)) => {
+            Ok(association) => {
                 if association.long_rd_id != params.transmitter_long_rd_id {
                     warn!(
                         "Attempted association with {} but now associated with {}",
                         params.transmitter_long_rd_id, association.long_rd_id
                     )
                 }
-                return Some((
-                    Association {
-                        network: params.network_id,
-                        parent: association.long_rd_id,
-                        channel: params.channel,
-                        ipv6_config: association.ipv6_config,
-                    },
-                    release,
-                ));
+                return Some(Association {
+                    network: params.network_id,
+                    parent: association.long_rd_id,
+                    channel: params.channel,
+                    ipv6_config: association.ipv6_config,
+                });
             }
             Err(e) => info!("Association failed: {}; continuing.", e),
         }

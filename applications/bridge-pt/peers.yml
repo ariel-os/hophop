@@ -6,7 +6,9 @@
     /.well-known/core: GET
     # Only accessible from UART right now
     /id: GET
-    /d: GET
+    /hop/assoc: GET
+    # Config allowed until Jelly learns some OSORE
+    /hop/config: [GET, PUT]
 
 - kccs: |
     # While testing, we'll allow access to whoever has the very public private key that is shipped with the CoAP examples of Ariel OS.

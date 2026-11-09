@@ -13,7 +13,7 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
 async fn main() {
     /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
-    let mut dect = hophop::nrfxlib_mac::DectMac::create(());
+    let (mut dect, dlc_tx, dlc_rx) = hophop::nrfxlib_mac::DectMac::create(());
 
     dect.systemmode_set_mac().await;
 
@@ -29,23 +29,23 @@ async fn main() {
 
     let config = hophop::association::PtConfiguration {
         power_save: true,
-        networks: const {
-            &[
-                // The network pre-configured with Nordic DECT shell
-                hophop::association::CandidateNetwork {
-                    beacon_interval_ms: 2_000,
-                    channels: &[AbsoluteChannel::new(1665).expect("is a channel")],
-                    network_id: Some(
-                        NetworkId24::new(0x876543).expect("is not 6 digits and not 0"),
-                    ),
-                    keys: Some(hophop::association::Mode1Keys {
-                        // 4A7573744164656661756C7421212121 is more readable as:
-                        cipher_key: b"JustAdefault!!!!",
-                        integrity_key: b"JustAdefault!!!!",
-                    }),
-                },
-            ]
-        },
+        networks: heapless::vec::Vec::from_slice(&[
+            // The network pre-configured with Nordic DECT shell
+            hophop::association::CandidateNetwork {
+                beacon_interval_ms: 2_000,
+                channels: heapless::vec::Vec::from_slice(&[
+                    AbsoluteChannel::new(1665).expect("is a channel")
+                ])
+                .unwrap(),
+                network_id: Some(NetworkId24::new(0x876543).expect("is not 6 digits and not 0")),
+                keys: Some(hophop::association::Mode1Keys {
+                    // 4A7573744164656661756C7421212121 is more readable as:
+                    cipher_key: *b"JustAdefault!!!!",
+                    integrity_key: *b"JustAdefault!!!!",
+                }),
+            },
+        ])
+        .unwrap(),
         rd_id: our_long_id,
     };
 
@@ -57,13 +57,14 @@ async fn main() {
     let handler = new_dispatcher()
         .at(&["hello"], SimpleRendered("Hello from hophop"))
         // FIXME generalize so it works here as well
-        .below(&["d"], control_hub.coap_server())
+        .below(&["hop"], control_hub.coap_server())
         // FIXME: This, as well as security, would be handled better by the Ariel OS CoAP server,
         // but right now we're sidestepping that; see laze-project.yml comment
         .with_wkc();
 
     embassy_futures::join::join(
-        hophop::runner::Stack::new(dect).run(ariel_os::time::Delay, &mut &control_hub),
+        hophop::runner::Stack::new(dect, dlc_tx, dlc_rx)
+            .run(ariel_os::time::Delay, &mut &control_hub),
         ariel_os::coap::coap_run(handler),
     )
     .await
@@ -73,7 +74,7 @@ async fn main() {
 // This has parallels with the Ni6wNetworkController, but goes into the SLIPMUX2IP/IP2SLIPMUX
 // controls.
 struct DirectToSlipmuxController {
-    static_config: hophop::association::PtConfiguration<'static>,
+    config: hophop::coap::ControllablePtConfiguration,
     association: core::cell::Cell<Option<hophop::association::Association>>,
     // FIXME: Currently, nothing sends into that
     poke: embassy_sync::channel::Channel<
@@ -86,42 +87,22 @@ struct DirectToSlipmuxController {
 }
 
 impl DirectToSlipmuxController {
-    fn new(static_config: hophop::association::PtConfiguration<'static>) -> Self {
+    fn new(initial_config: hophop::association::PtConfiguration) -> Self {
         use static_cell::ConstStaticCell;
         static BUFFER: ConstStaticCell<ariel_os::coap::SingleBuffer> =
             ConstStaticCell::new(ariel_os::coap::SingleBuffer::new());
         let buffer = Some(BUFFER.take()).into();
 
         Self {
-            static_config,
+            config: hophop::coap::ControllablePtConfiguration::new(initial_config),
             association: Default::default(),
             poke: embassy_sync::channel::Channel::new(),
             buffer,
         }
     }
 
-    // FIXME copied and adjusted from hophop::embassy_net
-    /// Builds a CoAP sub-tree (suitable for use with `.below()`)
     pub fn coap_server(&self) -> impl coap_handler::Handler + coap_handler::Reporting {
-        use coap_handler_implementations::*;
-        use coap_message_utils::Error;
-
-        struct ServeStatus<'a>(&'a DirectToSlipmuxController);
-
-        impl GetRenderable for ServeStatus<'_> {
-            type Get = Option<hophop::association::Association>;
-
-            fn get(&mut self) -> Result<Self::Get, Error> {
-                Ok(self.0.association.get())
-            }
-        }
-
-        wkc::ConstantSingleRecordReport::new(
-            TypeHandler::new_minicbor_2(with_get(ServeStatus(self))),
-            &[coap_handler::Attribute::ResourceType(
-                "tag:ariel-os.org,2026:experimental-hophop",
-            )],
-        )
+        hophop::coap::all(|| self.association.get(), &self.config)
     }
 }
 
@@ -146,6 +127,9 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         // FIXME can we signal that over SLIP, or do we rely on the CoAP server to pick it up?
         if let Some(assoc) = assoc {
             self.association.set(Some(assoc));
+
+            let address = assoc.local_ipv6_address(self.config.get().rd_id);
+            info!("Please set this IPv6 address on the host: {}", address);
         } else {
             self.association.set(None);
         }
@@ -186,18 +170,10 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         }
     }
 
-    // FIXME duplicate from hophop::embassy_net
     fn next_config(
         &mut self,
-    ) -> impl core::future::Future<Output = hophop::association::PtConfiguration<'static>> + use<'a>
-    {
-        // FIXME: This relies on the consumer just querying it once; on the long run, we must be
-        // sure to always return Pending after the first emission, or already forward changing
-        // configurations.
-
-        let static_config = self.static_config.clone();
-
-        async move { static_config }
+    ) -> impl core::future::Future<Output = hophop::association::PtConfiguration> + use<'a> {
+        self.config.next()
     }
 
     fn next_action(

@@ -60,3 +60,8 @@ use embassy_sync::mutex::Mutex;
 pub(crate) static PACKETS: Mutex<CriticalSectionRawMutex, heapless::Deque<DlcDataRx, 10>> =
     Mutex::new(heapless::Deque::new());
 pub(crate) static PACKET_READY: Channel<CriticalSectionRawMutex, (), 1> = Channel::new();
+
+// FIXME: Once we don't do tx() blockingly, we'll need to give this a larger size and track on the
+// RX side how many are in flight.
+pub(crate) static DLC_TX_DONE: Channel<CriticalSectionRawMutex, super::DlcDataTxDone, 1> =
+    Channel::new();

@@ -48,8 +48,16 @@ use shared_queues::*;
 ///
 /// ## Further development
 ///
-/// It is expected that as earlier with the PHY functions, this moves into hophop. But not now.
+/// As long as there is no state that needs to be held at runtime, this is a ZST, and exclusive
+/// access to it ensures that the static queues set up in the private `shared_queues` module
+/// (except for those split off at startup) are not accessed simultaneously (which would make them
+/// unreliable in that one party might expect an event that was taken by another party, or
+/// simultaneous polling might result in a busy wait).
 pub struct DectMac(());
+
+pub struct DlcTx(());
+
+pub struct DlcRx(());
 
 impl DectMac {
     /// See hophop::nrfxlib_phy::DectPhy::init_after_modem_init() for `_modem_is_set_up` context
@@ -58,7 +66,7 @@ impl DectMac {
     /// that, there'll probably be some kind of "desiccated" form of this object where a user can
     /// first initialize the desiccated form and then do a "set MAC system mode" function, both
     /// which steps this combines.
-    pub fn create(_modem_is_set_up: ()) -> Self {
+    pub fn create(_modem_is_set_up: ()) -> (Self, DlcTx, DlcRx) {
         // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
         unsafe { dect_mac::callback_set(&callbacks::OP_CALLBACKS, &callbacks::MAC_NTF_CALLBACKS) }
             .into_result()
@@ -66,7 +74,7 @@ impl DectMac {
                 "Unsuccessful operation would mean we passed NULL or had a None in the callbacks.",
             );
 
-        Self(())
+        (Self(()), DlcTx(()), DlcRx(()))
     }
 
     /// Waits for an event on the SINGLETON channel, and reports its success.
@@ -187,13 +195,7 @@ impl DectMac {
         &mut self,
         long_rd_id: LongRdId,
         network_id: NetworkId32,
-    ) -> Result<
-        (
-            AssociationEvent,
-            impl core::future::Future<Output = AssociationEndEvent> + use<>,
-        ),
-        MacError,
-    > {
+    ) -> Result<AssociationEvent, MacError> {
         let mut tx_flow_configs = [
             dect_mac::tx_flow_config {
                 flow_id: 6, // "User plane data -- flow 4"
@@ -246,9 +248,45 @@ impl DectMac {
 
         let association_event = ASSOCIATION_EVENTS.receive().await?;
 
-        Ok((association_event, RELEASE_EVENTS.receive()))
+        Ok(association_event)
     }
 
+    pub async fn next_association_end(&mut self) -> AssociationEndEvent {
+        // Not optimizing into a fn -> impl future: The compiler is already learning to do this
+        // itself.
+        RELEASE_EVENTS.receive().await
+    }
+
+    /// Asks the MAC to end the association with a given peer.
+    ///
+    /// This returns immediately; the effect is that [`Self::next_association_end()`] .
+    ///
+    /// # Caveats
+    ///
+    /// It is unclear how this acts in race conditions between associations being terminated by the
+    /// peer or by beacon timeouts and this function; possible outcomes that the application should
+    /// handle are receiving an error here (in which case it is plausible to expect that
+    /// [`Self::next_association_end()`] will produce something), and that two release events (one
+    /// from the other source and one from this function) occur, or just one event.
+    ///
+    /// The working assumption used in the rest of the crate is that up to two events are produced,
+    /// but the `OurRelease` variant comes last.
+    pub fn initiate_release_association(
+        &mut self,
+        peer: LongRdId,
+        cause: dect_mac::release_cause,
+    ) -> Result<(), nrf_modem::Error> {
+        unsafe {
+            dect_mac::association_release(&mut dect_mac::association_release_params {
+                release_cause: cause,
+                long_rd_id: peer.into(),
+            })
+        }
+        .into_result()
+    }
+}
+
+impl DlcTx {
     /// Transmits data in one of the flows.
     ///
     /// This is a primitive wrapper in that it only returns after transmission; a better version
@@ -274,10 +312,13 @@ impl DectMac {
         .into_result()
         // FIXME: Can this fail just because the slice is bad?
         .expect("Failed to start TX attempt");
-        self.receive_singleton_event(SingletonEventSource::DataTx)
-            .await
-    }
 
+        let done = shared_queues::DLC_TX_DONE.receive().await;
+        done.status
+    }
+}
+
+impl DlcRx {
     pub async fn dlc_data_rx(&mut self) -> DlcDataRx {
         if let Some(d) = PACKETS.lock().await.pop_front() {
             return d;
@@ -294,7 +335,6 @@ impl DectMac {
 #[derive(Debug, PartialEq, Eq)]
 enum SingletonEventSource {
     Configure,
-    DataTx,
     FunctionalMode,
     NetworkScan,
     NetworkScanStop,
@@ -349,6 +389,14 @@ impl<'brand> ScanReceiver<'brand> {
     }
 }
 
+#[derive(defmt::Format)]
+struct DlcDataTxDone {
+    pub transaction_id: u32,
+    pub status: Result<(), MacError>,
+    pub flow_id: u8,
+    pub peer: LongRdId,
+}
+
 pub struct DlcDataRx {
     pub(crate) long_rd_id: u32,
     pub(crate) flow_id: u8,
@@ -369,16 +417,24 @@ impl DlcDataRx {
     }
 }
 
-#[derive(defmt::Format)]
-pub(crate) enum ReleaseOrBeaconFailure {
-    Release(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+#[derive(defmt::Format, PartialEq, Eq)]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "the enum is about the abstract effect of a relase; some of them involve a concrete release message"
+)]
+pub(crate) enum Release {
+    /// Received a Release notification from the peer.
+    PeerRelease(ts_103_636_numbers::mac_details::release_message::ReleaseCause),
+    /// Received a Beacon RX failure, assuming the association is released.
     BeaconRxFailure,
+    /// Release due to the asynchronous response to an own [`dect_mac::assoc_release()`] call.
+    OurRelease,
 }
 
 #[derive(defmt::Format)]
 pub struct AssociationEndEvent {
     pub(crate) long_rd_id: LongRdId,
-    pub(crate) release_cause: ReleaseOrBeaconFailure,
+    pub(crate) release_cause: Release,
 }
 
 #[derive(defmt::Format)]
