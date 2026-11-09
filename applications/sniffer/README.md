@@ -9,6 +9,18 @@ This application continuously receives from its DECT NR+ interface,
 sends out received packets in Wireshark's format,
 and can be controlled through CoAP.
 
+Data flow
+---------
+
+This application is run with a PC connected to a development kit.
+The application sets up hophop instrument the PHY layer of the radio core.
+Control data (switching channels) is sent in through CoAP,
+and IP traffic is produced directly by the application, bypassing the Ariel IP stack, by using static headers.
+Both CoAP and IP traffic is multiplexed through slipmux to the host where Jelly provides an interface to CoAP,
+and makes radio traffic visible on the Linux network stack for Wireshark to dissect.
+
+![Illustration of the components described above in prose](../../doc/.media/scenarios.svg#page-sniffer)
+
 Running the application
 -----------------------
 
