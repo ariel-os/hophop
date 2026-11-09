@@ -83,7 +83,8 @@ impl DectMac {
     /// expectation of the event that triggered the singleton event; if need be, that could be
     /// turned into a debug_assert, and with corresponding changes in the `SingletonEvent` type to
     /// not use actual memory for the variants.
-    async fn receive_singleton_event(
+    // FIXME: pub only for experiments
+    pub async fn receive_singleton_event(
         &mut self,
         source: SingletonEventSource,
     ) -> Result<(), MacError> {
@@ -333,11 +334,14 @@ impl DlcRx {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum SingletonEventSource {
+// FIXME: pub only for experiments
+pub enum SingletonEventSource {
+    ClusterConfigure,
     Configure,
     FunctionalMode,
     NetworkScan,
     NetworkScanStop,
+    RssiScan,
     SystemMode,
 }
 
