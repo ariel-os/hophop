@@ -70,7 +70,7 @@ jobs:
 
       - name: "Checking whether tests list change since GitHub workflows were enumerated"
         run: |
-          ls test/ | sha256sum -c <(echo 'd363fe92bb99b77a7b208034db83070e36ae5039adf2b99d47a94a5c70116429  -')
+          ls test/ | sha256sum -c <(echo '4049d44c0973d4f532c79cdf01d5cd60076eb0d449ba217f06ff251ea4b14778  -')
       # Regenerate this whenever tests/ changes through
       # :r!ls ./test/[0-9]*.sh | sed 's/.*/      - run: & || echo & >> FAILED\n        name: &/'
       - run: ./test/01_reuse.sh || echo ./test/01_reuse.sh >> FAILED
@@ -89,6 +89,8 @@ jobs:
         name: ./test/07_app-build.sh
       - run: ./test/08_pretty-rebuild.sh || echo ./test/08_pretty-rebuild.sh >> FAILED
         name: ./test/08_pretty-rebuild.sh
+      - run: ./test/99_cargolock.sh || echo ./test/99_cargolock.sh >> FAILED
+        name: ./test/99_cargolock.sh
       # End genreated
 
       - name: Summary of failed steps
