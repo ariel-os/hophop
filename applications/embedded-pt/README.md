@@ -10,6 +10,18 @@ This application sets up an embedded network stack that can connect into a DECT 
 It currently uses Noridc's proprietary IPv6 mode,
 which hophop calls NI6W.
 
+Data flow
+---------
+
+This application is run on a development kit, usually (but not necessarily) connected to a PC.
+The application sets up hophop instrument the MAC layer of the radio core.
+IP traffic from the DLC layer (exposed from the radio core) is fed into the Ariel OS IP stack,
+whereas IP traffic from the host through slipmux is ignored.
+Both the host and the network can access a "hello world" user application through CoAP.
+In addition, they can also use CoAP to control hophop's process of joining and leaving DECT NR+ networks.
+
+![Illustration of the components described above in prose](../../doc/.media/scenarios.svg#page-embedded-pt)
+
 Running the application
 -----------------------
 

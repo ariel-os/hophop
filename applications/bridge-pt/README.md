@@ -8,6 +8,26 @@ bridge-pt
 This application sets up DECT IPv6 networking (in NI6W mode)
 and connects it out via SLIP.
 
+Data flow
+---------
+
+This application is run with a PC connected to a development kit.
+The application sets up hophop instrument the MAC layer of the radio core.
+IP traffic is passed through between the DLC layer (exposed from the radio core) to the host.
+Control over joining and leaving the network is exposed through over CoAP to the host.
+Both host-facing connections are multiplexed in slipmux,
+and demultiplexed by Jelly at the host,
+where it provides an interface to CoAP directly,
+and makes the network accessible through the Linux network stack.
+The Ariel OS network stack is bypassed.
+
+![Illustration of the components described above in prose](../../doc/.media/scenarios.svg#page-bridge-pt)
+
+Multiple hosts can interact with each other and with other boards that run the [`embedded-pt` example](../embedded-pt/),
+with a Nordic DECT shell running in the FT role:
+
+![Illustration of the network described above in prose (two bridge-pt and an embedded-pt linked to a Nordic DECT shell, with an extra sniffer connected to one PC)](../../doc/.media/scenarios.svg#page-combination)
+
 Running the application
 -----------------------
 

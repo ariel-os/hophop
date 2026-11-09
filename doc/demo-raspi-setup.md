@@ -49,10 +49,10 @@ A USB stick is used during setup.
   $ sudo passwd -l myusername
   ```
 
-* Install base packages needed for Ariel:
+* Install base packages needed for Ariel (plus socat for using `dect_shell`):
 
   ```
-  $ sudo apt install git ninja-build pkg-config libudev-dev clang gcc-arm-none-eabi gcc-riscv64-unknown-elf gcc curl make
+  $ sudo apt install git ninja-build pkg-config libudev-dev clang gcc-arm-none-eabi gcc-riscv64-unknown-elf gcc curl make socat
   ```
 
 * Install a few things as root so that they are available for all users (who don't need to change anything about that).
@@ -131,8 +131,37 @@ A USB stick is used during setup.
 
   (picking any funny password as above)
 
+* To give people SSH access more easily:
+
+  ```console
+  # apt install shellinabox
+  ```
+
+  and
+
+  - edit /etc/defaults/shellinabox, add `-t` to `SHELLINABOX_ARGS` (so it works with plain http)
+  - switch the _ and + in the 00 css files in options-enabled (as background color discovery seems not to work well with shellinabox)
+
 * Preparations from the GUI:
 
-  - Set up wireshark as per [../applications/sniffer/README.md](sniffer README)
+  - Set up wireshark as per [sniffer README](../applications/sniffer/README.md)
   - Add hophop website (repo) and Ariel OS website as bookmarks in the default browser in the bookmark bar group, and remove the predefined entries
-  - Kate: set font to DejaVu Sans mono
+  - Kate: set font to DejaVu Sans mono (default font is just unusable)
+  - Run `cargo doc` on an example, and bookmark that in the browser
+
+* Debug tips:
+
+  - UART output of nRF9151-DK has been acting up in some cases; power cycling the full board helped.
+
+# General tips for running demos
+
+Until the demo setup includes isolated network namespaces, run with link-local (fe80::) addresses: Those allow pings and clients to work specifically on interfaces, even when two bridges are connected to a single PC.
+
+To demo interoperatbility with Nordic's `dect_shell`, prepare a hex file as per [reference project docs](doc/reference-projects.md).
+That can be loaded on demand with:
+
+```
+$ probe-rs download --protocol=swd --chip nRF9151_xxAA --binary-format ihex baseline-desh-v350prev2-merged.hex --preverify --probe 1366:1059:001234567890  --allow-erase-all
+```
+
+and may need power cycling.
