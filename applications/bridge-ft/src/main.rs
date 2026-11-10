@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::info;
+use ariel_os::log::{info, warn, Hex};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 
@@ -15,7 +15,7 @@ use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
 async fn main() {
     /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
-    let (mut dect, _, _) = hophop::nrfxlib_mac::DectMac::create(());
+    let (mut dect, mut dlc_tx, mut dlc_rx) = hophop::nrfxlib_mac::DectMac::create(());
 
     dect.systemmode_set_mac().await;
 
@@ -223,6 +223,37 @@ async fn main() {
     info!("Done: {:?}", result);
 
     loop {
-        ariel_os::time::Timer::after_secs(5).await;
+        // Very quick and very dirty non-border router -- if a peer doesn't address something in
+        // such a way that DLC can forward it, we have to
+        let rx = &dlc_rx.dlc_data_rx().await;
+        let data = rx.data();
+        let Some(dest_addr) = data.get(24..40) else {
+            warn!("DLC data too short to be IP");
+            continue;
+        };
+        if &dest_addr[8..12] != &u32::from(our_long_id).to_be_bytes() {
+            warn!("Received DLC from {} on {} but it's not to be forwarded here: dest addr is {}", rx.sender(), rx.flow_id(), Hex(dest_addr));
+            continue;
+        }
+
+        // not checking 12..16 in peers list, just assuming that exists
+        let Some(dest) = LongRdId::new(u32::from_be_bytes(dest_addr[12..16].try_into().unwrap())) else {
+            warn!("Can not send to zero RD ID");
+            continue;
+        };
+
+        // This is needless copying, for we could also make DlcDataRx destructible into such a Vec,
+        // but we're .
+        let mut data_out = heapless::Vec::<u8, 1501>::from_slice(&data).expect("Sizes align");
+
+        let new_hoplimit = data_out[7].saturating_sub(1);
+        if new_hoplimit == 0 {
+            warn!("Discarding packet that underflew hop limit");
+            continue;
+        }
+        data_out[7] = new_hoplimit;
+
+        let result = dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await;
+        info!("Forwarded data to {:?} with hop limit {}: {:?}", dest, new_hoplimit, result);
     }
 }
