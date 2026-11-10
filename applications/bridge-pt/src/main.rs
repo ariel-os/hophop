@@ -114,7 +114,7 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         };
         buffer.clear();
         if buffer.extend_from_slice(data.data()).is_ok() {
-            ariel_os::coap::SLIPMUX2IP.signal(buffer);
+            ariel_os::coap::IP2SLIPMUX.signal(buffer);
         } else {
             warn!("Packet too long");
             self.buffer.set(Some(buffer));
