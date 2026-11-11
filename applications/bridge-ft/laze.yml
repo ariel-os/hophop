@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+apps:
+  - name: hophop-application-bridge-ft
+    depends:
+      - has_host_facing_uart
+    selects:
+      - nrf91-modem
+      - nrf-radiocore-firmware-dect
