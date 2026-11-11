@@ -5,11 +5,63 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::{info, warn, Hex};
+use ariel_os::log::{info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 
 use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
+
+/// Selectable options for NI6W addressing.
+///
+/// Not exposing the full-address mode because it is unclear how that would work.
+enum IpConfig {
+    LinkLocal,
+    Prefix([u8; 8]),
+}
+
+impl IpConfig {
+    /// Given a sink RD ID and a destination IP address, determine if the address is on the link
+    /// and has a usable destination RD ID, which is returned in that case.
+    fn matches_and_extract(
+        &self,
+        sink: &LongRdId,
+        address: &core::net::Ipv6Addr,
+    ) -> Option<LongRdId> {
+        let expected_prefix = match self {
+            IpConfig::LinkLocal => &[0xfe, 0x80, 0, 0, 0, 0, 0, 0],
+            IpConfig::Prefix(p) => p,
+        };
+        if &address.octets()[..8] != expected_prefix {
+            return None;
+        }
+        if &address.octets()[8..12] != &u32::from(*sink).to_be_bytes() {
+            return None;
+        }
+
+        LongRdId::new(u32::from_be_bytes(
+            address.octets()[12..].try_into().unwrap(),
+        ))
+    }
+}
+
+impl From<&IpConfig> for dect_mac::ipv6_address_config_t {
+    fn from(input: &IpConfig) -> Self {
+        dect_mac::ipv6_address_config_t {
+            type_: match input {
+                IpConfig::LinkLocal => dect_mac::ipv6_address_type_values::NONE,
+                IpConfig::Prefix(_) => dect_mac::ipv6_address_type_values::PREFIX,
+            },
+            address: match input {
+                IpConfig::LinkLocal => [0; _],
+                IpConfig::Prefix(prefix) => {
+                    let mut full = [0; _];
+                    full[..8].copy_from_slice(prefix);
+                    full
+                }
+            },
+        }
+    }
+}
 
 #[ariel_os::task(autostart)]
 async fn main() {
@@ -158,6 +210,8 @@ async fn main() {
     config_flags.set_has_max_tx_power(1);
     config_flags.set_has_rach_config(1);
 
+    let our_network = IpConfig::Prefix([0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0]);
+
     // FIXME all parameters
     let mut cluster_config = dect_mac::cluster_config {
         // flags
@@ -198,10 +252,7 @@ async fn main() {
         triggers: dect_mac::cluster_config_cluster_info_triggers {
             busy_threshold: 20,
         },
-        ipv6_config: dect_mac::ipv6_address_config_t {
-            type_: dect_mac::ipv6_address_type_values::NONE,
-            address: [0; 16],
-        },
+        ipv6_config: (&our_network).into(),
     };
 
     let result = unsafe {
@@ -227,18 +278,19 @@ async fn main() {
         // such a way that DLC can forward it, we have to
         let rx = &dlc_rx.dlc_data_rx().await;
         let data = rx.data();
-        let Some(dest_addr) = data.get(24..40) else {
+
+        let Some(dest_addr) = data.get(24..).and_then(|s| s.first_chunk()) else {
             warn!("DLC data too short to be IP");
             continue;
         };
-        if &dest_addr[8..12] != &u32::from(our_long_id).to_be_bytes() {
-            warn!("Received DLC from {} on {} but it's not to be forwarded here: dest addr is {}", rx.sender(), rx.flow_id(), Hex(dest_addr));
-            continue;
-        }
-
-        // not checking 12..16 in peers list, just assuming that exists
-        let Some(dest) = LongRdId::new(u32::from_be_bytes(dest_addr[12..16].try_into().unwrap())) else {
-            warn!("Can not send to zero RD ID");
+        let dest_addr = core::net::Ipv6Addr::from_octets(*dest_addr);
+        let Some(dest) = our_network.matches_and_extract(&our_long_id, &dest_addr) else {
+            warn!(
+                "Received DLC from {} on {} but it's not to be forwarded here: dest addr is {}",
+                rx.sender(),
+                rx.flow_id(),
+                dest_addr,
+            );
             continue;
         };
 
@@ -254,6 +306,9 @@ async fn main() {
         data_out[7] = new_hoplimit;
 
         let result = dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await;
-        info!("Forwarded data to {:?} with hop limit {}: {:?}", dest, new_hoplimit, result);
+        info!(
+            "Forwarded data to {:?} with hop limit {}: {:?}",
+            dest, new_hoplimit, result
+        );
     }
 }
