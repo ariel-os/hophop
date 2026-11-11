@@ -275,6 +275,7 @@ impl defmt::Format for NetworkId8 {
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "minicbor", derive(minicbor::Encode, minicbor::Decode))]
 #[cfg_attr(feature = "minicbor", cbor(transparent))]
+#[repr(transparent)] // used in new_from_slice
 pub struct LongRdId(NonZero<u32>);
 
 impl LongRdId {
@@ -295,6 +296,30 @@ impl LongRdId {
             Some(n) => Some(Self(n)),
             None => None,
         }
+    }
+
+    /// Checks a slice of u32 for absence of zeros and makes it available as `&[Self]`.
+    ///
+    /// This is useful in APIs that give access to a list of peers:
+    ///
+    /// ```
+    /// # fn query_peers() -> &'static [u32] { &[0x12345678, 0xabcdef01] }
+    /// # use ts_103_636_utils::identifiers::LongRdId;
+    /// let peers: &[u32] = query_peers();
+    /// println!("Peers are {:?}", LongRdId::new_from_slice(peers).unwrap());
+    /// ```
+    #[must_use]
+    #[expect(
+        clippy::transmute_ptr_to_ptr,
+        reason = "transmuting the slice makes it easier to recognize what happens than with the proposed alternative"
+    )]
+    pub fn new_from_slice(rd_ids: &[u32]) -> Option<&[Self]> {
+        if rd_ids.contains(&0) {
+            return None;
+        }
+
+        // SAFETY: NonZero<T> is documented to be transparent, and Self is transparent around that.
+        Some(unsafe { core::mem::transmute::<&[u32], &[LongRdId]>(rd_ids) })
     }
 }
 
