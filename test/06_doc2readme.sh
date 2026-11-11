@@ -3,7 +3,7 @@
 
 set -ex
 
-for DIR in ts-103-636-numbers ts-103-636-utils
+for DIR in ts-103-636-numbers ts-103-636-utils nrfxlib-sys-pretty
 do
     cd "${DIR}"
     cargo doc2readme --check
