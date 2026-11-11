@@ -305,10 +305,10 @@ async fn main() {
         }
         data_out[7] = new_hoplimit;
 
-        let result = dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await;
-        info!(
-            "Forwarded data to {:?} with hop limit {}: {:?}",
-            dest, new_hoplimit, result
-        );
+        match dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await {
+            Ok(()) => info!("Forwarded packet to {:?} with hop limit {}", dest, new_hoplimit),
+            Err(e) if e.is_rd_not_found() => warn!("Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting", dest),
+            Err(e) => warn!("Unhandled error forwarding packet to {:?}: {:?}", dest, e),
+        }
     }
 }
