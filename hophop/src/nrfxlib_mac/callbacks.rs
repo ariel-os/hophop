@@ -229,10 +229,65 @@ unsafe extern "C" fn cluster_info(params: *mut dect_mac::cluster_info_cb_params)
     todo!()
 }
 unsafe extern "C" fn neighbor_info(params: *mut dect_mac::neighbor_info_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::neighbor_info_cb_params {
+        status,
+        long_rd_id,
+        associated,
+        ft_mode,
+        channel,
+        network_id,
+        time_since_last_rx_ms,
+        last_rx_signal_info,
+        beacon_average_rx_txpower,
+        beacon_average_rx_rssi_2,
+        beacon_average_rx_snr,
+        status_info,
+    } = unsafe { &*params };
+
+    // The untested assumption about this split is that the sensible errors come at least with an
+    // RD id (which we may at the point of processing not be associated with, therefore no channel
+    // is applicable), but the long_rd_id comes from the request, and provides enough of an anchor
+    // point to return sensible information.
+    let (status, Some(long_rd_id)) = (status.into_mac_status(), LongRdId::new(long_rd_id)) else {
+        warn!("Ignoring neighbor_info CB with reserved basic values.");
+        return;
+    };
+
+    info!("neighbor_info: {} RD {}", status, long_rd_id);
+
+    let (Some(channel), Some(network_id)) =
+        (AbsoluteChannel::new(channel), NetworkId32::new(network_id))
+    else {
+        warn!("Ignoring neighbor_info CB with reserved additional values.");
+        return;
+    };
+
+    info!(
+        "more neighbor_info: channel {} network {}; {}ms since last RX",
+        channel, network_id, time_since_last_rx_ms
+    );
+
+    // FIXME: Feed those back to the caller.
 }
 unsafe extern "C" fn neighbor_list(params: *mut dect_mac::neighbor_list_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::neighbor_list_cb_params {
+        status,
+        num_neighbors,
+        long_rd_ids,
+    } = unsafe { &*params };
+    let status = status.into_mac_status();
+    // SAFETY: implied in C API
+    let neighbors = unsafe { core::slice::from_raw_parts(long_rd_ids, num_neighbors as _) };
+    let Some(neighbors) = LongRdId::new_from_slice(neighbors) else {
+        warn!("Ignoring neightbor_list CB with reserved values.");
+        return;
+    };
+    info!("Received neighbor list: {}, {}", status, neighbors);
+
+    // Not feeding those into any recipient channel: With properly set up notifications, we
+    // shouldn't need to query this (if we keep track of peers).
 }
 unsafe extern "C" fn dlc_data_tx(params: *mut dect_dlc::data_tx_cb_params) {
     // SAFETY: implied in C API
