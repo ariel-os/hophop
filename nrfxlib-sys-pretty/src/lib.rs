@@ -17,10 +17,10 @@
 //!
 //!   * Enum values are not linked from the enum type in bindgen. (This might also be addressed at
 //!     bindgen, probably).
-//!   * FIXME: It moves bindgen pieces (for anonymous structs or unions) out of the way.
-//!   * FIXME: It splits event and notify things and links them
+//!   * **Not implemented yet**: It moves bindgen pieces (for anonymous structs or unions) out of the way.
+//!   * **Not implemented yet**: It splits event and notify things and links them.
 //!
-//! * FIXME: It gathers manually added comments where nrfxlib documentation is lacking.
+//! * **Not implemented yet**: It gathers manually added comments where nrfxlib documentation is lacking.
 #![no_std]
 #![allow(clippy::needless_raw_string_hashes, reason = "simplifies inlining")]
 

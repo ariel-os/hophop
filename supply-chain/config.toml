@@ -22,6 +22,9 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [policy.hophop]
 audit-as-crates-io = true
 
+[policy.nrfxlib-sys-pretty]
+audit-as-crates-io = true
+
 [policy.ts-103-636-numbers]
 audit-as-crates-io = true
 
@@ -216,26 +219,6 @@ criteria = "safe-to-deploy"
 version = "1.0.3"
 criteria = "safe-to-deploy"
 
-[[exemptions.futures]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.futures-channel]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.futures-io]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.futures-macro]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.futures-sink]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
 [[exemptions.futures-task]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
@@ -346,6 +329,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.nrfxlib-sys]]
 version = "3.1.0+3.3.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.nrfxlib-sys-pretty]]
+version = "0.1.0+4.0.0plus3.4.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.num_enum]]
