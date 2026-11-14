@@ -25,6 +25,6 @@ DECT aspects (but could be extended to ther APIs in the same style):
 * **Not implemented yet**: It gathers manually added comments where nrfxlib documentation is lacking.
 
 
- [__cargo_doc2readme_dependencies_info]: ggGmYW0CYXZlMC43LjJhdIQb2o_SNWoR6AAb3_T-k0ODPHwbnQW7uS_D2XsbjVFFtK-lC3BhYvVhcoQb50dTmFTrr2YbUjY2SsmFi_4bPP09CUdWHs8bk4BSbonOxjhhZIKCaGRlY3RfcGh59oJrbnJmeGxpYl9zeXNrNC4wLjArMy40LjA
- [__link0]: https://crates.io/crates/nrfxlib_sys/4.0.0+3.4.0
+ [__cargo_doc2readme_dependencies_info]: ggGmYW0CYXZlMC43LjNhdIQb2o_SNWoR6AAb3_T-k0ODPHwbnQW7uS_D2XsbjVFFtK-lC3BhYvVhcoQb50dTmFTrr2YbUjY2SsmFi_4bPP09CUdWHs8bk4BSbonOxjhhZIKCaGRlY3RfcGh59oNrbnJmeGxpYi1zeXNrNC4wLjArMy40LjBrbnJmeGxpYl9zeXM
+ [__link0]: https://crates.io/crates/nrfxlib-sys/4.0.0+3.4.0
  [__link1]: https://docs.rs/dect_phy/latest/dect_phy/?search=err_values::ERR_COMBINED_OP_FAILED
