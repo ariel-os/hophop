@@ -148,7 +148,7 @@ unsafe extern "C" fn association(params: *mut dect_mac::association_cb_params) {
                 dect_mac::ipv6_address_type_values::FULL => {
                     Ok(Ipv6Config::Full(ipv6_config.address))
                 }
-                dect_mac::ipv6_address_type_values::NONE => Ok(Ipv6Config::None),
+                dect_mac::ipv6_address_type_values::NONE => Ok(Ipv6Config::LinkLocal),
                 dect_mac::ipv6_address_type_values::PREFIX => Ok(Ipv6Config::Prefix(
                     *ipv6_config.address.first_chunk().unwrap(),
                 )),

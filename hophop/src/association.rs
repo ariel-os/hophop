@@ -124,7 +124,7 @@ impl Association {
         match self.ipv6_config {
             Ipv6Config::Full(full) => address = full,
             Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(&prefix),
-            Ipv6Config::None => address[..2].copy_from_slice(&[0xfe, 0x80]),
+            Ipv6Config::LinkLocal => address[..2].copy_from_slice(&[0xfe, 0x80]),
         }
 
         address.into()

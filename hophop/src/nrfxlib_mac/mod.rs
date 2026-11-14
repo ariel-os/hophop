@@ -457,5 +457,5 @@ pub enum Ipv6Config {
     #[n(1)]
     Prefix(#[n(0)] [u8; 8]),
     #[n(0)]
-    None,
+    LinkLocal,
 }
