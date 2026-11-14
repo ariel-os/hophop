@@ -245,16 +245,18 @@ unsafe extern "C" fn neighbor_info(params: *mut dect_mac::neighbor_info_cb_param
         status_info,
     } = unsafe { &*params };
 
-    // The untested assumption about this split is that the sensible errors come at least with an
-    // RD id (which we may at the point of processing not be associated with, therefore no channel
-    // is applicable), but the long_rd_id comes from the request, and provides enough of an anchor
-    // point to return sensible information.
+    // Documentation of "associated" draws the line above that field about what is valid for all
+    // values of status (status, long_rd_id) and what is only valid for OK (the rest).
     let (status, Some(long_rd_id)) = (status.into_mac_status(), LongRdId::new(long_rd_id)) else {
         warn!("Ignoring neighbor_info CB with reserved basic values.");
         return;
     };
 
     info!("neighbor_info: {} RD {}", status, long_rd_id);
+
+    if status.is_err() {
+        return;
+    }
 
     let (Some(channel), Some(network_id)) =
         (AbsoluteChannel::new(channel), NetworkId32::new(network_id))
