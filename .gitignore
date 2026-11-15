@@ -5,3 +5,7 @@
 target/
 # Created by laze
 build/
+
+# Created by Python
+__pycache__/
+*.py[cod]

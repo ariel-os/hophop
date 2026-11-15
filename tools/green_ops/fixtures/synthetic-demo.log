@@ -1,0 +1,10 @@
+# SYNTHETIC TEST FIXTURE - NOT HARDWARE MEASUREMENTS
+INFO firmware booted
+GREEN_OPS rx_data attempts=1 decoded=1 local_rx_ticks=1000
+GREEN_OPS sync_beacon count=1
+GREEN_OPS tx_success count=1 scheduled_tx_ticks=70000
+INFO ordinary firmware message
+GREEN_OPS rx_data attempts=2 decoded=2 local_rx_ticks=2000
+GREEN_OPS tx_success count=2 scheduled_tx_ticks=140000
+GREEN_OPS rx_data attempts=1 decoded=1 local_rx_ticks=100
+GREEN_OPS sync_beacon count=1
