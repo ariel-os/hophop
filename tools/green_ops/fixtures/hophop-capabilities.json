@@ -1,6 +1,6 @@
 {
   "adapter_id": "hophop",
-  "capabilities_version": 1,
+  "capabilities_version": 2,
   "execution_kinds": [
     "simulation",
     "hardware"
@@ -11,9 +11,12 @@
     100,
     500
   ],
-  "loss_models": [
+  "loss_presets": [
     "none",
-    "gilbert_elliott"
+    "mild",
+    "moderate",
+    "severe",
+    "custom"
   ],
   "payload_size_bytes": [
     32,

@@ -15,19 +15,25 @@ write_experiment_plan("plan.json", plan)
 
 `capabilities` declares an adapter’s named software planning envelope:
 
-- `capabilities_version`: integer `1`.
+- `capabilities_version`: integer `2`.
 - `adapter_id`, `feature_profile_id`: safe 1–64 character identifiers.
 - `execution_kinds`: supported modes, currently `simulation` and/or `hardware`.
-- `payload_size_bytes`, `interval_ms`, `tx_power_dbm`, `loss_models`: non-empty, duplicate-free supported values.
+- `payload_size_bytes`, `interval_ms`, `tx_power_dbm`, `loss_presets`: non-empty, duplicate-free supported values.
 
-`request` has `request_version: 1`, a `plan_id`, matching adapter/profile IDs,
+`request` has `request_version: 2`, a `plan_id`, matching adapter/profile IDs,
 one supported execution kind, selected non-empty values for every sweep field,
 non-negative integer seeds and a positive integer repetition count. The plan
 ID is limited to 57 characters so generated run IDs such as
 `week3-demo-000001` remain within the project’s 64-character identifier rule.
 
+`loss_scenarios` contains named or custom Gilbert–Elliott selectors described
+in `green-ops-channel-loss.md`. The planner resolves every selector and embeds
+all seven scenario fields in each experiment. Generated experiments remain
+`state: "planned"`; their presence does not mean a simulation or hardware run
+occurred.
+
 The output order follows the declared request order: payload, interval, TX
-power, loss model, seed, then repetition. Equal inputs yield equal plans and
+power, loss scenario, seed, then repetition. Equal inputs yield equal plans and
 the `configuration_sha256` binds the requested configuration. The writer uses
 exclusive creation and refuses to overwrite an existing file.
 
