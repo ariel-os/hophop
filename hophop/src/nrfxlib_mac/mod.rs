@@ -284,6 +284,167 @@ impl DectMac {
         }
         .into_result()
     }
+
+    /// Starts an RSSI scan.
+    ///
+    /// FIXME:
+    /// - Results are currently not processed but merely shown in debug output from the interrupt
+    ///   (they arrive in a _ntfy event).
+    pub async fn rssi_scan(
+        &mut self,
+        channel_scan_length_ms: u8,
+        threshold_min_dbm: i8,
+        threshold_max_dbm: i8,
+        // FIXME: … or allow scanning a full band
+        channels: &[AbsoluteChannel],
+    ) -> Result<(), MacError> {
+        let mut channels_array = [0; _];
+        if channels.len() > channels_array.len() {
+            return error::MacErrorExt::into_mac_status(
+                nrfxlib_sys_pretty::dect_mac::err_values::NO_MEMORY,
+            );
+        };
+        channels_array
+            .iter_mut()
+            .zip(channels)
+            .for_each(|(output, input)| *output = (*input).into());
+
+        unsafe {
+            dect_mac::rssi_scan(&mut dect_mac::rssi_scan_params {
+                channel_scan_length: channel_scan_length_ms,
+                threshold_min: threshold_min_dbm,
+                threshold_max: threshold_max_dbm,
+                band: 0,
+                num_channels: channels.len().try_into().expect(""),
+                channel_list: channels_array,
+            })
+        }
+        .into_result()
+        .expect("we sanitized all sanitizable parameters");
+        self.receive_singleton_event(SingletonEventSource::RssiScan)
+            .await
+    }
+
+    /// Starts operation as an FT.
+    ///
+    /// FIXME: All parameters are currently hard-coded.
+    pub async fn cluster_configure(
+        &mut self,
+        channel: AbsoluteChannel,
+        our_network: Ipv6Config,
+    ) -> Result<(), MacError> {
+        // FIXME all parameters
+        let mut association_config = dect_mac::association_config {
+        // as used in samples/dect/dect_shell/prj.conf, for example
+        max_num_neighbours: 50,
+        // documented as not supported
+        max_num_ft_neighbours: 0,
+        neighbor_info_triggers:
+            dect_mac::association_config_neighbor_info_triggers {
+                inactivity_timer: 60_000, // 60s
+            },
+        default_tx_flow_config:
+            // AIU those are for the 2 signalling flows and the 4 user flows
+            [
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 0,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 0,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 3,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 4,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 5,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            dect_mac::association_config__bindgen_ty_2 {
+                priority: 6,
+                dlc_service_type: dect_dlc::service_type_values::_3,
+                dlc_sdu_lifetime: dect_dlc::sdu_lifetime_values::_8_S,
+            },
+            ],
+    };
+
+        // TX power and RACH seem to be mandatory
+        let mut config_flags = dect_mac::cluster_config_flags {
+            _bitfield_1: nrfxlib_sys::__BindgenBitfieldUnit::new([0]),
+            _bitfield_align_1: [0; 0],
+        };
+        config_flags.set_has_max_tx_power(1);
+        config_flags.set_has_rach_config(1);
+
+        // FIXME all parameters
+        let mut cluster_config = dect_mac::cluster_config {
+        // flags
+        __bindgen_anon_1: dect_mac::cluster_config___bindgen_anon_1 { flags: config_flags },
+        // don't be fooled: that's a nibble value as output by dect_utils_lib_dbm_to_phy_tx_power
+        // (undocumented, but clear from dect_shell code) -- just so happens that the value 10
+        // (0x0a) happens to also encode for 10dBm
+        beacon_tx_power: 10,
+        // not sure, but there are limited sets of allowed values
+        count_to_trigger: dect_mac::count_to_trigger_values::_2,
+        relative_quality: 0,
+        min_quality: 0,
+        // see beacon_tx_power
+        cluster_max_tx_power: 10,
+        cluster_beacon_period: dect_mac::cluster_beacon_period_values::_500_MS,
+        cluster_channel: channel.into(),
+        network_id: 0x87654321,
+        rach_configuration: dect_mac::cluster_config_nrf_modem_dect_mac_cluster_rach_config {
+            // probably disregarded due to bit mask
+            policy: dect_mac::rach_config_policy_values::FILL,
+            common: dect_mac::cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_common_config {
+                response_window_length: 8,
+                max_transmission_length: 8,
+                cw_min_sig: 2,
+                cw_max_sig: 7,
+            },
+            config: dect_mac::cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config {
+                fill:  dect_mac::cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_fill {
+                    percentage: 100,
+                },
+                // probably not used because policy is set to FILL
+                periodic: dect_mac::cluster_config_nrf_modem_dect_mac_cluster_rach_config_nrf_modem_dect_mac_rach_config_nrf_modem_dect_mac_rach_config_periodic {
+                    period: 0,
+                    length: 0,
+                },
+            }
+        },
+        triggers: dect_mac::cluster_config_cluster_info_triggers {
+            busy_threshold: 20,
+        },
+        ipv6_config: (&our_network).into(),
+    };
+
+        let mut params = dect_mac::cluster_configure_params {
+            // FIXME all parameters
+
+            // as used anywhere in v3.4.0 code (but probably should be influenced by the RSSI
+            // bit field)
+            cluster_period_start_offset: 0,
+            association_config: &mut association_config,
+            cluster_config: &mut cluster_config,
+        };
+        unsafe { dect_mac::cluster_configure(&mut params) }
+            .into_result()
+            .expect("library sets up presumably valid configuration");
+        self.receive_singleton_event(SingletonEventSource::ClusterConfigure)
+            .await
+    }
 }
 
 impl DlcTx {
@@ -334,10 +495,12 @@ impl DlcRx {
 
 #[derive(Debug, PartialEq, Eq)]
 enum SingletonEventSource {
+    ClusterConfigure,
     Configure,
     FunctionalMode,
     NetworkScan,
     NetworkScanStop,
+    RssiScan,
     SystemMode,
 }
 
@@ -444,6 +607,9 @@ pub struct AssociationEvent {
     // Deliberately not in here: RSSI, MCS etc -- those might change, right?
 }
 
+/// Selectable options for NI6W addressing.
+///
+/// The Full mode is not supported well because it is unclear how it would be used.
 #[derive(defmt::Format, Debug, Copy, Clone, minicbor::Encode)]
 // FIXME: Why can't this be cbor(transparent)?
 #[cbor(flat)]
@@ -453,5 +619,53 @@ pub enum Ipv6Config {
     #[n(1)]
     Prefix(#[n(0)] [u8; 8]),
     #[n(0)]
-    None,
+    LinkLocal,
+}
+
+impl Ipv6Config {
+    /// Given a sink RD ID and a destination IP address, determine if the address is on the link
+    /// and has a usable destination RD ID, which is returned in that case.
+    pub fn matches_and_extract(
+        &self,
+        sink: &LongRdId,
+        address: &core::net::Ipv6Addr,
+    ) -> Option<LongRdId> {
+        let expected_prefix = match self {
+            Ipv6Config::LinkLocal => &[0xfe, 0x80, 0, 0, 0, 0, 0, 0],
+            Ipv6Config::Prefix(p) => p,
+            // FIXME: This is where it's unclear.
+            Ipv6Config::Full(_addr) => return None,
+        };
+        if &address.octets()[..8] != expected_prefix {
+            return None;
+        }
+        if address.octets()[8..12] != u32::from(*sink).to_be_bytes() {
+            return None;
+        }
+
+        LongRdId::new(u32::from_be_bytes(
+            address.octets()[12..].try_into().unwrap(),
+        ))
+    }
+}
+
+impl From<&Ipv6Config> for dect_mac::ipv6_address_config_t {
+    fn from(input: &Ipv6Config) -> Self {
+        dect_mac::ipv6_address_config_t {
+            type_: match input {
+                Ipv6Config::LinkLocal => dect_mac::ipv6_address_type_values::NONE,
+                Ipv6Config::Prefix(_) => dect_mac::ipv6_address_type_values::PREFIX,
+                Ipv6Config::Full(_) => dect_mac::ipv6_address_type_values::FULL,
+            },
+            address: match input {
+                Ipv6Config::LinkLocal => [0; _],
+                Ipv6Config::Prefix(prefix) => {
+                    let mut full = [0; _];
+                    full[..8].copy_from_slice(prefix);
+                    full
+                }
+                Ipv6Config::Full(a) => *a,
+            },
+        }
+    }
 }

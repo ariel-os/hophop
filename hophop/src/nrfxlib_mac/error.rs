@@ -10,6 +10,12 @@ const _: () = assert!(dect_mac::err_values::OK == 0);
 /// Errors reported by the MAC layer
 pub struct MacError(core::num::NonZero<u8>);
 
+impl MacError {
+    pub fn is_rd_not_found(&self) -> bool {
+        u8::from(self.0) == dect_mac::err_values::RD_NOT_FOUND
+    }
+}
+
 impl core::fmt::Debug for MacError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self.0.into() {
