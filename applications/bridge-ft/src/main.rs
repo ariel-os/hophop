@@ -98,6 +98,8 @@ async fn main() {
     dect.cluster_configure(channel, our_network).await.unwrap();
     info!("Running cluster.");
 
+    ariel_os::asynch::spawner().spawn(coap_task().unwrap());
+
     loop {
         // Very quick and very dirty non-border router -- if a peer doesn't address something in
         // such a way that DLC can forward it, we have to
@@ -142,4 +144,11 @@ async fn main() {
             Err(e) => warn!("Unhandled error forwarding packet to {:?}: {:?}", dest, e),
         }
     }
+}
+
+#[ariel_os::task()]
+async fn coap_task() {
+    use coap_handler_implementations::*;
+    let handler = new_dispatcher().with_wkc();
+    ariel_os::coap::coap_run(handler).await;
 }
