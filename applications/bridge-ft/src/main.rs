@@ -9,8 +9,8 @@ use ariel_os::log::{info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 
-use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
 use hophop::nrfxlib_mac::{DectMac, Ipv6Config};
+use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
 
 #[ariel_os::task(autostart)]
 async fn main() {
@@ -131,8 +131,14 @@ async fn main() {
         data_out[7] = new_hoplimit;
 
         match dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await {
-            Ok(()) => info!("Forwarded packet to {:?} with hop limit {}", dest, new_hoplimit),
-            Err(e) if e.is_rd_not_found() => warn!("Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting", dest),
+            Ok(()) => info!(
+                "Forwarded packet to {:?} with hop limit {}",
+                dest, new_hoplimit
+            ),
+            Err(e) if e.is_rd_not_found() => warn!(
+                "Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting",
+                dest
+            ),
             Err(e) => warn!("Unhandled error forwarding packet to {:?}: {:?}", dest, e),
         }
     }
