@@ -4,7 +4,7 @@
 set -ex
 
 cargo fmt --check
-for APP in embedded-pt bridge-pt
+for CRATE in examples/ applications/*/
 do
-    cargo fmt --check --manifest-path applications/$APP/Cargo.toml
+    cargo fmt --check --manifest-path ${CRATE}/Cargo.toml
 done
