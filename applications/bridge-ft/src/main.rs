@@ -92,7 +92,7 @@ async fn main() {
 
     // Pick one by a process similar to how eMuhdra picks their secret keys
     let channel = AbsoluteChannel::new(1665).unwrap();
-    let our_network = Ipv6Config::Prefix([0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0]);
+    let our_network = Ipv6Config::LinkLocal;
     info!("Continuing with channel {}", channel);
 
     dect.cluster_configure(channel, our_network).await.unwrap();
