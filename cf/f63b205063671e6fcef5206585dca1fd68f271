@@ -1,0 +1,27 @@
+nrfxlib-sys-pretty/src/lib.rs
+  s_4593197652a2a5::t_a3fc1360960df0 24-25
+nrfxlib-sys-pretty/README.md
+  s_4593197652a2a5::t_5dac2140772d92 28,30
+.github/mlc_config.json
+  s_4593197652a2a5::t_1201d6b1792198 3-5
+doc/glossary.md
+  s_4593197652a2a5::t_1ea5e01e5b8078 42
+doc/demo-raspi-setup.md
+  s_4593197652a2a5::t_7c7a5f374488ae 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cff63b205063671e6fcef5206585dca1fd68f271",
+  "prompts": {},
+  "sessions": {
+    "s_4593197652a2a5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "195a8bcd-9b1a-4fa9-9468-bc981f5a995d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Joël Schulz-Andres <joel@systemscape.de>"
+    }
+  }
+}
