@@ -25,6 +25,6 @@ DECT aspects (but could be extended to ther APIs in the same style):
 * **Not implemented yet**: It gathers manually added comments where nrfxlib documentation is lacking.
 
 
- [__cargo_doc2readme_dependencies_info]: ggGmYW0CYXZlMC43LjNhdIQb2o_SNWoR6AAb3_T-k0ODPHwbnQW7uS_D2XsbjVFFtK-lC3BhYvVhcoQb50dTmFTrr2YbUjY2SsmFi_4bPP09CUdWHs8bk4BSbonOxjhhZIKCaGRlY3RfcGh59oNrbnJmeGxpYi1zeXNrNC4wLjArMy40LjBrbnJmeGxpYl9zeXM
+ [__cargo_doc2readme_dependencies_info]: ggGmYW0CYXZlMC43LjNhdIQb2o_SNWoR6AAb3_T-k0ODPHwbnQW7uS_D2XsbjVFFtK-lC3BhYvVhcoQb8TW4_03XGzcbbjUTnEMA9uEbc_3Cif0dXpkbYlckwK_0rj5hZIKDa25yZnhsaWItc3lzazQuMC4wKzMuNC4wa25yZnhsaWJfc3lzg3JucmZ4bGliLXN5cy1wcmV0dHl0MC4xLjArNC4wLjBwbHVzMy40LjBybnJmeGxpYl9zeXNfcHJldHR5
  [__link0]: https://crates.io/crates/nrfxlib-sys/4.0.0+3.4.0
- [__link1]: https://docs.rs/dect_phy/latest/dect_phy/?search=err_values::ERR_COMBINED_OP_FAILED
+ [__link1]: https://docs.rs/nrfxlib-sys-pretty/0.1.0+4.0.0plus3.4.0/nrfxlib_sys_pretty/?search=dect_phy::err_values::ERR_COMBINED_OP_FAILED

@@ -21,6 +21,8 @@
 //!   * **Not implemented yet**: It splits event and notify things and links them.
 //!
 //! * **Not implemented yet**: It gathers manually added comments where nrfxlib documentation is lacking.
+//!
+//! [`dect_phy::err_values::ERR_COMBINED_OP_FAILED`]: crate::dect_phy::err_values::ERR_COMBINED_OP_FAILED
 #![no_std]
 #![allow(clippy::needless_raw_string_hashes, reason = "simplifies inlining")]
 
