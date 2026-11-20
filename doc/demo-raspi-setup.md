@@ -157,7 +157,7 @@ A USB stick is used during setup.
 
 Until the demo setup includes isolated network namespaces, run with link-local (fe80::) addresses: Those allow pings and clients to work specifically on interfaces, even when two bridges are connected to a single PC.
 
-To demo interoperatbility with Nordic's `dect_shell`, prepare a hex file as per [reference project docs](doc/reference-projects.md).
+To demo interoperatbility with Nordic's `dect_shell`, prepare a hex file as per [reference project docs](reference-projects.md).
 That can be loaded on demand with:
 
 ```
