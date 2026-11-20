@@ -20,3 +20,6 @@ ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt"] }
 nrf-modem = "*"
 # hophop might even want to make this a feature, but in the next iteration it'll likely just be always-on
 nrfxlib-sys = { version = "4.0.0", features = ["dect-mac"] }
+
+[features]
+green-ops-profile = []

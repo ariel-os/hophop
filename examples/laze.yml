@@ -15,3 +15,11 @@ apps:
         workdir: ${appdir}
         cmd:
           - ${CARGO_PRESHELL} ${CARGO_ENV} ${CARGO} ${CARGO_TOOLCHAIN} ${CARGO_ARGS} run --profile=${PROFILE} ${FEATURES} $@
+
+modules:
+  - name: green-ops-profile
+    help: Enable Green-Ops Ping telemetry
+    env:
+      global:
+        FEATURES:
+          - green-ops-profile
