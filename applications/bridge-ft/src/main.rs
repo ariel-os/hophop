@@ -100,48 +100,125 @@ async fn main() {
 
     ariel_os::asynch::spawner().spawn(coap_task().unwrap());
 
+    // A very stupid ad-hoc buffer pool that works for sending around &'static mut items.
+    //
+    // (Doing heapless ObjectBlock or BoxBlock would not quite work because we really need to send
+    // &'static mut, which is a shortcoming of the current SLIPMUX2IP mechanism, and also,
+    // initializing it from ConstStaticCell has Send bound trouble).
+    const EMPTY_BLOCK: ariel_os::coap::SingleBuffer = ariel_os::coap::SingleBuffer::new();
+    static BUFFERS: static_cell::ConstStaticCell<[ariel_os::coap::SingleBuffer; 8]> =
+        static_cell::ConstStaticCell::new([EMPTY_BLOCK; 8]);
+    let buffers: &mut [_; 8] = BUFFERS.take();
+    let buffer_pointers: [&mut _; 8] = buffers.each_mut();
+    // Initially just all our owned buffers, but we gladly also take up other parties' buffers.
+    // As long as they are stored in here, they are to be empty.
+    let mut buffer_pool = heapless::Vec::<_, 8>::from(buffer_pointers);
+
+    #[derive(PartialEq, Eq)]
+    enum Source {
+        Radio,
+        Slipmux,
+    }
+
     loop {
         // Very quick and very dirty non-border router -- if a peer doesn't address something in
         // such a way that DLC can forward it, we have to
-        let rx = &dlc_rx.dlc_data_rx().await;
-        let data = rx.data();
+        let (source, buffer) = match embassy_futures::select::select(
+            dlc_rx.dlc_data_rx(),
+            ariel_os::coap::SLIPMUX2IP.wait(),
+        )
+        .await
+        {
+            embassy_futures::select::Either::First(rx) => {
+                let data = rx.data();
 
-        let Some(dest_addr) = data.get(24..).and_then(|s| s.first_chunk()) else {
+                let buffer = if let Some(buffer) = buffer_pool.pop() {
+                    if let Ok(_) = buffer.extend_from_slice(data) {
+                        buffer
+                    } else {
+                        warn!("Not forwarding packet through SLIPMUX: packet too big");
+                        // This goes away once we just use xarxa pools everywhere
+                        buffer_pool.push(buffer).unwrap();
+                        continue;
+                    }
+                } else {
+                    warn!("Not forwarding packet through SLIPMUX: buffer not available");
+                    continue;
+                };
+
+                (Source::Radio, buffer)
+            }
+            embassy_futures::select::Either::Second(inbuf) => {
+                if inbuf.is_empty() {
+                    buffer_pool
+                        .push(inbuf)
+                        .expect("why else would slip send us one");
+                    continue;
+                }
+                (Source::Slipmux, inbuf)
+            }
+        };
+
+        let mut buffer = core::mem::DropGuard::new(buffer, |buffer| {
+            buffer.clear();
+            if let Err(overflown) = buffer_pool.push(buffer) {
+                ariel_os::coap::IP2SLIPMUX.signal(overflown);
+            }
+        });
+
+        // Dissect IP, and decrement hop limit early (before we forget)
+
+        let Some(dest_addr) = buffer.get(24..).and_then(|s| s.first_chunk()) else {
             warn!("DLC data too short to be IP");
             continue;
         };
         let dest_addr = core::net::Ipv6Addr::from_octets(*dest_addr);
-        let Some(dest) = our_network.matches_and_extract(&our_long_id, &dest_addr) else {
-            warn!(
-                "Received DLC from {} on {} but it's not to be forwarded here: dest addr is {}",
-                rx.sender(),
-                rx.flow_id(),
-                dest_addr,
-            );
-            continue;
-        };
 
-        // This is needless copying, for we could also make DlcDataRx destructible into such a Vec,
-        // but we're .
-        let mut data_out = heapless::Vec::<u8, 1501>::from_slice(&data).expect("Sizes align");
-
-        let new_hoplimit = data_out[7].saturating_sub(1);
+        let new_hoplimit = buffer[7].saturating_sub(1);
         if new_hoplimit == 0 {
             warn!("Discarding packet that underflew hop limit");
             continue;
         }
-        data_out[7] = new_hoplimit;
+        buffer[7] = new_hoplimit;
 
-        match dlc_tx.dlc_data_tx(rx.flow_id(), dest, &data_out).await {
-            Ok(()) => info!(
-                "Forwarded packet to {:?} with hop limit {}",
-                dest, new_hoplimit
-            ),
-            Err(e) if e.is_rd_not_found() => warn!(
-                "Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting",
-                dest
-            ),
-            Err(e) => warn!("Unhandled error forwarding packet to {:?}: {:?}", dest, e),
+        // Routing decisions:
+
+        if dest_addr.is_multicast() {
+            warn!("FIXME: Send to multicast on all but incoming interface");
+            continue;
+        } else {
+            let mac_dest = our_network.matches_and_extract(&our_long_id, &dest_addr);
+
+            if let Some(dest) = mac_dest
+                && dest != our_long_id
+            {
+                match dlc_tx.dlc_data_tx(1, dest, &buffer).await {
+                    Ok(()) => info!(
+                        "Forwarded packet to {:?} with hop limit {}",
+                        dest, new_hoplimit
+                    ),
+                    Err(e) if e.is_rd_not_found() => {
+                        warn!(
+                            "Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting",
+                            dest
+                        );
+                    }
+                    Err(e) => warn!("Unhandled error forwarding packet to {:?}: {:?}", dest, e),
+                }
+            } else {
+                if source == Source::Slipmux {
+                    warn!(
+                        "Slipmux sent packet with destination outside our routing information, ignoring it."
+                    );
+                    continue;
+                } else {
+                    let buffer = core::mem::DropGuard::dismiss(buffer);
+
+                    // Note that we're *not* implementing promisc mode here: Linux on tun appears to
+                    // just return link-local packets.
+                    ariel_os::coap::IP2SLIPMUX.signal(buffer);
+                }
+            };
         }
     }
 }
