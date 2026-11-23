@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use ariel_os::log::{info, warn};
+use ariel_os::log::{debug, info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 
@@ -159,7 +159,7 @@ async fn main() {
             }
         };
 
-        let mut buffer = core::mem::DropGuard::new(buffer, |buffer| {
+        let buffer = core::mem::DropGuard::new(buffer, |buffer| {
             buffer.clear();
             if let Err(overflown) = buffer_pool.push(buffer) {
                 ariel_os::coap::IP2SLIPMUX.signal(overflown);
@@ -174,12 +174,16 @@ async fn main() {
         };
         let dest_addr = core::net::Ipv6Addr::from_octets(*dest_addr);
 
+        /* Decrementing the hop limit would be a nice touch, but that'd kill at least ff02::1
+         * pings, and probably also causes troule if any connected peer sets a hop limit of 1,
+         * which would be perfectly reasonable.
         let new_hoplimit = buffer[7].saturating_sub(1);
         if new_hoplimit == 0 {
             warn!("Discarding packet that underflew hop limit");
             continue;
         }
         buffer[7] = new_hoplimit;
+        */
 
         // Routing decisions:
 
@@ -193,10 +197,7 @@ async fn main() {
                 && dest != our_long_id
             {
                 match dlc_tx.dlc_data_tx(1, dest, &buffer).await {
-                    Ok(()) => info!(
-                        "Forwarded packet to {:?} with hop limit {}",
-                        dest, new_hoplimit
-                    ),
+                    Ok(()) => debug!("Packet forwarded successfully to {:?}", dest,),
                     Err(e) if e.is_rd_not_found() => {
                         warn!(
                             "Failed to forward packet to {:?}; FIXME: Send ICMP (likely type 1 Destination Unreachable, Code 3 Address Unreachable), possibly with rate limiting",
