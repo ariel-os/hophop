@@ -11,7 +11,7 @@
     reason = "stop complaining while there are todo!() items"
 )]
 
-use defmt::{info, unwrap, warn};
+use defmt::{debug, info, unwrap, warn};
 use nrfxlib_sys_pretty::{dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
@@ -553,7 +553,7 @@ unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_param
     // FIXME: Can we get a `_mut`? (Not that I'd know what to use it for, given we have to copy
     // the data out in the ISR)
     let data = unsafe { core::slice::from_raw_parts(params.data as *mut u8, params.data_len) };
-    info!(
+    debug!(
         "Got DLC data RX: flow {}, peer 0x{:x}, data 0x{:02x}",
         params.flow_id, params.long_rd_id, data
     );
