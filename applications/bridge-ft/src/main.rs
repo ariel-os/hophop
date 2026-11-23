@@ -98,6 +98,11 @@ async fn main() {
     dect.cluster_configure(channel, our_network).await.unwrap();
     info!("Running cluster.");
 
+    info!(
+        "Please set this IPv6 address on the host: {}",
+        our_network.address_of(our_long_id, our_long_id)
+    );
+
     ariel_os::asynch::spawner().spawn(coap_task().unwrap());
 
     // A very stupid ad-hoc buffer pool that works for sending around &'static mut items.
