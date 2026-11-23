@@ -647,6 +647,21 @@ impl Ipv6Config {
             address.octets()[12..].try_into().unwrap(),
         ))
     }
+
+    pub fn address_of(&self, sink: LongRdId, mac: LongRdId) -> core::net::Ipv6Addr {
+        let mut address = [0; 16];
+        address[8..12].copy_from_slice(&u32::from(sink).to_be_bytes());
+        address[12..].copy_from_slice(&u32::from(mac).to_be_bytes());
+
+        use crate::nrfxlib_mac::Ipv6Config;
+        match self {
+            Ipv6Config::Full(full) => address = *full,
+            Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(prefix),
+            Ipv6Config::LinkLocal => address[..2].copy_from_slice(&[0xfe, 0x80]),
+        }
+
+        address.into()
+    }
 }
 
 impl From<&Ipv6Config> for dect_mac::ipv6_address_config_t {
