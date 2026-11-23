@@ -189,7 +189,21 @@ async fn main() {
 
         if dest_addr.is_multicast() {
             warn!("FIXME: Send to multicast on all but incoming interface");
-            continue;
+            /* Tempting to do it this way, but doesn't work that way for two reasons:
+             * - packets coming in multicast from the radio need to be distributed again
+             * - DLC layer says "INVALID_PARAM" when attempting to send to broadcast
+             *
+             * possible workarounds include unicasting this to all peers.
+            if source == Source::Slipmux {
+                match dlc_tx.dlc_data_tx(1, LongRdId::BROADCAST, &buffer).await {
+                    Ok(()) => debug!("Multicast packet forwarded successfully."),
+                    Err(e) => warn!("Unhandled error forwarding multicast packet: {:?}", e),
+                }
+            } else {
+                let buffer = core::mem::DropGuard::dismiss(buffer);
+                ariel_os::coap::IP2SLIPMUX.signal(buffer);
+            }
+            */
         } else {
             let mac_dest = our_network.matches_and_extract(&our_long_id, &dest_addr);
 
