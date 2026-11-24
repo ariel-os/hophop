@@ -2697,6 +2697,7 @@ dependencies = [
  "coap-handler",
  "coap-handler-implementations",
  "coap-message-utils",
+ "defmt",
  "embassy-futures",
  "embassy-sync 0.8.0",
  "embedded-io-async 0.6.1",

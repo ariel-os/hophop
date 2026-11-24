@@ -119,9 +119,9 @@ async fn main() {
     // As long as they are stored in here, they are to be empty.
     let mut buffer_pool = heapless::Vec::<_, 8>::from(buffer_pointers);
 
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, defmt::Format, Debug)]
     enum Source {
-        Radio,
+        Radio(LongRdId),
         Slipmux,
     }
 
@@ -151,7 +151,7 @@ async fn main() {
                     continue;
                 };
 
-                (Source::Radio, buffer)
+                (Source::Radio(rx.sender()), buffer)
             }
             embassy_futures::select::Either::Second(inbuf) => {
                 if inbuf.is_empty() {
@@ -174,7 +174,7 @@ async fn main() {
         // Dissect IP, and decrement hop limit early (before we forget)
 
         if *buffer == &hophop::ni6w::KEEPALIVE_MESSAGE {
-            debug!("Received keepalive message");
+            debug!("Received keepalive message from {:?}", source);
             continue;
         }
 
