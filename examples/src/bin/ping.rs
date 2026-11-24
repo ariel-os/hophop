@@ -6,6 +6,10 @@
 #![no_std]
 #![no_main]
 
+#[cfg(feature = "green-ops-profile")]
+#[path = "../green_ops_telemetry.rs"]
+mod green_ops_telemetry;
+
 use ariel_os::log::{info, warn};
 use ariel_os_boards::pins;
 
@@ -30,10 +34,15 @@ async fn main(peripherals: pins::ButtonPeripherals) {
 
     let button0 = ariel_os::gpio::Input::new(peripherals.button0, ariel_os::gpio::Pull::Up);
 
+    #[cfg(feature = "green-ops-profile")]
+    let mut telemetry = green_ops_telemetry::Telemetry::new();
+
     loop {
         // FIXME: This is an exactly 1-second receive; that'll need API changes, but for this very
         // moment we can just leave it at that.
         if button0.is_high() {
+            #[cfg(feature = "green-ops-profile")]
+            telemetry.record_rx_attempt();
             let received = dect
                 .rx(const { AbsoluteChannel::new(1665).unwrap() }, None)
                 .await
@@ -44,17 +53,35 @@ async fn main(peripherals: pins::ButtonPeripherals) {
                 let pcc = received.pcc();
                 let pdc = received.pdc();
                 if let Ok(pdc) = pdc {
+                    #[cfg(feature = "green-ops-profile")]
+                    {
+                        telemetry.record_rx_data(start);
+                        info!(
+                            "GREEN_OPS rx_data attempts={} decoded={} local_rx_ticks={}",
+                            telemetry.rx_attempts, telemetry.rx_data_packets, start
+                        );
+                    }
                     let header = utils::mac_pdu::Message::parse(pdc);
                     info!("Received at {}: {:?}. PDC: {:?}", start, pcc, header);
                     if let Ok(header) = utils::mac_pdu::Message::parse(pdc)
                         && let utils::mac_pdu::MacCommonHeader::Beacon(ref beacon) = header.common
                     {
+                        #[cfg(feature = "green-ops-profile")]
+                        let mut sync_counted = false;
+
                         for ie in header.tail_items() {
                             if let Ok(ie) = ie
                                 && ie.ie_number() == numbers::mac_ie::ie6bit::USER_PLANE_DATA_FLOW_1
                                 && ie.payload().len() == 9
                                 && ie.payload()[0] == 0x10
                             {
+                                #[cfg(feature = "green-ops-profile")]
+                                if !sync_counted {
+                                    telemetry.record_sync_beacon();
+                                    sync_counted = true;
+                                    info!("GREEN_OPS sync_beacon count={}", telemetry.sync_beacons);
+                                }
+
                                 info!(
                                     "Sync received. Local ID {} time {}. Remote ID {} time {}.",
                                     transmitter_id_long,
@@ -149,6 +176,15 @@ async fn main(peripherals: pins::ButtonPeripherals) {
             )
             .await
             .unwrap();
+
+            #[cfg(feature = "green-ops-profile")]
+            {
+                telemetry.record_tx_success(transmit_time);
+                info!(
+                    "GREEN_OPS tx_success count={} scheduled_tx_ticks={}",
+                    telemetry.tx_successes, transmit_time
+                );
+            }
 
             info!("Sent {} bytes PDC data", pdc_buf.len());
         }

@@ -1,0 +1,31 @@
+{
+  "adapter_id": "hophop",
+  "capabilities_version": 2,
+  "execution_kinds": [
+    "simulation",
+    "hardware"
+  ],
+  "feature_profile_id": "hophop-nrf9151-v1",
+  "interval_ms": [
+    5,
+    100,
+    500
+  ],
+  "loss_presets": [
+    "none",
+    "mild",
+    "moderate",
+    "severe",
+    "custom"
+  ],
+  "payload_size_bytes": [
+    32,
+    64,
+    1501
+  ],
+  "tx_power_dbm": [
+    -10,
+    0,
+    23
+  ]
+}
