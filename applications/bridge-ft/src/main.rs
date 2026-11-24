@@ -173,7 +173,7 @@ async fn main() {
 
         // Dissect IP, and decrement hop limit early (before we forget)
 
-        if &buffer == &hophop::ni6w::KEEPALIVE_MESSAGE {
+        if *buffer == &hophop::ni6w::KEEPALIVE_MESSAGE {
             debug!("Received keepalive message");
             continue;
         }
