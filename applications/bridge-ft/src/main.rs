@@ -10,7 +10,7 @@ use ariel_os::log::{debug, info, warn};
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 
 use hophop::nrfxlib_mac::{DectMac, Ipv6Config};
-use nrfxlib_sys_pretty::{dect_control, dect_dlc, dect_mac};
+use nrfxlib_sys_pretty::{dect_control, dect_mac};
 
 #[ariel_os::task(autostart)]
 async fn main() {
