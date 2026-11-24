@@ -173,6 +173,11 @@ async fn main() {
 
         // Dissect IP, and decrement hop limit early (before we forget)
 
+        if &buffer == &hophop::ni6w::KEEPALIVE_MESSAGE {
+            debug!("Received keepalive message");
+            continue;
+        }
+
         let Some(dest_addr) = buffer.get(24..).and_then(|s| s.first_chunk()) else {
             warn!("DLC data too short to be IP");
             continue;

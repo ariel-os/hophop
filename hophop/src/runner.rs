@@ -6,7 +6,7 @@
 //! currently tied to the [`crate::nrfxlib_mac`].
 
 use defmt::*;
-use embassy_futures::select::{Either4, select, select4};
+use embassy_futures::select::{Either5, select, select5};
 
 use ts_103_636_utils::identifiers::LongRdId;
 
@@ -113,7 +113,8 @@ impl Stack {
             // everything else is properly drained.
             let mut wait_for_our_release = false;
             loop {
-                match select4(
+                use Either5::*;
+                match select5(
                     // of all the dect functions, this one fortunately is already cancel safe
                     self.dlc_rx.dlc_data_rx(),
                     controller.next_dlc_tx(),
@@ -123,15 +124,18 @@ impl Stack {
                     // beacons" is from the last association of the current one.
                     self.dect.next_association_end(),
                     controller.next_config(),
+                    time.delay_ms(60_000 * 9 / 10),
                 )
                 .await
                 {
-                    Either4::First(received) => controller.on_dlc_rx(received),
-                    Either4::Second((flow_id, dest, data)) => {
+                    // FIXME: This should really not count towards timeout delay (but usually it
+                    // works well enough because we don't get traffic that we then ignore).
+                    First(received) => controller.on_dlc_rx(received),
+                    Second((flow_id, dest, data)) => {
                         // FIXME: Should we back-signal?
                         let _ = self.dlc_tx.dlc_data_tx(flow_id, dest, &data).await;
                     }
-                    Either4::Third(release) => {
+                    Third(release) => {
                         defmt::assert_eq!(release.long_rd_id, association.parent);
                         if wait_for_our_release
                             && release.release_cause != crate::nrfxlib_mac::Release::OurRelease
@@ -145,7 +149,7 @@ impl Stack {
                         info!("Association released ({}), going back to scanning", release);
                         break;
                     }
-                    Either4::Fourth(new_config) => {
+                    Fourth(new_config) => {
                         config = new_config;
                         if self
                             .dect
@@ -161,6 +165,21 @@ impl Stack {
                                 "Failed to kick off release association. The working hypothesis about the Nordic MAC layer's workings is that this would only happen if it thinks that that association is already released, and that a Third case is already on its way in our queue to tell us that it's fine and we did release."
                             );
                         }
+                    }
+                    Fifth(()) => {
+                        info!("Timeout fired");
+                        // Send keepalive data.
+                        //
+                        // This is not how this *should* work, but how the Nordic MAC handles it;
+                        // see <https://github.com/ariel-os/hophop/issues/108>.
+                        //
+                        // BACKEND is apparently not a viable recipient in this position. (And
+                        // sending something empty isn't allowed either).
+                        let status = self
+                            .dlc_tx
+                            .dlc_data_tx(1, association.parent, &crate::ni6w::KEEPALIVE_MESSAGE)
+                            .await;
+                        info!("Keepalive result: {}", status);
                     }
                 }
             }
