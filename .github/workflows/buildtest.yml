@@ -101,8 +101,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: tcort/github-action-markdown-link-check@v1
+    - uses: lycheeverse/lychee-action@v2
       with:
+        fail: true
         # Ignoring several URIs because the hosts don't react sensibly when
-        # detecting a bot request, and maybe the bot should also just do HEAD.
-        config-file: .github/mlc_config.json
+        # detecting a bot request.
+        args: >-
+          --verbose --no-progress
+          --exclude '^https://(www|docs|devzone)\.nordicsemi\.com/'
+          --exclude '^https://www\.raspberrypi\.com/'
+          '.'
