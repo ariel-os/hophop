@@ -1,7 +1,0 @@
-{
-  "ignorePatterns":
-    [ {"pattern": "^https://crates.io/"}
-    , {"pattern": "^https://(www|docs|devzone).nordicsemi.com/"}
-    , {"pattern": "^https://www.raspberrypi.com/"}
-    ]
-}
