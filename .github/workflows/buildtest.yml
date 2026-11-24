@@ -108,7 +108,6 @@ jobs:
         # detecting a bot request.
         args: >-
           --verbose --no-progress
-          --exclude '^https://crates\.io/'
           --exclude '^https://(www|docs|devzone)\.nordicsemi\.com/'
           --exclude '^https://www\.raspberrypi\.com/'
           '.'
