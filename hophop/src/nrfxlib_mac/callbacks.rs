@@ -548,14 +548,23 @@ unsafe extern "C" fn capability_ntf(params: *mut dect_mac::capability_ntf_cb_par
 }
 unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_params) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
+    let &dect_dlc::data_rx_ntf_cb_params {
+        flow_id,
+        long_rd_id,
+        data,
+        data_len,
+    } = unsafe { &*params };
+    let Some(long_rd_id) = LongRdId::new(long_rd_id) else {
+        warn!("Ignoring dlc_data_rx NTF with reserved value.");
+        return;
+    };
     // SAFETY: implied in C API (and we're only using it in this callback)
     // FIXME: Can we get a `_mut`? (Not that I'd know what to use it for, given we have to copy
     // the data out in the ISR)
-    let data = unsafe { core::slice::from_raw_parts(params.data as *mut u8, params.data_len) };
+    let data = unsafe { core::slice::from_raw_parts(data as *mut u8, data_len) };
     debug!(
-        "Got DLC data RX: flow {}, peer 0x{:x}, data 0x{:02x}",
-        params.flow_id, params.long_rd_id, data
+        "Got DLC data RX: flow {}, peer {}, data 0x{:02x}",
+        flow_id, long_rd_id, data
     );
     if let Ok(vec) = data.try_into() {
         let Ok(mut packet_lock) = PACKETS.try_lock() else {
@@ -564,8 +573,8 @@ unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_param
         };
         if packet_lock
             .push_back(DlcDataRx {
-                long_rd_id: params.long_rd_id,
-                flow_id: params.flow_id,
+                long_rd_id,
+                flow_id,
                 data: vec,
             })
             .is_ok()

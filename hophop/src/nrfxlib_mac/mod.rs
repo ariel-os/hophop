@@ -561,13 +561,13 @@ struct DlcDataTxDone {
 }
 
 pub struct DlcDataRx {
-    pub(crate) long_rd_id: u32,
+    pub(crate) long_rd_id: LongRdId,
     pub(crate) flow_id: u8,
     pub(crate) data: heapless::vec::Vec<u8, 1501>,
 }
 
 impl DlcDataRx {
-    pub fn sender(&self) -> u32 {
+    pub fn sender(&self) -> LongRdId {
         self.long_rd_id
     }
 
