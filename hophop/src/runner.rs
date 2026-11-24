@@ -124,7 +124,7 @@ impl Stack {
                     // beacons" is from the last association of the current one.
                     self.dect.next_association_end(),
                     controller.next_config(),
-                    time.delay_ms(60_000 * 9 / 10),
+                    time.delay_ms(super::ni6w::INACTIVITY_MS * 3 / 4),
                 )
                 .await
                 {

@@ -341,7 +341,7 @@ impl DectMac {
         max_num_ft_neighbours: 0,
         neighbor_info_triggers:
             dect_mac::association_config_neighbor_info_triggers {
-                inactivity_timer: 60_000, // 60s
+                inactivity_timer: super::ni6w::INACTIVITY_MS,
             },
         default_tx_flow_config:
             // AIU those are for the 2 signalling flows and the 4 user flows
