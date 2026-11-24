@@ -431,7 +431,31 @@ unsafe extern "C" fn neighbor_inactivity_ntf(
     // notification only comes after the next association. So in a sense we might need to keep a
     // counter of how often a device has been registered per RD ID, if we want to act on inactivity
     // notifications at all.
+    //
+    // *Probably* the events are ordered coming out from the MAC, though, so we can trust that once
+    // we get a new association, we won't see an old inactivity notification.
     info!("Inactivity notification from {}", long_rd_id);
+
+    // There is little actionable we can do here:
+    // - We can't send any more data (that'd give NOT_ALLOWED).
+    //   unsafe { dect_dlc::data_tx(&mut dect_dlc::data_tx_params { transaction_id: 42, flow_id: 4, long_rd_id: long_rd_id.into(), data: b"1".as_ptr() as _, data_len: 1 }) };
+    //
+    // - We could send a release, but that's a one-off event. If the device went out of radio
+    //   contact, it'll miss it. If the device has an inactivity timer, that won't happen. So the
+    //   one case where it's helpful is when the device has *no* inactivity timer and starts over
+    //   based on the message -- but that is brittle because if it misses it, it'll sit forever.
+    //
+    //   use nrf_modem::ErrorSource;
+    //   info!(
+    //       "releasing peer: {}",
+    //       unsafe {
+    //           dect_mac::association_release(&mut dect_mac::association_release_params {
+    //               release_cause: dect_mac::release_cause_values::LONG_INACTIVITY,
+    //               long_rd_id: long_rd_id.into(),
+    //           })
+    //       }
+    //       .into_result()
+    //   );
 }
 unsafe extern "C" fn neighbor_paging_failure_ntf(
     params: *mut dect_mac::neighbor_paging_failure_ntf_cb_params,
