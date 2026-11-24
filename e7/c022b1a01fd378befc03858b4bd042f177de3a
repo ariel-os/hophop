@@ -1,0 +1,19 @@
+.github/workflows/buildtest.yml
+  s_2fc03e9a0d429b::t_79565aa70eaea5 104,106,108-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e7c022b1a01fd378befc03858b4bd042f177de3a",
+  "prompts": {},
+  "sessions": {
+    "s_2fc03e9a0d429b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f99c53ba-951b-430c-959a-a45430332649",
+        "model": "claude-fable-5-2"
+      },
+      "human_author": "Joël Schulz-Andres <joel@systemscape.de>"
+    }
+  }
+}
