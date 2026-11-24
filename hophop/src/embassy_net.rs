@@ -4,9 +4,8 @@
 //!
 //! # Compatibility warning
 //!
-//! This does **not** implement proper IPv6 over nr+ (ETSI TS 103 874-3), but merely "dump data
-//! directly into DLC in any flow" -- Nordic's IPv6 Workaround (NI6W) (see also [their DevZone
-//! entry](https://devzone.nordicsemi.com/f/nordic-q-a/128194/dect-shell-ipv6-and-etsi-ts-103-874-3)).
+//! This does **not** implement proper IPv6 over nr+; see [the `ni6w` module docs][crate::ni6w] for
+//! details.
 //!
 //! The intention for this module is to grow into an actual imlementation (possibly retaining the
 //! NI6W version for compatibility).

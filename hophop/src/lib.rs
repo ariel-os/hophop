@@ -14,4 +14,5 @@ pub mod nrfxlib_mac;
 pub mod association;
 pub mod coap;
 pub mod embassy_net;
+pub mod ni6w;
 pub mod runner;
