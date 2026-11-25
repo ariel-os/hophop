@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Managing a full stack.
+//! Managing a full PT stack.
 //!
 //! Code in here should eventually be independent of the underlying implementation of nr+, but is
 //! currently tied to the [`crate::nrfxlib_mac`].

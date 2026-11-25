@@ -391,6 +391,9 @@ unsafe extern "C" fn association_ntf(params: *mut dect_mac::association_ntf_cb_p
     );
     // SAFETY: implied by C ABI
     debug_ies(unsafe { core::slice::from_raw_parts(ies, number_of_ies as _) });
+
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.associated(long_rd_id);
 }
 unsafe extern "C" fn association_release_ntf(
     params: *mut dect_mac::association_release_ntf_cb_params,
@@ -409,6 +412,9 @@ unsafe extern "C" fn association_release_ntf(
         long_rd_id,
         release_cause: super::Release::PeerRelease(release_cause),
     });
+
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.removed(long_rd_id);
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
     params: *mut dect_mac::cluster_ch_load_change_ntf_cb_params,
@@ -425,6 +431,9 @@ unsafe extern "C" fn neighbor_inactivity_ntf(
         warn!("Ignoring inactivity NTF with reserved value.");
         return;
     };
+
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.removed(long_rd_id);
 
     // This will be tricky to use: We only see the long RD ID. If the device reboots and keeps the
     // long RD ID and sends a different short RD ID (as hophop PTs currently do), the inactivity

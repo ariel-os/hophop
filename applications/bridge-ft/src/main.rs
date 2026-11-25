@@ -12,11 +12,13 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 use hophop::nrfxlib_mac::{DectMac, Ipv6Config};
 use nrfxlib_sys_pretty::{dect_control, dect_mac};
 
+static ASSOCIATIONS: hophop::peers::AtomicPresence<20> = hophop::peers::AtomicPresence::new();
+
 #[ariel_os::task(autostart)]
 async fn main() {
     /* FIXME: duplicate from ../embedded-pt/ */
     info!("Initializing DECT MAC, trusting that Ariel OS did the basic setup");
-    let (mut dect, mut dlc_tx, mut dlc_rx) = DectMac::create(());
+    let (mut dect, mut dlc_tx, mut dlc_rx) = DectMac::create((), &ASSOCIATIONS);
 
     dect.systemmode_set_mac().await;
 
@@ -126,6 +128,12 @@ async fn main() {
     }
 
     loop {
+        info!(
+            "Peers are {} ({:?}, ...)",
+            ASSOCIATIONS.peers().count(),
+            ASSOCIATIONS.peers().next()
+        );
+
         // Very quick and very dirty non-border router -- if a peer doesn't address something in
         // such a way that DLC can forward it, we have to
         let (source, buffer) = match embassy_futures::select::select(

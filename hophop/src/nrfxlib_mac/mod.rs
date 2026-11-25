@@ -66,7 +66,19 @@ impl DectMac {
     /// that, there'll probably be some kind of "desiccated" form of this object where a user can
     /// first initialize the desiccated form and then do a "set MAC system mode" function, both
     /// which steps this combines.
-    pub fn create(_modem_is_set_up: ()) -> (Self, DlcTx, DlcRx) {
+    ///
+    /// This also sets the `association_receiver` as a callback for changes to association status
+    /// in FT mode. (PT users can use the `peers::LogToDefmt`, which is as no-op as it can get at
+    /// quiet log levels). This allows the application to collect notifications directly in the
+    /// interrupt; this avoids issues with applications missing the notifications due to high load
+    /// and limited queues.
+    pub fn create(
+        _modem_is_set_up: (),
+        association_receiver: &'static dyn super::peers::PeerStatus,
+    ) -> (Self, DlcTx, DlcRx) {
+        // nRF9151 has a global driver, so we can do this statically
+        shared_queues::ASSOCIATION_STATUS.init(association_receiver);
+
         // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
         unsafe { dect_mac::callback_set(&callbacks::OP_CALLBACKS, &callbacks::MAC_NTF_CALLBACKS) }
             .into_result()
