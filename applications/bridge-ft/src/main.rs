@@ -199,23 +199,32 @@ async fn main() {
 
         // Routing decisions:
 
+        // Unlike sending over the radio, this consumes the buffer, so we move it out of the
+        // decision tree to its end.
+        let mut send_to_slipmux = false;
+
         if dest_addr.is_multicast() {
-            warn!("FIXME: Send to multicast on all but incoming interface");
-            /* Tempting to do it this way, but doesn't work that way for two reasons:
-             * - packets coming in multicast from the radio need to be distributed again
-             * - DLC layer says "INVALID_PARAM" when attempting to send to broadcast
-             *
-             * possible workarounds include unicasting this to all peers.
-            if source == Source::Slipmux {
-                match dlc_tx.dlc_data_tx(1, LongRdId::BROADCAST, &buffer).await {
+            // Note that sending to LongRdId::BROADCAST gives INVALID_PARAM, and sending to
+            // multicast does not appear to be available in the nRF MAC API at all.
+
+            if source != Source::Slipmux {
+                send_to_slipmux = true;
+            }
+
+            for peer in ASSOCIATIONS.peers() {
+                if Source::Radio(peer) == source {
+                    // No reflection
+                    continue;
+                }
+
+                // FIXME: Blocking is not sensible here, but is what we currently have in terms of
+                // APIs.
+                match dlc_tx.dlc_data_tx(1, peer, &buffer).await {
                     Ok(()) => debug!("Multicast packet forwarded successfully."),
+                    // This will likely cause a release
                     Err(e) => warn!("Unhandled error forwarding multicast packet: {:?}", e),
                 }
-            } else {
-                let buffer = core::mem::DropGuard::dismiss(buffer);
-                ariel_os::coap::IP2SLIPMUX.signal(buffer);
             }
-            */
         } else {
             let mac_dest = our_network.matches_and_extract(&our_long_id, &dest_addr);
 
@@ -239,13 +248,17 @@ async fn main() {
                     );
                     continue;
                 } else {
-                    let buffer = core::mem::DropGuard::dismiss(buffer);
-
-                    // Note that we're *not* implementing promisc mode here: Linux on tun appears to
-                    // just return link-local packets.
-                    ariel_os::coap::IP2SLIPMUX.signal(buffer);
+                    send_to_slipmux = true;
                 }
             };
+        }
+
+        if send_to_slipmux {
+            let buffer = core::mem::DropGuard::dismiss(buffer);
+
+            // Note that we're *not* implementing promisc mode here: Linux on tun appears to
+            // just return link-local packets.
+            ariel_os::coap::IP2SLIPMUX.signal(buffer);
         }
     }
 }
