@@ -2705,6 +2705,7 @@ dependencies = [
  "embedded-nal-minimal-coapserver",
  "heapless 0.9.3",
  "hophop",
+ "minicbor",
  "nrf-modem",
  "nrfxlib-sys",
  "nrfxlib-sys-pretty",

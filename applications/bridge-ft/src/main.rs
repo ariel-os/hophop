@@ -105,7 +105,7 @@ async fn main() {
         our_network.address_of(our_long_id, our_long_id)
     );
 
-    ariel_os::asynch::spawner().spawn(coap_task().unwrap());
+    ariel_os::asynch::spawner().spawn(coap_task(&ASSOCIATIONS).unwrap());
 
     // A very stupid ad-hoc buffer pool that works for sending around &'static mut items.
     //
@@ -128,12 +128,6 @@ async fn main() {
     }
 
     loop {
-        info!(
-            "Peers are {} ({:?}, ...)",
-            ASSOCIATIONS.peers().count(),
-            ASSOCIATIONS.peers().next()
-        );
-
         // Very quick and very dirty non-border router -- if a peer doesn't address something in
         // such a way that DLC can forward it, we have to
         let (source, buffer) = match embassy_futures::select::select(
@@ -256,9 +250,56 @@ async fn main() {
     }
 }
 
-#[ariel_os::task()]
-async fn coap_task() {
+fn list_peers<const N: usize>(
+    peers: &'static hophop::peers::AtomicPresence<N>,
+) -> impl coap_handler::Handler + coap_handler::Reporting {
+    use hophop::peers::AtomicPresence;
+
+    use coap_handler::Attribute;
     use coap_handler_implementations::*;
-    let handler = new_dispatcher().with_wkc();
+    use coap_message_utils::Error;
+
+    #[derive(Copy, Clone)]
+    struct PeersView<const N: usize>(&'static AtomicPresence<N>);
+
+    impl<const N: usize> GetRenderable for PeersView<N> {
+        type Get = Self;
+
+        fn get(&mut self) -> Result<Self::Get, Error> {
+            Ok(*self)
+        }
+    }
+
+    impl<const N: usize, C> minicbor::Encode<C> for PeersView<N> {
+        fn encode<W: minicbor::encode::Write>(
+            &self,
+            e: &mut minicbor::Encoder<W>,
+            ctx: &mut C,
+        ) -> Result<(), minicbor::encode::Error<W::Error>> {
+            e.begin_array()?;
+
+            for p in self.0.peers() {
+                p.encode(e, ctx)?;
+            }
+
+            e.end()?;
+            Ok(())
+        }
+    }
+
+    wkc::ConstantSingleRecordReport::new(
+        TypeHandler::new_minicbor_2(with_get(PeersView(peers))),
+        &[Attribute::ResourceType(
+            "tag:ariel-os.org,2026:experimental-hophop3",
+        )],
+    )
+}
+
+#[ariel_os::task()]
+async fn coap_task(peers: &'static hophop::peers::AtomicPresence<20>) {
+    use coap_handler_implementations::*;
+    let handler = new_dispatcher()
+        .at(&["dect-ft", "assoc"], list_peers(peers))
+        .with_wkc();
     ariel_os::coap::coap_run(handler).await;
 }
