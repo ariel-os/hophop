@@ -22,7 +22,8 @@ nrf-modem = { version = "*", features = ["dect", "nrf9151", "defmt"] }
 ts-103-636-numbers = { path = "../ts-103-636-numbers/", features = ["defmt"] }
 # minicbor feature could be dependent on our minicbor once we make that conditional
 ts-103-636-utils = { path = "../ts-103-636-utils/", features = ["defmt", "minicbor"] }
-static_cell = "2.1.1"
+# From <https://github.com/embassy-rs/static-cell/pull/23>
+static_cell = { git = "https://github.com/bugadani/static-cell", branch = "shared", ref = "9486b88cf9da60cca14f41a8904a04d0bff1afa0" }
 itertools = { version = "0.14.0", default-features = false }
 embassy-futures = "0.1.2"
 

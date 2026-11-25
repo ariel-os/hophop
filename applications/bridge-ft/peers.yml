@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright Christian Amsüss <chrysn@fsfe.org>, Silano Systems
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+- from: unauthenticated
+  scope:
+    /.well-known/core: GET
+    # The device identity is currently also the radio identity; FIXME: Once we
+    # chose radio identities more carefully, we should lock this down.
+    /id: GET
+    /dect-ft/assoc: GET

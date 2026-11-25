@@ -37,7 +37,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Install stable toolchain (rest will be pulled by laze target)
-        uses: dtolnay/rust-toolchain@1.99.1
+        uses: dtolnay/rust-toolchain@1.100.0
         with:
           components: rustfmt, clippy, llvm-tools
 

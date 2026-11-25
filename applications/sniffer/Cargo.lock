@@ -81,7 +81,7 @@ dependencies = [
  "ariel-os-utils",
  "document-features",
  "linkme",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -143,7 +143,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_yaml",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -182,7 +182,7 @@ dependencies = [
  "embedded-io-async 0.7.0",
  "linkme",
  "portable-atomic",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -214,7 +214,7 @@ dependencies = [
  "esp-rom-sys",
  "paste",
  "portable-atomic",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -289,7 +289,7 @@ dependencies = [
  "embedded-hal-async",
  "paste",
  "portable-atomic",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -350,7 +350,7 @@ dependencies = [
  "embedded-hal-async",
  "paste",
  "portable-atomic",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "stm32-metapac",
 ]
 
@@ -2641,7 +2641,7 @@ dependencies = [
  "nrf-modem",
  "nrfxlib-sys",
  "nrfxlib-sys-pretty",
- "static_cell",
+ "static_cell 2.1.1 (git+https://github.com/bugadani/static-cell?branch=shared)",
  "ts-103-636-numbers",
  "ts-103-636-utils",
 ]
@@ -2660,7 +2660,7 @@ dependencies = [
  "heapless 0.9.3",
  "hophop",
  "minicbor",
- "static_cell",
+ "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ts-103-636-numbers",
  "ts-103-636-utils",
 ]
@@ -4323,6 +4323,14 @@ name = "static_cell"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0530892bb4fa575ee0da4b86f86c667132a94b74bb72160f58ee5a4afec74c23"
+dependencies = [
+ "portable-atomic",
+]
+
+[[package]]
+name = "static_cell"
+version = "2.1.1"
+source = "git+https://github.com/bugadani/static-cell?branch=shared#9486b88cf9da60cca14f41a8904a04d0bff1afa0"
 dependencies = [
  "portable-atomic",
 ]

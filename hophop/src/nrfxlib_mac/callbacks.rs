@@ -11,7 +11,7 @@
     reason = "stop complaining while there are todo!() items"
 )]
 
-use defmt::{info, unwrap, warn};
+use defmt::{debug, info, unwrap, warn};
 use nrfxlib_sys_pretty::{dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
@@ -391,6 +391,9 @@ unsafe extern "C" fn association_ntf(params: *mut dect_mac::association_ntf_cb_p
     );
     // SAFETY: implied by C ABI
     debug_ies(unsafe { core::slice::from_raw_parts(ies, number_of_ies as _) });
+
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.associated(long_rd_id);
 }
 unsafe extern "C" fn association_release_ntf(
     params: *mut dect_mac::association_release_ntf_cb_params,
@@ -409,6 +412,9 @@ unsafe extern "C" fn association_release_ntf(
         long_rd_id,
         release_cause: super::Release::PeerRelease(release_cause),
     });
+
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.removed(long_rd_id);
 }
 unsafe extern "C" fn cluster_ch_load_change_ntf(
     params: *mut dect_mac::cluster_ch_load_change_ntf_cb_params,
@@ -426,12 +432,39 @@ unsafe extern "C" fn neighbor_inactivity_ntf(
         return;
     };
 
+    let association_status = *ASSOCIATION_STATUS.get();
+    association_status.removed(long_rd_id);
+
     // This will be tricky to use: We only see the long RD ID. If the device reboots and keeps the
     // long RD ID and sends a different short RD ID (as hophop PTs currently do), the inactivity
     // notification only comes after the next association. So in a sense we might need to keep a
     // counter of how often a device has been registered per RD ID, if we want to act on inactivity
     // notifications at all.
+    //
+    // *Probably* the events are ordered coming out from the MAC, though, so we can trust that once
+    // we get a new association, we won't see an old inactivity notification.
     info!("Inactivity notification from {}", long_rd_id);
+
+    // There is little actionable we can do here:
+    // - We can't send any more data (that'd give NOT_ALLOWED).
+    //   unsafe { dect_dlc::data_tx(&mut dect_dlc::data_tx_params { transaction_id: 42, flow_id: 4, long_rd_id: long_rd_id.into(), data: b"1".as_ptr() as _, data_len: 1 }) };
+    //
+    // - We could send a release, but that's a one-off event. If the device went out of radio
+    //   contact, it'll miss it. If the device has an inactivity timer, that won't happen. So the
+    //   one case where it's helpful is when the device has *no* inactivity timer and starts over
+    //   based on the message -- but that is brittle because if it misses it, it'll sit forever.
+    //
+    //   use nrf_modem::ErrorSource;
+    //   info!(
+    //       "releasing peer: {}",
+    //       unsafe {
+    //           dect_mac::association_release(&mut dect_mac::association_release_params {
+    //               release_cause: dect_mac::release_cause_values::LONG_INACTIVITY,
+    //               long_rd_id: long_rd_id.into(),
+    //           })
+    //       }
+    //       .into_result()
+    //   );
 }
 unsafe extern "C" fn neighbor_paging_failure_ntf(
     params: *mut dect_mac::neighbor_paging_failure_ntf_cb_params,
@@ -548,14 +581,23 @@ unsafe extern "C" fn capability_ntf(params: *mut dect_mac::capability_ntf_cb_par
 }
 unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_params) {
     // SAFETY: implied in C API
-    let params = unsafe { &*params };
+    let &dect_dlc::data_rx_ntf_cb_params {
+        flow_id,
+        long_rd_id,
+        data,
+        data_len,
+    } = unsafe { &*params };
+    let Some(long_rd_id) = LongRdId::new(long_rd_id) else {
+        warn!("Ignoring dlc_data_rx NTF with reserved value.");
+        return;
+    };
     // SAFETY: implied in C API (and we're only using it in this callback)
     // FIXME: Can we get a `_mut`? (Not that I'd know what to use it for, given we have to copy
     // the data out in the ISR)
-    let data = unsafe { core::slice::from_raw_parts(params.data as *mut u8, params.data_len) };
-    info!(
-        "Got DLC data RX: flow {}, peer 0x{:x}, data 0x{:02x}",
-        params.flow_id, params.long_rd_id, data
+    let data = unsafe { core::slice::from_raw_parts(data as *mut u8, data_len) };
+    debug!(
+        "Got DLC data RX: flow {}, peer {}, data 0x{:02x}",
+        flow_id, long_rd_id, data
     );
     if let Ok(vec) = data.try_into() {
         let Ok(mut packet_lock) = PACKETS.try_lock() else {
@@ -564,8 +606,8 @@ unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_param
         };
         if packet_lock
             .push_back(DlcDataRx {
-                long_rd_id: params.long_rd_id,
-                flow_id: params.flow_id,
+                long_rd_id,
+                flow_id,
                 data: vec,
             })
             .is_ok()

@@ -25,6 +25,9 @@ audit-as-crates-io = true
 [policy.nrfxlib-sys-pretty]
 audit-as-crates-io = true
 
+[policy.static_cell]
+audit-as-crates-io = true
+
 [policy.ts-103-636-numbers]
 audit-as-crates-io = true
 
@@ -432,7 +435,7 @@ version = "1.2.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.static_cell]]
-version = "2.1.1"
+version = "2.1.1@git:9486b88cf9da60cca14f41a8904a04d0bff1afa0"
 criteria = "safe-to-deploy"
 
 [[exemptions.syn]]

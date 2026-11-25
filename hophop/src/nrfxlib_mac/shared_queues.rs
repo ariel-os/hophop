@@ -39,6 +39,7 @@ pub(crate) static BEACON_EVENTS: Channel<
     2,
 > = Channel::new();
 
+/// Association events in a PT
 pub(crate) static ASSOCIATION_EVENTS: Channel<
     CriticalSectionRawMutex,
     Result<AssociationEvent, MacError>,
@@ -65,3 +66,8 @@ pub(crate) static PACKET_READY: Channel<CriticalSectionRawMutex, (), 1> = Channe
 // RX side how many are in flight.
 pub(crate) static DLC_TX_DONE: Channel<CriticalSectionRawMutex, super::DlcDataTxDone, 1> =
     Channel::new();
+
+/// Association event aggregation for FTs.
+pub(crate) static ASSOCIATION_STATUS: static_cell::SharedStaticCell<
+    &'static dyn crate::peers::PeerStatus,
+> = static_cell::SharedStaticCell::new();

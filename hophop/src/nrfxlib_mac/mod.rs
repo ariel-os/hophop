@@ -66,7 +66,19 @@ impl DectMac {
     /// that, there'll probably be some kind of "desiccated" form of this object where a user can
     /// first initialize the desiccated form and then do a "set MAC system mode" function, both
     /// which steps this combines.
-    pub fn create(_modem_is_set_up: ()) -> (Self, DlcTx, DlcRx) {
+    ///
+    /// This also sets the `association_receiver` as a callback for changes to association status
+    /// in FT mode. (PT users can use the `peers::LogToDefmt`, which is as no-op as it can get at
+    /// quiet log levels). This allows the application to collect notifications directly in the
+    /// interrupt; this avoids issues with applications missing the notifications due to high load
+    /// and limited queues.
+    pub fn create(
+        _modem_is_set_up: (),
+        association_receiver: &'static dyn super::peers::PeerStatus,
+    ) -> (Self, DlcTx, DlcRx) {
+        // nRF9151 has a global driver, so we can do this statically
+        shared_queues::ASSOCIATION_STATUS.init(association_receiver);
+
         // SAFETY: used as per C API (and it'd even check for NULLs here and inside)
         unsafe { dect_mac::callback_set(&callbacks::OP_CALLBACKS, &callbacks::MAC_NTF_CALLBACKS) }
             .into_result()
@@ -341,7 +353,7 @@ impl DectMac {
         max_num_ft_neighbours: 0,
         neighbor_info_triggers:
             dect_mac::association_config_neighbor_info_triggers {
-                inactivity_timer: 60_000, // 60s
+                inactivity_timer: super::ni6w::INACTIVITY_MS,
             },
         default_tx_flow_config:
             // AIU those are for the 2 signalling flows and the 4 user flows
@@ -561,13 +573,13 @@ struct DlcDataTxDone {
 }
 
 pub struct DlcDataRx {
-    pub(crate) long_rd_id: u32,
+    pub(crate) long_rd_id: LongRdId,
     pub(crate) flow_id: u8,
     pub(crate) data: heapless::vec::Vec<u8, 1501>,
 }
 
 impl DlcDataRx {
-    pub fn sender(&self) -> u32 {
+    pub fn sender(&self) -> LongRdId {
         self.long_rd_id
     }
 
@@ -646,6 +658,21 @@ impl Ipv6Config {
         LongRdId::new(u32::from_be_bytes(
             address.octets()[12..].try_into().unwrap(),
         ))
+    }
+
+    pub fn address_of(&self, sink: LongRdId, mac: LongRdId) -> core::net::Ipv6Addr {
+        let mut address = [0; 16];
+        address[8..12].copy_from_slice(&u32::from(sink).to_be_bytes());
+        address[12..].copy_from_slice(&u32::from(mac).to_be_bytes());
+
+        use crate::nrfxlib_mac::Ipv6Config;
+        match self {
+            Ipv6Config::Full(full) => address = *full,
+            Ipv6Config::Prefix(prefix) => address[..8].copy_from_slice(prefix),
+            Ipv6Config::LinkLocal => address[..2].copy_from_slice(&[0xfe, 0x80]),
+        }
+
+        address.into()
     }
 }
 
