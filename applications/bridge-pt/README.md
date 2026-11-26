@@ -23,10 +23,12 @@ The Ariel OS network stack is bypassed.
 
 ![Illustration of the components described above in prose](../../doc/.media/scenarios.svg#page-bridge-pt)
 
+<!--
 Multiple hosts can interact with each other and with other boards that run the [`embedded-pt` example](../embedded-pt/),
 with a Nordic DECT shell running in the FT role:
 
 ![Illustration of the network described above in prose (two bridge-pt and an embedded-pt linked to a Nordic DECT shell, with an extra sniffer connected to one PC)](../../doc/.media/scenarios.svg#page-combination)
+-->
 
 Running the application
 -----------------------
