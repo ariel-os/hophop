@@ -42,6 +42,10 @@ Basic steps common to all examples and applications
 Examples to run
 ---------------
 
+The main application to run from here is
+[the star network setup](./star.md),
+which sets up several applications in a single network.
+
 * To get the most high-level functionality, run:
 
   - the [`embedded-pt`] application, which includes running Nordic's DECT shell as a FT (Fixed Terminal, a bit like a base station).
