@@ -130,7 +130,7 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
             self.association.set(Some(assoc));
 
             let address = assoc.local_ipv6_address(self.config.get().rd_id);
-            info!("Please set this IPv6 address on the host: {}", address);
+            info!("Please set this IPv6 address on the host: {}/64", address);
         } else {
             self.association.set(None);
         }

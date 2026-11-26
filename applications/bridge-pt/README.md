@@ -59,7 +59,7 @@ Running the application
   ```
   [INFO ] Scanning succeeded, attempting association with the found FT ClusterBeacon { channel: 1665, … }
   [INFO ] Learned about association: Some(Association { network: 0x87654321, … }
-  [INFO ] Please set this IPv6 address on the host: fe80:0000:0000:0000:7d99:e9b0:922f:5140
+  [INFO ] Please set this IPv6 address on the host: fe80:0000:0000:0000:7d99:e9b0:922f:5140/64
   ```
 
   At the current stage of development, the host is required to use that precise address.

@@ -101,7 +101,7 @@ async fn main() {
     info!("Running cluster.");
 
     info!(
-        "Please set this IPv6 address on the host: {}",
+        "Please set this IPv6 address on the host: {}/64",
         our_network.address_of(our_long_id, our_long_id)
     );
 
