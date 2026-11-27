@@ -13,6 +13,8 @@ hophop: Documentation index
 
   - [Supported hardware](hardware.md)
   - [Finding the right firmware](dect-firmware.md)
+  - [Running a star network](star.md)
+  - running individual examples and applications (which are documented in their respective README files)
 
 * Documentation about surrounding topics:
 

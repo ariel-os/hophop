@@ -23,10 +23,12 @@ The Ariel OS network stack is bypassed.
 
 ![Illustration of the components described above in prose](../../doc/.media/scenarios.svg#page-bridge-pt)
 
+<!--
 Multiple hosts can interact with each other and with other boards that run the [`embedded-pt` example](../embedded-pt/),
 with a Nordic DECT shell running in the FT role:
 
 ![Illustration of the network described above in prose (two bridge-pt and an embedded-pt linked to a Nordic DECT shell, with an extra sniffer connected to one PC)](../../doc/.media/scenarios.svg#page-combination)
+-->
 
 Running the application
 -----------------------
@@ -57,7 +59,7 @@ Running the application
   ```
   [INFO ] Scanning succeeded, attempting association with the found FT ClusterBeacon { channel: 1665, … }
   [INFO ] Learned about association: Some(Association { network: 0x87654321, … }
-  [INFO ] Please set this IPv6 address on the host: fe80:0000:0000:0000:7d99:e9b0:922f:5140
+  [INFO ] Please set this IPv6 address on the host: fe80:0000:0000:0000:7d99:e9b0:922f:5140/64
   ```
 
   At the current stage of development, the host is required to use that precise address.

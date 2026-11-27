@@ -24,14 +24,11 @@ Basic steps common to all examples and applications
 
 * Install [Jelly](https://github.com/teufelchen1/jelly), a slipmux (SLIP and CoAP) tool used with many hophop applications.
 
-  At the time of writing, some examples (where it is used to alter a device's setup) require a feature branch:
+  At the time of writing, some examples (where it is used to alter a device's setup) require yet unreleased features:
 
   ```
-  $ cargo install Jelly --git https://github.com/chrysn-pull-requests/jelly/ --branch core.p-edit
+  $ cargo install Jelly --git https://github.com/teufelchen1/jelly/
   ```
-
-  Should that fail, try plain `cargo install Jelly` -- the relevant features might already be part of Jelly in that case
-  (and please open an [issue in hophop, or alter this documentation right away](https://github.com/ariel-os/hophop/issues)).
 
 * [Ensure that you have the DECT firmware running](../doc/dect-firmware.md).
 
@@ -41,6 +38,10 @@ Basic steps common to all examples and applications
 
 Examples to run
 ---------------
+
+The main application to run from here is
+[the star network setup](./star.md),
+which sets up several applications in a single network.
 
 * To get the most high-level functionality, run:
 
