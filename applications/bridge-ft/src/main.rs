@@ -12,6 +12,8 @@ use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId};
 use hophop::nrfxlib_mac::{DectMac, Ipv6Config};
 use nrfxlib_sys_pretty::{dect_control, dect_mac};
 
+use xarxa::Pool as _;
+
 static ASSOCIATIONS: hophop::peers::AtomicPresence<20> = hophop::peers::AtomicPresence::new();
 
 #[ariel_os::task(autostart)]
@@ -107,75 +109,47 @@ async fn main() {
 
     ariel_os::asynch::spawner().spawn(coap_task(&ASSOCIATIONS).unwrap());
 
-    // A very stupid ad-hoc buffer pool that works for sending around &'static mut items.
-    //
-    // (Doing heapless ObjectBlock or BoxBlock would not quite work because we really need to send
-    // &'static mut, which is a shortcoming of the current SLIPMUX2IP mechanism, and also,
-    // initializing it from ConstStaticCell has Send bound trouble).
-    const EMPTY_BLOCK: ariel_os::coap::SingleBuffer = ariel_os::coap::SingleBuffer::new();
-    static BUFFERS: static_cell::ConstStaticCell<[ariel_os::coap::SingleBuffer; 8]> =
-        static_cell::ConstStaticCell::new([EMPTY_BLOCK; 8]);
-    let buffers: &mut [_; 8] = BUFFERS.take();
-    let buffer_pointers: [&mut _; 8] = buffers.each_mut();
-    // Initially just all our owned buffers, but we gladly also take up other parties' buffers.
-    // As long as they are stored in here, they are to be empty.
-    let mut buffer_pool = heapless::Vec::<_, 8>::from(buffer_pointers);
-
     #[derive(PartialEq, Eq, defmt::Format, Debug)]
     enum Source {
         Radio(LongRdId),
         Slipmux,
     }
 
+    let buffer_pool = &ariel_os::coap::SLIPMUX_POOL;
+
     loop {
         // Very quick and very dirty non-border router -- if a peer doesn't address something in
         // such a way that DLC can forward it, we have to
         let (source, buffer) = match embassy_futures::select::select(
             dlc_rx.dlc_data_rx(),
-            ariel_os::coap::SLIPMUX2IP.wait(),
+            ariel_os::coap::SLIPMUX2IP.receive(),
         )
         .await
         {
             embassy_futures::select::Either::First(rx) => {
                 let data = rx.data();
 
-                let buffer = if let Some(buffer) = buffer_pool.pop() {
-                    if let Ok(_) = buffer.extend_from_slice(data) {
-                        buffer
-                    } else {
-                        warn!("Not forwarding packet through SLIPMUX: packet too big");
-                        // This goes away once we just use xarxa pools everywhere
-                        buffer_pool.push(buffer).unwrap();
-                        continue;
-                    }
-                } else {
+                if data.len() > buffer_pool.buf_capacity() {
+                    // This goes away once we just use xarxa pools everywhere
+                    warn!("Not forwarding packet through SLIPMUX: packet too big");
+                    continue;
+                }
+                let Some(mut buffer) = buffer_pool.alloc() else {
                     warn!("Not forwarding packet through SLIPMUX: buffer not available");
                     continue;
                 };
 
+                buffer.set_len(data.len());
+                buffer.copy_from_slice(data);
+
                 (Source::Radio(rx.sender()), buffer)
             }
-            embassy_futures::select::Either::Second(inbuf) => {
-                if inbuf.is_empty() {
-                    buffer_pool
-                        .push(inbuf)
-                        .expect("why else would slip send us one");
-                    continue;
-                }
-                (Source::Slipmux, inbuf)
-            }
+            embassy_futures::select::Either::Second(inbuf) => (Source::Slipmux, inbuf),
         };
-
-        let buffer = core::mem::DropGuard::new(buffer, |buffer| {
-            buffer.clear();
-            if let Err(overflown) = buffer_pool.push(buffer) {
-                ariel_os::coap::IP2SLIPMUX.signal(overflown);
-            }
-        });
 
         // Dissect IP, and decrement hop limit early (before we forget)
 
-        if *buffer == &hophop::ni6w::KEEPALIVE_MESSAGE {
+        if *buffer == hophop::ni6w::KEEPALIVE_MESSAGE {
             debug!("Received keepalive message from {:?}", source);
             continue;
         }
@@ -254,11 +228,11 @@ async fn main() {
         }
 
         if send_to_slipmux {
-            let buffer = core::mem::DropGuard::dismiss(buffer);
-
             // Note that we're *not* implementing promisc mode here: Linux on tun appears to
             // just return link-local packets.
-            ariel_os::coap::IP2SLIPMUX.signal(buffer);
+            if ariel_os::coap::IP2SLIPMUX.try_send(buffer).is_err() {
+                warn!("Dropping packet: Queue of IP2SLIPMUX overflew.");
+            }
         }
     }
 }

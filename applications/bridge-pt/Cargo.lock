@@ -144,6 +144,9 @@ dependencies = [
  "serde",
  "serde_yaml",
  "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+ "xarxa",
+ "xarxa-driver",
 ]
 
 [[package]]
@@ -2709,6 +2712,7 @@ dependencies = [
  "static_cell 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ts-103-636-numbers",
  "ts-103-636-utils",
+ "xarxa",
 ]
 
 [[package]]
@@ -5037,6 +5041,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
+]
+
+[[package]]
+name = "xarxa"
+version = "0.1.0"
+source = "git+https://github.com/embassy-rs/xarxa?rev=df5d6cc5bca193db5cbb652961d626fdbf8b1aa1#df5d6cc5bca193db5cbb652961d626fdbf8b1aa1"
+dependencies = [
+ "bitflags 2.13.2",
+ "byteorder",
+ "critical-section",
+ "defmt",
+ "document-features",
+ "heapless 0.9.3",
+ "xarxa-driver",
+]
+
+[[package]]
+name = "xarxa-driver"
+version = "0.1.0"
+source = "git+https://github.com/embassy-rs/xarxa?rev=df5d6cc5bca193db5cbb652961d626fdbf8b1aa1#df5d6cc5bca193db5cbb652961d626fdbf8b1aa1"
+dependencies = [
+ "defmt",
+ "document-features",
 ]
 
 [[package]]

@@ -9,6 +9,8 @@ use ariel_os::log::{info, warn};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId24};
 
+use xarxa::Pool as _;
+
 #[ariel_os::task(autostart)]
 async fn main() {
     /* FIXME: duplicate from ../embedded-pt/ */
@@ -84,21 +86,14 @@ struct DirectToSlipmuxController {
         // Senders can just wait, or use fallible pushing
         1,
     >,
-    buffer: core::cell::Cell<Option<&'static mut ariel_os::coap::SingleBuffer>>,
 }
 
 impl DirectToSlipmuxController {
     fn new(initial_config: hophop::association::PtConfiguration) -> Self {
-        use static_cell::ConstStaticCell;
-        static BUFFER: ConstStaticCell<ariel_os::coap::SingleBuffer> =
-            ConstStaticCell::new(ariel_os::coap::SingleBuffer::new());
-        let buffer = Some(BUFFER.take()).into();
-
         Self {
             config: hophop::coap::ControllablePtConfiguration::new(initial_config),
             association: Default::default(),
             poke: embassy_sync::channel::Channel::new(),
-            buffer,
         }
     }
 
@@ -109,17 +104,17 @@ impl DirectToSlipmuxController {
 
 impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
     fn on_dlc_rx(&mut self, data: hophop::nrfxlib_mac::DlcDataRx) {
-        let Some(buffer) = self.buffer.take() else {
+        if data.data().len() > ariel_os::coap::SLIPMUX_POOL.buf_capacity() {
+            warn!("Packet too long");
+        }
+
+        let Some(mut buffer) = ariel_os::coap::SLIPMUX_POOL.alloc() else {
             warn!("Dropping packet -- overflow");
             return;
         };
-        buffer.clear();
-        if buffer.extend_from_slice(data.data()).is_ok() {
-            ariel_os::coap::IP2SLIPMUX.signal(buffer);
-        } else {
-            warn!("Packet too long");
-            self.buffer.set(Some(buffer));
-        }
+
+        buffer.set_len(data.data().len());
+        buffer.copy_from_slice(data.data());
     }
 
     fn on_assoc_change(&mut self, assoc: Option<hophop::association::Association>) {
@@ -142,15 +137,9 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
         async {
             let mut received;
             loop {
-                received = ariel_os::coap::SLIPMUX2IP.wait().await;
-                if received.is_empty() {
-                    // just coming back from on_dlc_rx
-                    assert!(self.buffer.take().is_none());
-                    self.buffer.set(Some(received));
-                    continue;
-                }
+                received = ariel_os::coap::SLIPMUX2IP.receive().await;
                 let to_send = if let Some(association) = self.association.get() {
-                    let copied = heapless::vec::Vec::try_from(received.as_slice());
+                    let copied = heapless::vec::Vec::try_from(&*received);
                     if let Ok(copied) = copied {
                         Some((1, association.parent, copied))
                     } else {
@@ -162,8 +151,6 @@ impl<'a> hophop::runner::MacController for &'a DirectToSlipmuxController {
                     warn!("Dropping packet because currently not associated");
                     None
                 };
-                received.clear();
-                ariel_os::coap::IP2SLIPMUX.signal(received);
                 if let Some(to_send) = to_send {
                     return to_send;
                 }

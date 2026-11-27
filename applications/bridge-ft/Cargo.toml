@@ -39,3 +39,6 @@ embedded-nal = "0.9"
 static_cell = "2.1.1"
 defmt = "1.2.0"
 minicbor = "2.3.1"
+
+# Not using the full stack, just the pool
+xarxa = { git = "https://github.com/embassy-rs/xarxa", version = "0.1.0", default-features = false, features = ["defmt", "ipv6", "medium-ip"], rev = "df5d6cc5bca193db5cbb652961d626fdbf8b1aa1" }
