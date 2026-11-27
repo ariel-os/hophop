@@ -8,10 +8,12 @@ imports:
       # - https://github.com/ariel-os/ariel-os/pull/2101 (user network driver)
       # - https://github.com/ariel-os/ariel-os/pull/1613 (slipmux)
       # - https://github.com/ariel-os/ariel-os/pull/2415 (slipmux user access to IP)
-      # - https://github.com/ariel-os/ariel-os/pull/2417 (coap /id)
+      # - https://github.com/ariel-os/ariel-os/pull/2417 and cherry-picked https://github.com/ariel-os/ariel-os/pull/2491 (coap /id)
       # - and an extra of setting the STATE's embassy_net_driver_channel::State TX and RX count to 10
-      commit: af8f2d0ab66273d98f3daa2bf4523774542f6b98
+      commit: 6e09cc0d6aac2c55b7a48a66d0323fa2beff5292
     dldir: ariel-os
+#   - path: /home/chrysn/git/crates/ariel-os
+#     symlink: true
 
 subdirs:
   - examples

@@ -11,7 +11,7 @@
     reason = "stop complaining while there are todo!() items"
 )]
 
-use defmt::{debug, info, unwrap, warn};
+use defmt::{debug, error, info, unwrap, warn};
 use nrfxlib_sys_pretty::{dect_dlc, dect_mac};
 
 use ts_103_636_utils::identifiers::{AbsoluteChannel, LongRdId, NetworkId32, ShortRdId};
@@ -419,7 +419,22 @@ unsafe extern "C" fn association_release_ntf(
 unsafe extern "C" fn cluster_ch_load_change_ntf(
     params: *mut dect_mac::cluster_ch_load_change_ntf_cb_params,
 ) {
-    todo!("Only relevant for FTs")
+    // SAFETY: implied in C API
+    let &dect_mac::cluster_ch_load_change_ntf_cb_params {
+        rssi_result:
+            dect_mac::rssi_result {
+                channel,
+                busy_percentage,
+                busy,
+                free,
+                possible,
+            },
+    } = unsafe { &*params };
+
+    error!(
+        "Cluster load change NTF is unhandled (channel {}, {}%, {:x} {:x} {:x})",
+        channel, busy_percentage, busy, free, possible
+    );
 }
 unsafe extern "C" fn neighbor_inactivity_ntf(
     params: *mut dect_mac::neighbor_inactivity_ntf_cb_params,
@@ -469,7 +484,15 @@ unsafe extern "C" fn neighbor_inactivity_ntf(
 unsafe extern "C" fn neighbor_paging_failure_ntf(
     params: *mut dect_mac::neighbor_paging_failure_ntf_cb_params,
 ) {
-    todo!("Only relevant for FTs")
+    // SAFETY: implied in C API
+    let &dect_mac::neighbor_paging_failure_ntf_cb_params { long_rd_id } = unsafe { &*params };
+
+    let Some(long_rd_id) = LongRdId::new(long_rd_id) else {
+        warn!("Ignoring neighbor_paging_failure NTF with reserved value.");
+        return;
+    };
+
+    error!("Paging failure NTF from {} is unhandled", long_rd_id);
 }
 unsafe extern "C" fn rssi_scan_ntf(params: *mut dect_mac::rssi_scan_ntf_cb_params) {
     // SAFETY: implied in C API
@@ -560,7 +583,15 @@ unsafe extern "C" fn cluster_beacon_rx_failure_ntf(
 unsafe extern "C" fn ipv6_config_update_ntf(
     params: *mut dect_mac::ipv6_config_update_ntf_cb_params,
 ) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_mac::ipv6_config_update_ntf_cb_params {
+        ipv6_config: dect_mac::ipv6_address_config_t { type_, address },
+    } = unsafe { &*params };
+
+    error!(
+        "IPv6 config update NTF is unhandled; new type {} ({:02x})",
+        type_, address
+    );
 }
 unsafe extern "C" fn network_beacon_ntf(params: *mut dect_mac::network_beacon_ntf_cb_params) {
     // SAFETY: implied in C API
@@ -621,5 +652,10 @@ unsafe extern "C" fn dlc_data_rx_ntf(params: *mut dect_dlc::data_rx_ntf_cb_param
     };
 }
 unsafe extern "C" fn dlc_flow_control_ntf(params: *mut dect_dlc::flow_control_ntf_cb_params) {
-    todo!()
+    // SAFETY: implied in C API
+    let &dect_dlc::flow_control_ntf_cb_params { status } = unsafe { &*params };
+
+    let status = status.into_mac_status();
+
+    error!("DLC flow control NTF is unhandled; status {}", status);
 }
